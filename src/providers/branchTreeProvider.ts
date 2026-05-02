@@ -44,11 +44,12 @@ class BranchPathNode extends vscode.TreeItem {
 export class BranchTreeItem extends vscode.TreeItem {
   constructor(
     public readonly branch: BranchRef,
-    label: string
+    label: string,
+    idScope: string
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.contextValue = 'branchRef';
-    this.id = `branch:${branch.fullName}`;
+    this.id = `branch:${idScope}:${branch.fullName}`;
     this.description = describeBranch(branch);
     this.tooltip = `${branch.name}\n${branch.fullName}${branch.upstream ? `\nupstream: ${branch.upstream}` : ''}`;
     this.iconPath = branch.current
@@ -154,13 +155,13 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
       const branchPath = pathMode === 'name' ? branch.name : branch.shortName;
       const relativeName = basePath ? branchPath.slice(basePath.length + 1) : branchPath;
       if (!relativeName) {
-        leaves.push(new BranchTreeItem(branch, branchPath.split('/').at(-1) ?? branchPath));
+        leaves.push(new BranchTreeItem(branch, branchPath.split('/').at(-1) ?? branchPath, idPrefix));
         continue;
       }
 
       const parts = relativeName.split('/');
       if (parts.length === 1) {
-        leaves.push(new BranchTreeItem(branch, relativeName));
+        leaves.push(new BranchTreeItem(branch, relativeName, idPrefix));
         continue;
       }
 
