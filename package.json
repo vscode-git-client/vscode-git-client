@@ -82,7 +82,8 @@
         {
           "id": "intelliGit.commitView",
           "name": "Commit View",
-          "when": "intelliGit.commitViewVisible"
+          "when": "intelliGit.commitViewVisible",
+          "icon": "media/icon-commit-view.svg"
         }
       ]
     },
