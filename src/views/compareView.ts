@@ -135,6 +135,7 @@ export class CompareView {
 function renderCompareHtml(result: CompareResult): string {
   const leftCommits = renderCommitRows(result.commitsOnlyLeft, 'left');
   const rightCommits = renderCommitRows(result.commitsOnlyRight, 'right');
+  const authors = collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -174,6 +175,51 @@ function renderCompareHtml(result: CompareResult): string {
       flex: 2;
       min-height: 0;
       margin-bottom: 16px;
+    }
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(150px, 180px) minmax(150px, 180px) auto;
+      gap: 8px;
+      margin-bottom: 12px;
+      align-items: end;
+    }
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .filter-label {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .filter-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--bg), white 4%);
+      color: var(--fg);
+      font: inherit;
+      padding: 6px 8px;
+    }
+    .filter-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      height: 100%;
+    }
+    .filter-clear {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--fg);
+      font: inherit;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .filter-clear:hover {
+      background: color-mix(in srgb, var(--accent), transparent 90%);
     }
     .card {
       border: 1px solid var(--border);
@@ -305,9 +351,27 @@ function renderCompareHtml(result: CompareResult): string {
   </style>
 </head>
 <body>
+  <section class="filters">
+    <label class="filter-field">
+      <span class="filter-label">Author</span>
+      <input id="filter-author" class="filter-input" type="text" list="author-options" placeholder="Type author name" />
+    </label>
+    <label class="filter-field">
+      <span class="filter-label">Từ ngày</span>
+      <input id="filter-since" class="filter-input" type="date" />
+    </label>
+    <label class="filter-field">
+      <span class="filter-label">Đến ngày</span>
+      <input id="filter-until" class="filter-input" type="date" />
+    </label>
+    <div class="filter-actions">
+      <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
+    </div>
+  </section>
+  <datalist id="author-options">${authors.map((author) => `<option value="${escapeHtml(author)}"></option>`).join('')}</datalist>
   <div class="grid">
     <section class="card">
-      <div class="section-banner">Only in ${escapeHtml(result.leftRef)} (${result.commitsOnlyLeft.length})</div>
+      <div class="section-banner" data-side="left" data-total="${result.commitsOnlyLeft.length}" data-ref="${escapeHtml(result.leftRef)}">Only in ${escapeHtml(result.leftRef)} (${result.commitsOnlyLeft.length})</div>
       <div class="table-wrap">
         <table>
           <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
@@ -318,7 +382,7 @@ function renderCompareHtml(result: CompareResult): string {
     </section>
 
     <section class="card">
-      <div class="section-banner">Only in ${escapeHtml(result.rightRef)} (${result.commitsOnlyRight.length})</div>
+      <div class="section-banner" data-side="right" data-total="${result.commitsOnlyRight.length}" data-ref="${escapeHtml(result.rightRef)}">Only in ${escapeHtml(result.rightRef)} (${result.commitsOnlyRight.length})</div>
       <div class="table-wrap">
         <table>
           <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
@@ -359,6 +423,10 @@ function renderCompareHtml(result: CompareResult): string {
   <script>
     const vscode = acquireVsCodeApi();
     const menu = document.getElementById('commit-context-menu');
+    const authorInput = document.getElementById('filter-author');
+    const sinceInput = document.getElementById('filter-since');
+    const untilInput = document.getElementById('filter-until');
+    const clearButton = document.getElementById('filter-clear');
     let selectedCommit = null;
 
     document.addEventListener('click', (event) => {
@@ -444,6 +512,87 @@ function renderCompareHtml(result: CompareResult): string {
 
     window.addEventListener('blur', closeMenu);
     window.addEventListener('scroll', closeMenu, true);
+
+    const parseSince = (value) => {
+      if (!value) { return undefined; }
+      const timestamp = new Date(value + 'T00:00:00').getTime();
+      return Number.isFinite(timestamp) ? timestamp : undefined;
+    };
+
+    const parseUntil = (value) => {
+      if (!value) { return undefined; }
+      const timestamp = new Date(value + 'T23:59:59.999').getTime();
+      return Number.isFinite(timestamp) ? timestamp : undefined;
+    };
+
+    const updateBannerCount = (side, visibleCount) => {
+      const banner = document.querySelector('.section-banner[data-side="' + side + '"]');
+      if (!banner) { return; }
+      const total = Number(banner.getAttribute('data-total') || '0');
+      const refName = banner.getAttribute('data-ref') || '';
+      const suffix = visibleCount === total ? String(total) : String(visibleCount) + '/' + String(total);
+      banner.textContent = 'Only in ' + refName + ' (' + suffix + ')';
+    };
+
+    const ensureNoResultsRow = (tbody) => {
+      let row = tbody.querySelector('tr.no-filter-results');
+      if (!row) {
+        row = document.createElement('tr');
+        row.className = 'no-filter-results';
+        row.innerHTML = '<td colspan="4">No commits match current filters</td>';
+        row.style.display = 'none';
+        tbody.appendChild(row);
+      }
+      return row;
+    };
+
+    const applyFilters = () => {
+      const authorFilter = (authorInput && authorInput.value ? authorInput.value : '').trim().toLowerCase();
+      const sinceTs = parseSince(sinceInput ? sinceInput.value : '');
+      const untilTs = parseUntil(untilInput ? untilInput.value : '');
+      const visibleBySide = { left: 0, right: 0 };
+      const rows = document.querySelectorAll('tr.commit-row');
+
+      rows.forEach((row) => {
+        const author = (row.getAttribute('data-author') || '').toLowerCase();
+        const side = row.getAttribute('data-side') || '';
+        const timestamp = Number(row.getAttribute('data-timestamp') || '0');
+        const authorOk = !authorFilter || author.includes(authorFilter);
+        const sinceOk = sinceTs === undefined || timestamp >= sinceTs;
+        const untilOk = untilTs === undefined || timestamp <= untilTs;
+        const visible = authorOk && sinceOk && untilOk;
+        row.style.display = visible ? '' : 'none';
+        if (visible && (side === 'left' || side === 'right')) {
+          visibleBySide[side] += 1;
+        }
+      });
+
+      ['left', 'right'].forEach((side) => {
+        updateBannerCount(side, visibleBySide[side]);
+        const tbody = document.querySelector('tr.commit-row[data-side="' + side + '"]')?.closest('tbody');
+        if (!tbody) { return; }
+        const noRow = ensureNoResultsRow(tbody);
+        noRow.style.display = visibleBySide[side] === 0 ? '' : 'none';
+      });
+    };
+
+    if (authorInput) {
+      authorInput.addEventListener('input', applyFilters);
+    }
+    if (sinceInput) {
+      sinceInput.addEventListener('change', applyFilters);
+    }
+    if (untilInput) {
+      untilInput.addEventListener('change', applyFilters);
+    }
+    if (clearButton) {
+      clearButton.addEventListener('click', () => {
+        if (authorInput) { authorInput.value = ''; }
+        if (sinceInput) { sinceInput.value = ''; }
+        if (untilInput) { untilInput.value = ''; }
+        applyFilters();
+      });
+    }
   </script>
 </body>
 </html>`;
@@ -460,9 +609,25 @@ function renderCommitRows(commits: GraphCommit[], side: 'left' | 'right'): strin
       const rel = escapeHtml(relativeTime(date));
       const full = escapeHtml(date.toLocaleString(undefined, { dateStyle: 'long', timeStyle: 'short' }));
       const graph = escapeHtml(renderGraphGlyph(commit.graph));
-      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit id: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject">${escapeHtml(commit.subject)}</td><td class="col-author">${escapeHtml(commit.author)}</td><td class="col-date muted"><span title="${full}">${rel}</span></td></tr>`;
+      const timestamp = Number.isFinite(date.getTime()) ? date.getTime() : 0;
+      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit id: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject">${escapeHtml(commit.subject)}</td><td class="col-author">${escapeHtml(commit.author)}</td><td class="col-date muted"><span title="${full}">${rel}</span></td></tr>`;
     })
     .join('');
+}
+
+function collectDistinctAuthors(left: GraphCommit[], right: GraphCommit[]): string[] {
+  const unique = new Map<string, string>();
+  for (const commit of [...left, ...right]) {
+    const raw = commit.author.trim();
+    if (!raw) {
+      continue;
+    }
+    const normalized = raw.toLowerCase();
+    if (!unique.has(normalized)) {
+      unique.set(normalized, raw);
+    }
+  }
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
 }
 
 function renderGraphGlyph(graph?: string): string {
