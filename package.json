@@ -146,6 +146,30 @@
         "icon": "$(search)"
       },
       {
+        "command": "intelliGit.tag.checkoutNewBranch",
+        "title": "Checkout New Branch"
+      },
+      {
+        "command": "intelliGit.tag.checkout",
+        "title": "Checkout"
+      },
+      {
+        "command": "intelliGit.tag.copyRevisionNumber",
+        "title": "Copy Revision Number"
+      },
+      {
+        "command": "intelliGit.tag.showRepositoryAtRevision",
+        "title": "View Repository At Revision"
+      },
+      {
+        "command": "intelliGit.tag.compareWithCurrent",
+        "title": "Compare With Current"
+      },
+      {
+        "command": "intelliGit.tag.createPatch",
+        "title": "Create Patch"
+      },
+      {
         "command": "intelliGit.stash.create",
         "title": "Create Stash"
       },
@@ -617,6 +641,36 @@
           "command": "intelliGit.branch.rebaseOnto",
           "when": "view == intelliGit.branches && viewItem == branchRef",
           "group": "navigation@6"
+        },
+        {
+          "command": "intelliGit.tag.checkout",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "inline"
+        },
+        {
+          "command": "intelliGit.tag.checkoutNewBranch",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "navigation"
+        },
+        {
+          "command": "intelliGit.tag.copyRevisionNumber",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "navigation@1"
+        },
+        {
+          "command": "intelliGit.tag.showRepositoryAtRevision",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "navigation@2"
+        },
+        {
+          "command": "intelliGit.tag.compareWithCurrent",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "navigation@3"
+        },
+        {
+          "command": "intelliGit.tag.createPatch",
+          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "group": "navigation@4"
         },
         {
           "command": "intelliGit.stash.apply",

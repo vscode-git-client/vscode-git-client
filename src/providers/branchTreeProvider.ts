@@ -86,7 +86,7 @@ export class BranchTreeItem extends vscode.TreeItem {
   }
 }
 
-class TagTreeItem extends vscode.TreeItem {
+export class TagTreeItem extends vscode.TreeItem {
   constructor(
     public readonly tag: TagRef,
     label: string,
@@ -96,7 +96,7 @@ class TagTreeItem extends vscode.TreeItem {
     this.contextValue = 'tagRef';
     this.id = `tag:${idScope}:${tag.fullName}`;
     this.description = 'tag';
-    this.tooltip = `${tag.name}\n${tag.fullName}`;
+    this.tooltip = `${tag.name}\n${tag.fullName}${tag.sha ? `\n${tag.sha}` : ''}`;
     this.iconPath = new vscode.ThemeIcon('tag');
   }
 }

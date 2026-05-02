@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { EditorOrchestrator } from '../editor/editorOrchestrator';
 import { confirmDangerousAction } from '../guards';
 import { Logger } from '../logger';
-import { BranchTreeItem } from '../providers/branchTreeProvider';
+import { BranchTreeItem, TagTreeItem } from '../providers/branchTreeProvider';
 import { CommitActionContext, CommitFileTreeItem, RevisionFileTreeItem } from '../providers/commitFilesTreeProvider';
 import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../providers/graphTreeProvider';
 import { StashTreeItem } from '../providers/stashTreeProvider';
@@ -49,6 +49,7 @@ export class CommandController {
 
   register(context: vscode.ExtensionContext): void {
     const asBranchItem = (value: unknown): BranchTreeItem | undefined => (value instanceof BranchTreeItem ? value : undefined);
+    const asTagItem = (value: unknown): TagTreeItem | undefined => (value instanceof TagTreeItem ? value : undefined);
     const asStashItem = (value: unknown): StashTreeItem | undefined => (value instanceof StashTreeItem ? value : undefined);
     const asGraphItem = (value: unknown): GraphCommitTreeItem | undefined =>
       value instanceof GraphCommitTreeItem ? value : undefined;
@@ -101,7 +102,13 @@ export class CommandController {
         const trimmed = value.trim();
         return trimmed || undefined;
       }
-      return asGraphItem(value)?.commit.sha;
+      const tag = asTagItem(value)?.tag;
+      return asGraphItem(value)?.commit.sha ?? tag?.sha ?? tag?.name;
+    };
+    const toTagRef = (value: unknown): string | undefined => asTagItem(value)?.tag.name;
+    const toTagRevision = (value: unknown): string | undefined => {
+      const tag = asTagItem(value)?.tag;
+      return tag?.sha ?? tag?.name;
     };
 
     const register = (command: string, callback: (...args: unknown[]) => Promise<void>): void => {
@@ -177,6 +184,88 @@ export class CommandController {
       await this.git.createBranch(branchName.trim(), baseBranch);
       await this.git.checkoutBranch(branchName.trim());
       await this.state.refreshAll();
+    });
+
+    register('intelliGit.tag.checkoutNewBranch', async (arg?: unknown) => {
+      const baseRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
+      if (!baseRef) {
+        return;
+      }
+
+      const branchName = await vscode.window.showInputBox({
+        title: `Checkout new branch from ${baseRef}`,
+        placeHolder: 'feature/new-branch',
+        validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
+      });
+
+      if (!branchName) {
+        return;
+      }
+
+      await this.git.createBranch(branchName.trim(), baseRef);
+      await this.git.checkoutBranch(branchName.trim());
+      await this.state.refreshAll();
+    });
+
+    register('intelliGit.tag.checkout', async (arg?: unknown) => {
+      const tagRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
+      if (!tagRef) {
+        return;
+      }
+
+      const confirmed = await confirmDangerousAction({
+        title: 'Checkout revision',
+        detail: `Revision: ${tagRef}`,
+        acceptLabel: 'Checkout'
+      });
+      if (!confirmed) {
+        return;
+      }
+
+      await this.git.checkoutCommit(tagRef);
+      await this.state.refreshAll();
+    });
+
+    register('intelliGit.tag.copyRevisionNumber', async (arg?: unknown) => {
+      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
+      if (!revision) {
+        return;
+      }
+
+      await vscode.env.clipboard.writeText(revision);
+      void vscode.window.setStatusBarMessage(`Copied ${revision}`, 1500);
+    });
+
+    register('intelliGit.tag.showRepositoryAtRevision', async (arg?: unknown) => {
+      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
+      if (!revision) {
+        return;
+      }
+
+      await this.editor.showRepositoryAtRevision(revision);
+    });
+
+    register('intelliGit.tag.compareWithCurrent', async (arg?: unknown) => {
+      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
+      if (!revision) {
+        return;
+      }
+
+      await this.editor.openCompareFromCommit(revision);
+    });
+
+    register('intelliGit.tag.createPatch', async (arg?: unknown) => {
+      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
+      if (!revision) {
+        return;
+      }
+
+      const patch = await this.git.getPatchForCommit(revision);
+      const doc = await vscode.workspace.openTextDocument({
+        language: 'diff',
+        content: patch
+      });
+      await vscode.window.showTextDocument(doc, { preview: false });
     });
 
     register('intelliGit.branch.rename', async (arg?: unknown) => {

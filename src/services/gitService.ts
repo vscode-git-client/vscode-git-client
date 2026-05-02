@@ -158,7 +158,7 @@ export class GitService {
   }
 
   async getTags(): Promise<TagRef[]> {
-    const format = ['%(refname:short)', '%(refname)', '%(creatordate:unix)'].join(FIELD_SEPARATOR);
+    const format = ['%(refname:short)', '%(refname)', '%(objectname)', '%(*objectname)', '%(creatordate:unix)'].join(FIELD_SEPARATOR);
     const result = await this.runGit([
       'for-each-ref',
       `--format=${format}${RECORD_SEPARATOR}`,
@@ -170,11 +170,12 @@ export class GitService {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [name, fullName, commitEpochRaw] = line.split(FIELD_SEPARATOR);
+        const [name, fullName, objectSha, peeledSha, commitEpochRaw] = line.split(FIELD_SEPARATOR);
         const commitEpoch = Number.parseInt((commitEpochRaw ?? '').trim(), 10);
         return {
           name,
           fullName,
+          sha: peeledSha || objectSha || undefined,
           lastCommitEpoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch
         };
       })

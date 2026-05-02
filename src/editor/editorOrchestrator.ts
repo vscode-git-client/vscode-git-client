@@ -103,18 +103,6 @@ export class EditorOrchestrator {
     });
   }
 
-  private async openCommitFileDiffBeside(sha: string, filePath: string): Promise<void> {
-    const leftUri = await this.createVirtualUri(`${sha}^`, filePath);
-    const rightUri = await this.createVirtualUri(sha, filePath);
-    const title = `${sha.slice(0, 8)} parent ↔ commit · ${filePath}`;
-
-    await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, {
-      preview: false,
-      preserveFocus: true,
-      viewColumn: vscode.ViewColumn.Beside
-    });
-  }
-
   async openCommitFileDiffWithStatus(sha: string, filePath: string, status?: string): Promise<void> {
     const title = `${sha.slice(0, 8)} parent ↔ commit · ${filePath}`;
     const normalizedStatus = (status ?? '').trim().toUpperCase();
@@ -136,10 +124,10 @@ export class EditorOrchestrator {
     this.contentProvider.setContent(leftUri, leftContent);
     this.contentProvider.setContent(rightUri, rightContent);
 
+    await this.closeEmptyEditorGroups();
     await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, {
       preview: false,
-      preserveFocus: true,
-      viewColumn: vscode.ViewColumn.Beside
+      preserveFocus: false
     });
   }
 
@@ -182,6 +170,16 @@ export class EditorOrchestrator {
       return await this.git.getFileContentFromRef(ref, relativePath);
     } catch {
       return '';
+    }
+  }
+
+  private async closeEmptyEditorGroups(): Promise<void> {
+    const groups = vscode.window.tabGroups.all;
+    const allGroupsAreEmpty = groups.every((group) => group.tabs.length === 0);
+    const emptyGroups = groups.filter((group) => group.tabs.length === 0 && !(allGroupsAreEmpty && group.isActive));
+
+    if (emptyGroups.length > 0) {
+      await vscode.window.tabGroups.close(emptyGroups, true);
     }
   }
 }

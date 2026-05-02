@@ -18,6 +18,7 @@ export interface BranchRef {
 export interface TagRef {
   readonly name: string;
   readonly fullName: string;
+  readonly sha?: string;
   readonly lastCommitEpoch?: number;
 }
 
