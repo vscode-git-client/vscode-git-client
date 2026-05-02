@@ -30,8 +30,57 @@ import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from './worktree
 const FIELD_SEPARATOR = '|~|';
 const RECORD_SEPARATOR = '|#|';
 
+interface VsCodeGitChange {
+  readonly uri: vscode.Uri;
+}
+
+interface VsCodeGitRepository {
+  readonly rootUri: vscode.Uri;
+  readonly state: {
+    readonly HEAD?: {
+      readonly name?: string;
+      readonly commit?: string;
+    };
+    readonly indexChanges: readonly VsCodeGitChange[];
+    readonly mergeChanges: readonly VsCodeGitChange[];
+    readonly workingTreeChanges: readonly VsCodeGitChange[];
+    readonly untrackedChanges: readonly VsCodeGitChange[];
+  };
+  status(): Promise<void>;
+  add(paths: string[]): Promise<void>;
+  restore(paths: string[], options?: { staged?: boolean; ref?: string }): Promise<void>;
+  revert(paths: string[]): Promise<void>;
+  clean(paths: string[]): Promise<void>;
+  createBranch(name: string, checkout: boolean, ref?: string): Promise<void>;
+  deleteBranch(name: string, force?: boolean): Promise<void>;
+  setBranchUpstream(name: string, upstream: string): Promise<void>;
+  checkout(treeish: string): Promise<void>;
+  tag(name: string, message: string, ref?: string): Promise<void>;
+  fetch(options?: { prune?: boolean }): Promise<void>;
+  pull(unshallow?: boolean): Promise<void>;
+  push(remoteName?: string, branchName?: string, setUpstream?: boolean): Promise<void>;
+  commit(message: string, opts?: { all?: boolean | 'tracked'; amend?: boolean }): Promise<void>;
+  rebase(branch: string): Promise<void>;
+  mergeAbort(): Promise<void>;
+  createStash(options?: { message?: string; includeUntracked?: boolean; staged?: boolean }): Promise<void>;
+}
+
+interface VsCodeGitApi {
+  readonly repositories: readonly VsCodeGitRepository[];
+  getRepository(uri: vscode.Uri): VsCodeGitRepository | null;
+  getRepositoryRoot(uri: vscode.Uri): Promise<vscode.Uri | null>;
+  openRepository(root: vscode.Uri): Promise<VsCodeGitRepository | null>;
+}
+
+interface VsCodeGitExtension {
+  readonly enabled: boolean;
+  getAPI(version: 1): VsCodeGitApi;
+}
+
 export class GitService {
   private _gitRootCache: string | undefined;
+  private _vscodeGitApi: Promise<VsCodeGitApi | undefined> | undefined;
+  private _vscodeGitRepository: VsCodeGitRepository | undefined;
 
   constructor(
     private readonly context: RepositoryContext,
@@ -79,6 +128,10 @@ export class GitService {
   }
 
   async isRepo(): Promise<boolean> {
+    const vscodeGitRoot = await this.getVsCodeGitRoot();
+    if (vscodeGitRoot) {
+      return true;
+    }
     try {
       const result = await this.runGit(['rev-parse', '--is-inside-work-tree']);
       return result.stdout.trim() === 'true';
@@ -88,11 +141,19 @@ export class GitService {
   }
 
   async getCurrentBranch(): Promise<string> {
+    const repository = await this.getVsCodeRepository();
+    if (repository?.state.HEAD?.name) {
+      return repository.state.HEAD.name;
+    }
     const result = await this.runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
     return result.stdout.trim();
   }
 
   async getCurrentHeadSha(): Promise<string> {
+    const repository = await this.getVsCodeRepository();
+    if (repository?.state.HEAD?.commit) {
+      return repository.state.HEAD.commit;
+    }
     const result = await this.runGit(['rev-parse', 'HEAD']);
     return result.stdout.trim();
   }
@@ -190,6 +251,12 @@ export class GitService {
   }
 
   async createBranch(name: string, base?: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git createBranch ${name}${base ? ` ${base}` : ''}`);
+      await repository.createBranch(name, false, base);
+      return;
+    }
     const args = ['branch', name];
     if (base) {
       args.push(base);
@@ -198,6 +265,12 @@ export class GitService {
   }
 
   async createTag(name: string, ref: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git tag ${name} ${ref}`);
+      await repository.tag(name, '', ref);
+      return;
+    }
     await this.runGit(['tag', name, ref]);
   }
 
@@ -206,18 +279,42 @@ export class GitService {
   }
 
   async deleteBranch(branch: string, force = false): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git deleteBranch ${branch}${force ? ' --force' : ''}`);
+      await repository.deleteBranch(branch, force);
+      return;
+    }
     await this.runGit(['branch', force ? '-D' : '-d', branch]);
   }
 
   async checkoutBranch(branch: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git checkout ${branch}`);
+      await repository.checkout(branch);
+      return;
+    }
     await this.runGit(['checkout', branch]);
   }
 
   async checkoutCommit(commit: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git checkout ${commit}`);
+      await repository.checkout(commit);
+      return;
+    }
     await this.runGit(['checkout', commit]);
   }
 
   async trackBranch(localBranch: string, upstream: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git setBranchUpstream ${localBranch} ${upstream}`);
+      await repository.setBranchUpstream(localBranch, upstream);
+      return;
+    }
     await this.runGit(['branch', '--set-upstream-to', upstream, localBranch]);
   }
 
@@ -239,6 +336,12 @@ export class GitService {
   }
 
   async rebaseCurrentOnto(branch: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git rebase ${branch}`);
+      await repository.rebase(branch);
+      return;
+    }
     await this.runGit(['rebase', branch]);
   }
 
@@ -247,6 +350,12 @@ export class GitService {
   }
 
   async mergeAbort(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git mergeAbort');
+      await repository.mergeAbort();
+      return;
+    }
     await this.runGit(['merge', '--abort']);
   }
 
@@ -401,6 +510,74 @@ export class GitService {
     return this._submoduleService;
   }
 
+  private async getVsCodeGitApi(): Promise<VsCodeGitApi | undefined> {
+    if (!this._vscodeGitApi) {
+      this._vscodeGitApi = (async () => {
+        const extension = vscode.extensions.getExtension<VsCodeGitExtension>('vscode.git');
+        if (!extension) {
+          return undefined;
+        }
+        const gitExtension = extension.isActive ? extension.exports : await extension.activate();
+        if (!gitExtension.enabled) {
+          return undefined;
+        }
+        return gitExtension.getAPI(1);
+      })();
+    }
+    return this._vscodeGitApi;
+  }
+
+  private async getVsCodeGitRoot(): Promise<string | undefined> {
+    try {
+      const api = await this.getVsCodeGitApi();
+      const rootUri = await api?.getRepositoryRoot(this.context.rootUri);
+      return rootUri?.fsPath;
+    } catch {
+      return undefined;
+    }
+  }
+
+  private async getVsCodeRepository(): Promise<VsCodeGitRepository | undefined> {
+    const rootUri = vscode.Uri.file(this.gitRoot);
+    if (this._vscodeGitRepository && this.samePath(this._vscodeGitRepository.rootUri.fsPath, rootUri.fsPath)) {
+      return this._vscodeGitRepository;
+    }
+
+    const api = await this.getVsCodeGitApi();
+    if (!api) {
+      return undefined;
+    }
+
+    const repository =
+      api.getRepository(rootUri) ??
+      api.repositories.find((candidate) => this.samePath(candidate.rootUri.fsPath, rootUri.fsPath)) ??
+      await api.openRepository(rootUri);
+    if (!repository) {
+      return undefined;
+    }
+
+    this._vscodeGitRepository = repository;
+    return repository;
+  }
+
+  private toAbsoluteRepoPath(relativeOrAbsolutePath: string): string {
+    return path.isAbsolute(relativeOrAbsolutePath)
+      ? relativeOrAbsolutePath
+      : path.join(this.gitRoot, relativeOrAbsolutePath);
+  }
+
+  private uniqueChangePaths(changes: readonly VsCodeGitChange[]): string[] {
+    return [...new Set(changes.map((change) => change.uri.fsPath))];
+  }
+
+  private samePath(left: string, right: string): boolean {
+    const normalizedLeft = path.normalize(left);
+    const normalizedRight = path.normalize(right);
+    return process.platform === 'win32'
+      ? normalizedLeft.toLowerCase() === normalizedRight.toLowerCase()
+      : normalizedLeft === normalizedRight;
+  }
+
   private async getGitDir(): Promise<string | undefined> {
     if (this._gitDirCache) { return this._gitDirCache; }
     try {
@@ -510,6 +687,13 @@ export class GitService {
   }
 
   async createStash(message: string, options: { includeUntracked: boolean; keepIndex: boolean }): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository && !options.keepIndex) {
+      this.logger.info(`vscode.git createStash ${message}`);
+      await repository.createStash({ message, includeUntracked: options.includeUntracked });
+      return;
+    }
+
     const args = ['stash', 'push', '-m', message];
     if (options.includeUntracked) {
       args.push('-u');
@@ -850,10 +1034,22 @@ export class GitService {
   }
 
   async stageFile(path: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git add ${path}`);
+      await repository.add([this.toAbsoluteRepoPath(path)]);
+      return;
+    }
     await this.runGit(['add', '--', path]);
   }
 
   async unstageFile(path: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git restore --staged ${path}`);
+      await repository.restore([this.toAbsoluteRepoPath(path)], { staged: true });
+      return;
+    }
     await this.runGit(['restore', '--staged', '--', path]);
   }
 
@@ -877,18 +1073,50 @@ export class GitService {
   }
 
   async push(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git push');
+      await repository.push();
+      return;
+    }
     await this.runGit(['push']);
   }
 
   async pull(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git pull');
+      await repository.pull();
+      return;
+    }
     await this.runGit(['pull']);
   }
 
   async fetchPrune(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git fetch --prune');
+      await repository.fetch({ prune: true });
+      return;
+    }
     await this.runGit(['fetch', '--prune']);
   }
 
   async addAll(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git add all');
+      await repository.status();
+      const paths = this.uniqueChangePaths([
+        ...repository.state.mergeChanges,
+        ...repository.state.workingTreeChanges,
+        ...repository.state.untrackedChanges
+      ]);
+      if (paths.length > 0) {
+        await repository.add(paths);
+      }
+      return;
+    }
     await this.runGit(['add', '-A']);
   }
 
@@ -897,6 +1125,12 @@ export class GitService {
   }
 
   async amendCommit(message?: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git commit --amend${message ? ' -m <message>' : ' --no-edit'}`);
+      await repository.commit(message ?? '', { amend: true });
+      return;
+    }
     const args = ['commit', '--amend'];
     if (message) {
       args.push('-m', message);
@@ -907,6 +1141,12 @@ export class GitService {
   }
 
   async commit(message: string): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git commit -m <message>');
+      await repository.commit(message);
+      return;
+    }
     await this.runGit(['commit', '-m', message]);
   }
 
@@ -925,10 +1165,31 @@ export class GitService {
   }
 
   async unstageAll(): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info('vscode.git restore --staged all');
+      await repository.status();
+      const paths = this.uniqueChangePaths(repository.state.indexChanges);
+      if (paths.length > 0) {
+        await repository.restore(paths, { staged: true });
+      }
+      return;
+    }
     await this.runGit(['restore', '--staged', '.']);
   }
 
   async discardFile(filePath: string, isUntracked: boolean): Promise<void> {
+    const repository = await this.getVsCodeRepository();
+    if (repository) {
+      this.logger.info(`vscode.git ${isUntracked ? 'clean' : 'restore'} ${filePath}`);
+      const absolutePath = this.toAbsoluteRepoPath(filePath);
+      if (isUntracked) {
+        await repository.clean([absolutePath]);
+      } else {
+        await repository.revert([absolutePath]);
+      }
+      return;
+    }
     if (isUntracked) {
       await this.runGit(['clean', '-f', '--', filePath]);
     } else {
