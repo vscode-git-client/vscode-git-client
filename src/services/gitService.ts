@@ -129,6 +129,11 @@ export class GitService {
           lastCommitEpoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch
         };
       })
+      .filter((branch) => {
+        // Ignore remote root refs like "origin" (no slash) so each remote
+        // group only contains actual branches under "<remote>/<branch>".
+        return branch.type !== 'remote' || branch.name.includes('/');
+      })
       .sort((a, b) => {
         if (a.current) {
           return -1;
