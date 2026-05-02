@@ -1,0 +1,17 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main branch vertical line -->
+  <line x1="38" y1="10" x2="38" y2="118" stroke="#58a6ff" stroke-width="7" stroke-linecap="round"/>
+  <!-- Feature branch diverges from main -->
+  <path d="M38 38 C38 60, 90 52, 90 72" stroke="#f0883e" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- Feature branch segment -->
+  <line x1="90" y1="72" x2="90" y2="92" stroke="#f0883e" stroke-width="7" stroke-linecap="round"/>
+  <!-- Feature branch merges back into main -->
+  <path d="M90 92 C90 108, 38 100, 38 112" stroke="#f0883e" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <!-- Main branch commits -->
+  <circle cx="38" cy="14" r="9" fill="#0d1117" stroke="#58a6ff" stroke-width="6"/>
+  <circle cx="38" cy="42" r="9" fill="#0d1117" stroke="#58a6ff" stroke-width="6"/>
+  <!-- Feature branch commit -->
+  <circle cx="90" cy="76" r="9" fill="#0d1117" stroke="#f0883e" stroke-width="6"/>
+  <!-- Merge commit on main -->
+  <circle cx="38" cy="114" r="9" fill="#0d1117" stroke="#58a6ff" stroke-width="6"/>
+</svg>

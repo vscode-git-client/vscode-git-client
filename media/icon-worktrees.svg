@@ -1,0 +1,20 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Shared repository root -->
+  <circle cx="64" cy="110" r="10" fill="#0d1117" stroke="#79c0ff" stroke-width="6"/>
+  <!-- Path to left worktree -->
+  <path d="M64 100 C64 82, 28 82, 28 62" stroke="#58a6ff" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <!-- Path to right worktree -->
+  <path d="M64 100 C64 82, 100 82, 100 62" stroke="#f0883e" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <!-- Left worktree box (blue) -->
+  <rect x="10" y="20" width="36" height="42" rx="4" fill="#0d1117" stroke="#58a6ff" stroke-width="6"/>
+  <!-- Left box file lines -->
+  <line x1="18" y1="32" x2="38" y2="32" stroke="#58a6ff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="18" y1="40" x2="34" y2="40" stroke="#58a6ff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="18" y1="48" x2="30" y2="48" stroke="#58a6ff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <!-- Right worktree box (orange) -->
+  <rect x="82" y="20" width="36" height="42" rx="4" fill="#0d1117" stroke="#f0883e" stroke-width="6"/>
+  <!-- Right box file lines -->
+  <line x1="90" y1="32" x2="110" y2="32" stroke="#f0883e" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="90" y1="40" x2="106" y2="40" stroke="#f0883e" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+  <line x1="90" y1="48" x2="102" y2="48" stroke="#f0883e" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+</svg>

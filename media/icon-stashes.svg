@@ -1,0 +1,13 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bottom bar: most recent stash, full opacity -->
+  <rect x="10" y="86" width="108" height="28" rx="6" fill="#0d1117" stroke="#d2a8ff" stroke-width="6"/>
+  <!-- Middle bar: 80% opacity -->
+  <rect x="18" y="60" width="92" height="24" rx="5" fill="#0d1117" stroke="#d2a8ff" stroke-width="5" opacity="0.8"/>
+  <!-- Top bar: oldest stash, 55% opacity -->
+  <rect x="28" y="38" width="72" height="20" rx="4" fill="#0d1117" stroke="#d2a8ff" stroke-width="4" opacity="0.55"/>
+  <!-- Content lines inside bottom bar -->
+  <line x1="24" y1="97" x2="80" y2="97" stroke="#d2a8ff" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  <line x1="24" y1="107" x2="60" y2="107" stroke="#d2a8ff" stroke-width="4" stroke-linecap="round" opacity="0.4"/>
+  <!-- Right-pointing arrow (pop/apply hint) -->
+  <path d="M96 92 L108 100 L96 108" fill="none" stroke="#d2a8ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+</svg>

@@ -49,32 +49,33 @@
           "id": "intelliGit.branches",
           "name": "Branches",
           "visibility": "visible",
-          "icon": "media/intelligit.svg"
+          "icon": "media/icon-branches.svg"
         },
         {
           "id": "intelliGit.graph",
           "name": "Git Graph",
           "visibility": "visible",
-          "icon": "media/intelligit.svg"
+          "icon": "media/icon-graph.svg"
         },
         {
           "id": "intelliGit.worktrees",
           "name": "Worktrees",
           "visibility": "visible",
-          "icon": "media/intelligit.svg"
+          "icon": "media/icon-worktrees.svg"
         },
         {
           "id": "intelliGit.submodules",
           "name": "Submodules",
           "visibility": "visible",
-          "icon": "media/intelligit.svg"
+          "icon": "media/icon-submodules.svg"
         }
       ],
       "scm": [
         {
           "id": "intelliGit.stashes",
           "name": "IntelliGit Stashes",
-          "visibility": "visible"
+          "visibility": "visible",
+          "icon": "media/icon-stashes.svg"
         }
       ],
       "panel": [
