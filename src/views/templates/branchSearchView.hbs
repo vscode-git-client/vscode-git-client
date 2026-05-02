@@ -1,33 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Search Branches</title>
-  <style>
+{{> partials/documentStart title="Search Branches"}}
+    {{> partials/styles/theme}}
     :root {
-      color-scheme: light dark;
-      --bg: var(--vscode-editor-background);
-      --fg: var(--vscode-editor-foreground);
-      --muted: var(--vscode-descriptionForeground);
-      --border: var(--vscode-panel-border);
-      --accent: var(--vscode-focusBorder);
       --row-hover: color-mix(in srgb, var(--accent), transparent 85%);
       --row-active: color-mix(in srgb, var(--accent), transparent 70%);
     }
-    * { box-sizing: border-box; }
-    body {
-      font-family: var(--vscode-font-family);
-      color: var(--fg);
-      background: var(--bg);
-      margin: 0;
-      padding: 16px 20px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow: hidden;
-    }
+    {{> partials/styles/bodyBase background="var(--bg)" padding="16px 20px" gap="12px"}}
     .header {
       display: flex;
       flex-direction: column;
@@ -350,5 +327,4 @@
       vscode.postMessage({ type: 'checkout', name });
     });
   </script>
-</body>
-</html>
+{{> partials/documentEnd}}

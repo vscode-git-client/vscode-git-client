@@ -1,0 +1,31 @@
+    .{{listClass}} {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 2px);
+      z-index: 20;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--bg), white 3%);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, {{shadowAlpha}});
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+    }
+    .{{listClass}}.visible {
+      display: block;
+    }
+    .{{optionClass}} {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--fg);
+      font: inherit;
+      text-align: left;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
+    .{{optionClass}}:hover,
+    .{{optionClass}}.active {
+      background: color-mix(in srgb, var(--accent), transparent 85%);
+    }

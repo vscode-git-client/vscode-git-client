@@ -1,0 +1,17 @@
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      table-layout: fixed;
+    }
+    th, td {
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding: {{cellPadding}};
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: color-mix(in srgb, var(--bg), white 3%);
+      z-index: 1;
+    }

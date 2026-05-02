@@ -1,31 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Filter Graph</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      --bg: var(--vscode-editor-background);
-      --fg: var(--vscode-editor-foreground);
-      --muted: var(--vscode-descriptionForeground);
-      --border: var(--vscode-panel-border);
-      --accent: var(--vscode-focusBorder);
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: var(--vscode-font-family);
-      color: var(--fg);
-      background: var(--bg);
-      margin: 0;
-      padding: 14px 16px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      overflow: hidden;
-    }
+{{> partials/documentStart title="Filter Graph"}}
+    {{> partials/styles/theme}}
+    {{> partials/styles/bodyBase background="var(--bg)" padding="14px 16px" gap="10px"}}
     h1 {
       margin: 0;
       font-size: 14px;
@@ -65,9 +40,6 @@
       font-weight: 400;
       margin-left: 4px;
     }
-    .input-shell {
-      position: relative;
-    }
     .filter-input {
       width: 100%;
       padding: 7px 28px 7px 8px;
@@ -82,65 +54,8 @@
     .filter-input:focus {
       border-color: var(--accent);
     }
-    .field-clear {
-      position: absolute;
-      right: 6px;
-      top: 50%;
-      transform: translateY(-50%);
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      font-size: 14px;
-      line-height: 18px;
-      text-align: center;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 120ms ease;
-    }
-    .input-shell:hover .field-clear,
-    .input-shell:focus-within .field-clear {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .field-clear:hover {
-      color: var(--fg);
-      background: color-mix(in srgb, var(--accent), transparent 88%);
-    }
-    .autocomplete-list {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 2px);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: color-mix(in srgb, var(--bg), white 3%);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-      max-height: 220px;
-      overflow-y: auto;
-      display: none;
-      z-index: 20;
-    }
-    .autocomplete-list.visible {
-      display: block;
-    }
-    .autocomplete-option {
-      width: 100%;
-      border: 0;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      text-align: left;
-      padding: 6px 8px;
-      cursor: pointer;
-    }
-    .autocomplete-option:hover,
-    .autocomplete-option.active {
-      background: color-mix(in srgb, var(--accent), transparent 85%);
-    }
+    {{> partials/styles/fieldClear}}
+    {{> partials/styles/autocomplete listClass="autocomplete-list" optionClass="autocomplete-option" shadowAlpha="0.25"}}
     .actions {
       display: flex;
       gap: 8px;
@@ -192,25 +107,11 @@
       min-height: 0;
       flex: 1;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      table-layout: fixed;
-    }
+    {{> partials/styles/tableBase cellPadding="5px 6px"}}
     th, td {
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      padding: 5px 6px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-    th {
-      position: sticky;
-      top: 0;
-      background: color-mix(in srgb, var(--bg), white 3%);
-      z-index: 1;
     }
     .col-sha { width: 90px; font-family: var(--vscode-editor-font-family); }
     .col-date { width: 130px; }
@@ -226,37 +127,37 @@
         <label class="field-label" for="message">Message <span class="note">(subject/id)</span></label>
         <div class="input-shell">
           <input id="message" name="message" class="filter-input" type="text" placeholder="fix login, HOTFIX-123, short SHA" autofocus spellcheck="false" />
-          <button type="button" class="field-clear" data-target="message" aria-label="Clear message" title="Clear">×</button>
+          {{> partials/fieldClearButton target="message" label="message"}}
         </div>
       </div>
       <div class="field">
         <label class="field-label" for="branch">Branch</label>
         <div class="input-shell">
           <input id="branch" name="branch" class="filter-input" type="text" placeholder="main, feature/login" spellcheck="false" autocomplete="off" />
-          <button type="button" class="field-clear" data-target="branch" aria-label="Clear branch" title="Clear">×</button>
-          <div id="branch-list" class="autocomplete-list" role="listbox" aria-label="Branch suggestions"></div>
+          {{> partials/fieldClearButton target="branch" label="branch"}}
+          {{> partials/autocompleteList id="branch-list" className="autocomplete-list" label="Branch suggestions"}}
         </div>
       </div>
       <div class="field">
         <label class="field-label" for="author">Author</label>
         <div class="input-shell">
           <input id="author" name="author" class="filter-input" type="text" placeholder="name or email" spellcheck="false" autocomplete="off" />
-          <button type="button" class="field-clear" data-target="author" aria-label="Clear author" title="Clear">×</button>
-          <div id="author-list" class="autocomplete-list" role="listbox" aria-label="Author suggestions"></div>
+          {{> partials/fieldClearButton target="author" label="author"}}
+          {{> partials/autocompleteList id="author-list" className="autocomplete-list" label="Author suggestions"}}
         </div>
       </div>
       <div class="field">
         <label class="field-label" for="since">Since</label>
         <div class="input-shell">
           <input id="since" name="since" class="filter-input" type="date" />
-          <button type="button" class="field-clear" data-target="since" aria-label="Clear since" title="Clear">×</button>
+          {{> partials/fieldClearButton target="since" label="since"}}
         </div>
       </div>
       <div class="field">
         <label class="field-label" for="until">Until</label>
         <div class="input-shell">
           <input id="until" name="until" class="filter-input" type="date" />
-          <button type="button" class="field-clear" data-target="until" aria-label="Clear until" title="Clear">×</button>
+          {{> partials/fieldClearButton target="until" label="until"}}
         </div>
       </div>
     </section>
@@ -549,5 +450,4 @@
       }
     });
   </script>
-</body>
-</html>
+{{> partials/documentEnd}}

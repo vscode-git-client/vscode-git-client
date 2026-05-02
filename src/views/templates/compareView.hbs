@@ -1,34 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Branch Comparison</title>
-  <style>
+{{> partials/documentStart title="Branch Comparison"}}
+    {{> partials/styles/theme}}
     :root {
-      color-scheme: light dark;
-      --bg: var(--vscode-editor-background);
-      --fg: var(--vscode-editor-foreground);
-      --muted: var(--vscode-descriptionForeground);
-      --border: var(--vscode-panel-border);
-      --accent: var(--vscode-focusBorder);
       --menu-bg: color-mix(in srgb, var(--bg), black 8%);
       --menu-hover: color-mix(in srgb, var(--accent), transparent 75%);
       --menu-separator: color-mix(in srgb, var(--border), transparent 25%);
     }
-    body {
-      font-family: var(--vscode-font-family);
-      color: var(--fg);
-      background: linear-gradient(145deg, color-mix(in srgb, var(--bg), transparent 0%), color-mix(in srgb, var(--accent), transparent 92%));
-      margin: 0;
-      padding: 16px;
-      height: 100vh;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      gap: 0;
-    }
+    {{> partials/styles/bodyBase background="linear-gradient(145deg, color-mix(in srgb, var(--bg), transparent 0%), color-mix(in srgb, var(--accent), transparent 92%))" padding="16px" gap="0"}}
     .grid {
       display: flex;
       flex-direction: column;
@@ -65,40 +42,10 @@
       font: inherit;
       padding: 6px 8px;
     }
-    .input-shell {
-      position: relative;
-    }
     .input-shell .filter-input {
       padding-right: 28px;
     }
-    .field-clear {
-      position: absolute;
-      right: 6px;
-      top: 50%;
-      transform: translateY(-50%);
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      font-size: 14px;
-      line-height: 18px;
-      text-align: center;
-      cursor: pointer;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 120ms ease;
-    }
-    .input-shell:hover .field-clear,
-    .input-shell:focus-within .field-clear {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    .field-clear:hover {
-      color: var(--fg);
-      background: color-mix(in srgb, var(--accent), transparent 88%);
-    }
+    {{> partials/styles/fieldClear}}
     .filter-actions {
       display: flex;
       justify-content: flex-end;
@@ -117,37 +64,7 @@
     .filter-clear:hover {
       background: color-mix(in srgb, var(--accent), transparent 90%);
     }
-    .author-autocomplete {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 2px);
-      z-index: 20;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: color-mix(in srgb, var(--bg), white 3%);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-      max-height: 220px;
-      overflow-y: auto;
-      display: none;
-    }
-    .author-autocomplete.visible {
-      display: block;
-    }
-    .author-option {
-      width: 100%;
-      border: 0;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      text-align: left;
-      padding: 6px 8px;
-      cursor: pointer;
-    }
-    .author-option:hover,
-    .author-option.active {
-      background: color-mix(in srgb, var(--accent), transparent 85%);
-    }
+    {{> partials/styles/autocomplete listClass="author-autocomplete" optionClass="author-option" shadowAlpha="0.2"}}
     .card {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -176,26 +93,10 @@
       overflow-y: auto;
       min-height: 0;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-      table-layout: fixed;
-    }
+    {{> partials/styles/tableBase cellPadding="6px 4px"}}
     col.col-graph  { width: 24px; }
     col.col-author { width: 110px; }
     col.col-date   { width: 96px; }
-    th, td {
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      padding: 6px 4px;
-    }
-    th {
-      position: sticky;
-      top: 0;
-      background: color-mix(in srgb, var(--bg), white 3%);
-      z-index: 1;
-    }
     .col-graph {
       font-family: var(--vscode-editor-font-family);
       text-align: center;
@@ -283,22 +184,22 @@
       <span class="filter-label">Author</span>
       <div class="input-shell">
         <input id="filter-author" class="filter-input" type="text" autocomplete="off" placeholder="Type author name" />
-        <button type="button" class="field-clear" data-target="filter-author" aria-label="Clear Author" title="Clear">×</button>
-        <div id="author-autocomplete" class="author-autocomplete" role="listbox" aria-label="Author suggestions"></div>
+        {{> partials/fieldClearButton target="filter-author" label="Author"}}
+        {{> partials/autocompleteList id="author-autocomplete" className="author-autocomplete" label="Author suggestions"}}
       </div>
     </label>
     <label class="filter-field">
       <span class="filter-label">Từ ngày</span>
       <div class="input-shell">
         <input id="filter-since" class="filter-input" type="date" />
-        <button type="button" class="field-clear" data-target="filter-since" aria-label="Clear Từ ngày" title="Clear">×</button>
+        {{> partials/fieldClearButton target="filter-since" label="Từ ngày"}}
       </div>
     </label>
     <label class="filter-field">
       <span class="filter-label">Đến ngày</span>
       <div class="input-shell">
         <input id="filter-until" class="filter-input" type="date" />
-        <button type="button" class="field-clear" data-target="filter-until" aria-label="Clear Đến ngày" title="Clear">×</button>
+        {{> partials/fieldClearButton target="filter-until" label="Đến ngày"}}
       </div>
     </label>
     <div class="filter-actions">
@@ -306,55 +207,12 @@
     </div>
   </section>
   <div class="grid">
-    <section class="card">
-      <div class="section-banner" data-side="left" data-total="{{leftTotal}}" data-ref="{{leftRef}}">Only in {{leftRef}} ({{leftTotal}})</div>
-      <div class="table-wrap">
-        <table>
-          <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
-          <thead><tr><th class="col-graph"></th><th class="col-subject">Subject</th><th class="col-author">Author</th><th class="col-date">Date</th></tr></thead>
-          <tbody>{{{leftCommits}}}</tbody>
-        </table>
-      </div>
-    </section>
+    {{> partials/compareCommitTable side="left" total=leftTotal ref=leftRef rows=leftCommits}}
 
-    <section class="card">
-      <div class="section-banner" data-side="right" data-total="{{rightTotal}}" data-ref="{{rightRef}}">Only in {{rightRef}} ({{rightTotal}})</div>
-      <div class="table-wrap">
-        <table>
-          <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
-          <thead><tr><th class="col-graph"></th><th class="col-subject">Subject</th><th class="col-author">Author</th><th class="col-date">Date</th></tr></thead>
-          <tbody>{{{rightCommits}}}</tbody>
-        </table>
-      </div>
-    </section>
+    {{> partials/compareCommitTable side="right" total=rightTotal ref=rightRef rows=rightCommits}}
   </div>
 
-  <div id="commit-context-menu" class="context-menu" role="menu" aria-label="Commit context menu">
-    <button class="menu-item" data-action="copyRevisionNumber">Copy Revision Number</button>
-    <button class="menu-item" data-action="createPatch">Create Patch...</button>
-    <button class="menu-item" data-action="cherryPick">Cherry-Pick</button>
-    <div class="menu-separator"></div>
-    <button class="menu-item" data-action="checkoutRevision">Checkout Revision</button>
-    <button class="menu-item" data-action="showRepositoryAtRevision">Show Repository at Revision</button>
-    <button class="menu-item" data-action="compareWithLocal">Compare with Local</button>
-    <div class="menu-separator"></div>
-    <button class="menu-item" data-action="resetCurrentBranchToHere">Reset Current Branch to Here...</button>
-    <button class="menu-item" data-action="revertCommit">Revert Commit</button>
-    <button class="menu-item" disabled>Undo Commit...</button>
-    <div class="menu-separator"></div>
-    <button class="menu-item" disabled>Edit Commit Message...</button>
-    <button class="menu-item" disabled>Fixup...</button>
-    <button class="menu-item" disabled>Squash Into...</button>
-    <button class="menu-item" disabled>Drop Commit</button>
-    <button class="menu-item" data-action="interactiveRebaseFromHere">Interactively Rebase from Here...</button>
-    <button class="menu-item" disabled>Push All up to Here...</button>
-    <div class="menu-separator"></div>
-    <button class="menu-item" data-action="newBranch">New Branch...</button>
-    <button class="menu-item" data-action="newTag">New Tag...</button>
-    <div class="menu-separator"></div>
-    <button class="menu-item" disabled>Go to Child Commit</button>
-    <button class="menu-item" data-action="goToParentCommit">Go to Parent Commit</button>
-  </div>
+  {{> partials/compareContextMenu}}
 
   <script>
     const vscode = acquireVsCodeApi();
@@ -701,5 +559,4 @@
       closeAuthorDropdown();
     });
   </script>
-</body>
-</html>
+{{> partials/documentEnd}}

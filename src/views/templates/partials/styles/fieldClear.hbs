@@ -1,0 +1,31 @@
+    .input-shell {
+      position: relative;
+    }
+    .field-clear {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 14px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+    .input-shell:hover .field-clear,
+    .input-shell:focus-within .field-clear {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .field-clear:hover {
+      color: var(--fg);
+      background: color-mix(in srgb, var(--accent), transparent 88%);
+    }

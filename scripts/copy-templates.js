@@ -6,11 +6,21 @@ const sourceDir = path.join(root, 'src', 'views', 'templates');
 const targetDir = path.join(root, 'dist', 'views', 'templates');
 
 fs.rmSync(targetDir, { recursive: true, force: true });
-fs.mkdirSync(targetDir, { recursive: true });
+copyTemplates(sourceDir, targetDir);
 
-for (const entry of fs.readdirSync(sourceDir, { withFileTypes: true })) {
-  if (!entry.isFile() || !entry.name.endsWith('.hbs')) {
-    continue;
+function copyTemplates(source, target) {
+  fs.mkdirSync(target, { recursive: true });
+
+  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    const sourcePath = path.join(source, entry.name);
+    const targetPath = path.join(target, entry.name);
+    if (entry.isDirectory()) {
+      copyTemplates(sourcePath, targetPath);
+      continue;
+    }
+    if (!entry.isFile() || !entry.name.endsWith('.hbs')) {
+      continue;
+    }
+    fs.copyFileSync(sourcePath, targetPath);
   }
-  fs.copyFileSync(path.join(sourceDir, entry.name), path.join(targetDir, entry.name));
 }
