@@ -61,13 +61,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       getChildren: () => []
     };
     context.subscriptions.push(
-      vscode.window.createTreeView('intelliGit.branches', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.stashes', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.graph', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.commitView', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.worktrees', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.worktree', { treeDataProvider: emptyProvider }),
-      vscode.window.createTreeView('intelliGit.submodules', { treeDataProvider: emptyProvider })
+      ...compactTreeViews([
+        createTreeViewSafely('intelliGit.branches', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('intelliGit.stashes', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('intelliGit.graph', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('intelliGit.commitView', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('intelliGit.worktrees', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('intelliGit.submodules', { treeDataProvider: emptyProvider }, logger)
+      ])
     );
     return;
   }
@@ -81,38 +82,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const worktreeProvider = new WorktreeTreeProvider(stateStore);
   const submoduleProvider = new SubmoduleTreeProvider(stateStore);
 
-  const branchView = vscode.window.createTreeView('intelliGit.branches', {
+  const branchView = createTreeViewSafely('intelliGit.branches', {
     treeDataProvider: branchProvider,
     showCollapseAll: true
-  });
-  const stashView = vscode.window.createTreeView('intelliGit.stashes', {
+  }, logger);
+  const stashView = createTreeViewSafely('intelliGit.stashes', {
     treeDataProvider: stashProvider,
     showCollapseAll: true
-  });
-  const graphView = vscode.window.createTreeView('intelliGit.graph', {
+  }, logger);
+  const graphView = createTreeViewSafely('intelliGit.graph', {
     treeDataProvider: graphProvider,
     showCollapseAll: true,
     canSelectMany: true
-  });
-  const worktreeView = vscode.window.createTreeView('intelliGit.worktrees', {
+  }, logger);
+  const worktreeView = createTreeViewSafely('intelliGit.worktrees', {
     treeDataProvider: worktreeProvider,
     showCollapseAll: true
-  });
-  const worktreeAliasView = vscode.window.createTreeView('intelliGit.worktree', {
-    treeDataProvider: worktreeProvider,
-    showCollapseAll: true
-  });
-  const submoduleView = vscode.window.createTreeView('intelliGit.submodules', {
+  }, logger);
+  const submoduleView = createTreeViewSafely('intelliGit.submodules', {
     treeDataProvider: submoduleProvider,
     showCollapseAll: true
-  });
+  }, logger);
   const commitFilesProvider = new CommitFilesTreeProvider(gitService);
   const commitDecorationProvider = new CommitFileDecorationProvider(commitFilesProvider);
-  const commitView = vscode.window.createTreeView('intelliGit.commitView', {
+  const commitView = createTreeViewSafely('intelliGit.commitView', {
     treeDataProvider: commitFilesProvider,
     showCollapseAll: true,
     canSelectMany: true
-  });
+  }, logger);
 
   const virtualProvider = new VirtualGitContentProvider();
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('intelligit', virtualProvider));
@@ -122,16 +119,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const gutterController = new GutterDecorationController(gitService, stateStore, logger);
 
   context.subscriptions.push(
-    gutterController,
-    branchView,
-    stashView,
-    graphView,
-    commitView,
-    commitDecorationProvider,
-    worktreeView,
-    worktreeAliasView,
-    submoduleView,
-    vscode.window.registerFileDecorationProvider(commitDecorationProvider)
+    ...[
+      gutterController,
+      branchView,
+      stashView,
+      graphView,
+      commitView,
+      commitDecorationProvider,
+      worktreeView,
+      submoduleView,
+      vscode.window.registerFileDecorationProvider(commitDecorationProvider)
+    ].filter((item): item is vscode.Disposable => Boolean(item))
   );
   const commandController = new CommandController(
     gitService,
@@ -167,6 +165,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
 export function deactivate(): void {
   // no-op
+}
+
+function createTreeViewSafely<T>(
+  id: string,
+  options: vscode.TreeViewOptions<T>,
+  logger: Logger
+): vscode.TreeView<T> | undefined {
+  try {
+    return vscode.window.createTreeView(id, options);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/No view is registered with id/i.test(message)) {
+      logger.warn(`Skipping tree view registration for ${id}: ${message}. Reload the Extension Development Host if package.json was just changed.`);
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function compactTreeViews<T>(views: Array<vscode.TreeView<T> | undefined>): vscode.TreeView<T>[] {
+  return views.filter((view): view is vscode.TreeView<T> => Boolean(view));
 }
 
 async function registerBranchActionHubInGitCheckout(

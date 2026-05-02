@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "IntelliGit Client",
   "description": "IntelliJ-like Git client for VS Code with branch tree, stashes, graph, merge/diff/compare workflows.",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "publisher": "thanhtunguet",
   "icon": "media/intelligit.png",
   "main": "./dist/extension.js",
@@ -24,7 +24,6 @@
     "onView:intelliGit.graph",
     "onView:intelliGit.commitView",
     "onView:intelliGit.worktrees",
-    "onView:intelliGit.worktree",
     "onView:intelliGit.submodules",
     "onCommand:intelliGit.quickActions"
   ],
@@ -62,12 +61,6 @@
           "id": "intelliGit.worktrees",
           "name": "Worktrees",
           "visibility": "visible",
-          "icon": "media/intelligit.svg"
-        },
-        {
-          "id": "intelliGit.worktree",
-          "name": "Worktree",
-          "visibility": "collapsed",
           "icon": "media/intelligit.svg"
         },
         {
