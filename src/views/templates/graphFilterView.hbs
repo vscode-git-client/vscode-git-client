@@ -150,38 +150,101 @@
       border-top: 0;
     }
     .commit-files-tree {
-      padding: 4px 0 6px;
-      font-size: 11px;
+      padding: 2px 0 4px;
+      font-size: 12px;
     }
     .commit-file-entry {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       width: 100%;
+      min-height: 22px;
       border: 0;
       background: transparent;
       color: var(--fg);
       font: inherit;
       text-align: left;
-      padding: 3px 8px;
+      padding: 1px 8px;
       cursor: pointer;
     }
     .commit-file-entry:hover {
       background: color-mix(in srgb, var(--accent), transparent 90%);
     }
     .commit-file-entry.folder {
-      color: var(--muted);
+      color: var(--fg);
       cursor: default;
-      font-weight: 600;
     }
     .commit-file-entry.folder:hover {
       background: transparent;
     }
+    .commit-file-twistie {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      position: relative;
+    }
+    .commit-file-twistie.expanded::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 4px;
+      width: 6px;
+      height: 6px;
+      border-right: 1.5px solid var(--muted);
+      border-bottom: 1.5px solid var(--muted);
+      transform: rotate(45deg);
+    }
     .commit-file-icon {
       flex: 0 0 auto;
-      width: 14px;
-      text-align: center;
+      width: 16px;
+      height: 16px;
+      position: relative;
       color: var(--muted);
+    }
+    .commit-file-icon.folder-icon::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 6px;
+      width: 12px;
+      height: 8px;
+      border: 1px solid currentColor;
+      border-radius: 2px;
+      background: color-mix(in srgb, currentColor, transparent 88%);
+    }
+    .commit-file-icon.folder-icon::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 4px;
+      width: 6px;
+      height: 3px;
+      border: 1px solid currentColor;
+      border-bottom: 0;
+      border-radius: 2px 2px 0 0;
+    }
+    .commit-file-icon.file-icon::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 2px;
+      width: 9px;
+      height: 12px;
+      border: 1px solid currentColor;
+      border-radius: 2px;
+      background: color-mix(in srgb, currentColor, transparent 92%);
+    }
+    .commit-file-icon.file-icon::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      top: 3px;
+      width: 4px;
+      height: 4px;
+      border-left: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+      background: var(--bg);
+      transform: skew(-12deg);
     }
     .commit-file-name {
       min-width: 0;
@@ -398,24 +461,24 @@
       const folders = Array.from(node.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
       const files = node.files.sort((a, b) => a.path.localeCompare(b.path));
       return folders.map((folder) => {
-        const row = '<div class="commit-file-entry folder" style="padding-left: ' + (8 + depth * 16) + 'px"><span class="commit-file-icon">▸</span><span class="commit-file-name">' + escapeHtml(folder.name) + '</span></div>';
+        const row = '<div class="commit-file-entry folder" style="padding-left: ' + (8 + depth * 18) + 'px"><span class="commit-file-twistie expanded" aria-hidden="true"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">' + escapeHtml(folder.name) + '</span></div>';
         return row + renderFileTreeNode(folder, depth + 1);
       }).join('') + files.map((file) => {
         const safePath = escapeHtml(file.path);
-        return '<button type="button" class="commit-file-entry file" data-file-path="' + safePath + '" title="' + safePath + '" style="padding-left: ' + (8 + depth * 16) + 'px"><span class="commit-file-icon">•</span><span class="commit-file-name">' + escapeHtml(file.name) + '</span></button>';
+        return '<button type="button" class="commit-file-entry file" data-file-path="' + safePath + '" title="' + safePath + '" style="padding-left: ' + (8 + depth * 18) + 'px"><span class="commit-file-twistie" aria-hidden="true"></span><span class="commit-file-icon file-icon" aria-hidden="true"></span><span class="commit-file-name">' + escapeHtml(file.name) + '</span></button>';
       }).join('');
     }
 
     function renderCommitFiles(sha) {
       if (loadingCommitFiles.has(sha)) {
-        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-icon"></span><span class="commit-file-name">Loading changed files...</span></div></div>';
+        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-twistie"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">Loading changed files...</span></div></div>';
       }
       const files = commitFilesBySha.get(sha);
       if (!files) {
         return '';
       }
       if (files.length === 0) {
-        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-icon"></span><span class="commit-file-name">No changed files</span></div></div>';
+        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-twistie"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">No changed files</span></div></div>';
       }
       return '<div class="commit-files-tree">' + renderFileTreeNode(buildFileTree(files), 0) + '</div>';
     }
