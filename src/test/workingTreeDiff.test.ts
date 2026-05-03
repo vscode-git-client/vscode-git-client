@@ -34,4 +34,13 @@ describe('parseNameStatusZ', () => {
       { status: 'R', path: 'src/new.ts' }
     ]);
   });
+
+  it('skips malformed rename and copy entries without dropping later entries', () => {
+    const stdout = 'R100\0src/old.ts\0M\0src/a.ts\0C075\0src/old-copy.ts\0D\0src/b.ts\0';
+
+    assert.deepStrictEqual(parseNameStatusZ(stdout), [
+      { status: 'M', path: 'src/a.ts' },
+      { status: 'D', path: 'src/b.ts' }
+    ]);
+  });
 });

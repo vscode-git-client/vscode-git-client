@@ -35,23 +35,26 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
 
   const tokens = stdout.split('\0').filter((token) => token.length > 0);
   const entries: NameStatusEntry[] = [];
+  const isStatusToken = (token: string | undefined): boolean => !!token && /^[A-Z?!][0-9]{0,3}$/.test(token);
 
   for (let index = 0; index < tokens.length; ) {
     const statusToken = tokens[index++];
-    const status = statusToken[0]?.toUpperCase();
-
-    if (!status) {
-      continue;
-    }
+    const status = statusToken[0].toUpperCase();
 
     if (status === 'R' || status === 'C') {
-      const oldPath = tokens[index++];
-      const newPath = tokens[index++];
+      const oldPath = tokens[index];
+      const newPath = tokens[index + 1];
 
       if (!oldPath || !newPath) {
         break;
       }
 
+      if (isStatusToken(newPath)) {
+        index += 1;
+        continue;
+      }
+
+      index += 2;
       entries.push({ status, path: newPath });
       continue;
     }
