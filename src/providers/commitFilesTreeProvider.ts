@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { GitService } from '../services/gitService';
-import { CommitFileChange, WorkingTreeChange } from '../types';
+import { CommitFileChange, WorkingTreeFileChange } from '../types';
 
 export class CommitFileTreeItem extends vscode.TreeItem {
   constructor(
@@ -86,7 +86,7 @@ export class CommitFolderTreeItem extends vscode.TreeItem {
 }
 
 type CommitViewNode = CommitFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem;
-type TreeFileEntry = { path: string; status?: string };
+type TreeFileEntry = { path: string; status?: string; untracked?: boolean };
 export interface CommitActionContext {
   readonly sha: string;
   readonly subject: string;
@@ -97,7 +97,7 @@ export interface CommitActionContext {
 type ActiveTreeState =
   | { mode: 'commit'; sha: string; subject: string; files: CommitFileChange[]; canRevertSelected: boolean }
   | { mode: 'revision'; sha: string; files: TreeFileEntry[] }
-  | { mode: 'workingTreeCompare'; ref: string; refLabel: string; scopePath: string; files: WorkingTreeChange[] };
+  | { mode: 'workingTreeCompare'; ref: string; refLabel: string; scopePath: string; files: WorkingTreeFileChange[] };
 
 export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitViewNode> {
   private readonly emitter = new vscode.EventEmitter<void>();
@@ -139,7 +139,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         return buildWorkingTreeCompareTree(
           this.activeState.ref,
           this.activeState.refLabel,
-          element.children as WorkingTreeChange[],
+          element.children,
           element.folderPath,
           this.git.rootPath
         );
@@ -172,7 +172,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
-  showWorkingTreeComparison({
+  async showWorkingTreeComparison({
     ref,
     refLabel,
     scopePath,
@@ -181,14 +181,14 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     ref: string;
     refLabel: string;
     scopePath: string;
-    files: WorkingTreeChange[];
-  }): void {
+    files: WorkingTreeFileChange[];
+  }): Promise<void> {
     this.activeState = { mode: 'workingTreeCompare', ref, refLabel, scopePath, files };
     this.emitter.fire();
-    void vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
-    void vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
+    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
+    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
   async clear(): Promise<void> {
@@ -266,19 +266,16 @@ function buildRevisionTree(
 function buildWorkingTreeCompareTree(
   ref: string,
   refLabel: string,
-  files: WorkingTreeChange[],
+  files: TreeFileEntry[],
   basePath: string,
   workspaceRoot: string
 ): CommitViewNode[] {
-  const entries: TreeFileEntry[] = files.map((f) => ({ path: f.path, status: f.status }));
   return buildTree(
-    entries,
+    files,
     basePath,
     workspaceRoot,
-    (filePath, status) => {
-      const orig = files.find((f) => f.path === filePath);
-      const untracked = orig ? orig.status === '?' || orig.status === '??' : false;
-      return new WorkingTreeCompareFileTreeItem(ref, refLabel, filePath, status ?? '', untracked, workspaceRoot);
+    (filePath, status, untracked) => {
+      return new WorkingTreeCompareFileTreeItem(ref, refLabel, filePath, status ?? '', untracked ?? false, workspaceRoot);
     },
     (folderPath, children) =>
       new CommitFolderTreeItem(`commitView:workingTreeCompare:${ref}`, folderPath, children, workspaceRoot)
@@ -289,7 +286,7 @@ function buildTree(
   files: TreeFileEntry[],
   basePath: string,
   workspaceRoot: string,
-  toFileItem: (filePath: string, status?: string) => CommitFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem,
+  toFileItem: (filePath: string, status?: string, untracked?: boolean) => CommitFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem,
   toFolderItem: (folderPath: string, children: TreeFileEntry[]) => CommitFolderTreeItem
 ): CommitViewNode[] {
   const folders = new Map<string, TreeFileEntry[]>();
@@ -299,7 +296,7 @@ function buildTree(
     const relative = basePath ? file.path.slice(basePath.length + 1) : file.path;
     const slashIdx = relative.indexOf('/');
     if (slashIdx === -1) {
-      leaves.push(toFileItem(file.path, file.status));
+      leaves.push(toFileItem(file.path, file.status, file.untracked));
       continue;
     }
     const segment = relative.slice(0, slashIdx);
