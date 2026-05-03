@@ -1310,6 +1310,11 @@ export class CommandController {
         return;
       }
 
+      if (!(await this.git.isRepo())) {
+        void vscode.window.showErrorMessage('Not inside a Git repository');
+        return;
+      }
+
       const gitRoot = await this.git.getGitRoot();
       const normalizedTarget = uri.fsPath.replace(/[\\/]+$/, '');
       const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
@@ -1321,7 +1326,13 @@ export class CommandController {
         return;
       }
 
-      const stat = await vscode.workspace.fs.stat(uri);
+      let stat: vscode.FileStat;
+      try {
+        stat = await vscode.workspace.fs.stat(uri);
+      } catch {
+        void vscode.window.showErrorMessage('Selected path is no longer available.');
+        return;
+      }
       const isDirectory = (stat.type & vscode.FileType.Directory) !== 0;
 
       const selection = await pickRevisionToCompare(this.git, this.state.branches, this.state.tags);
