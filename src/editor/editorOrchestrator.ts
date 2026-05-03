@@ -131,6 +131,79 @@ export class EditorOrchestrator {
     });
   }
 
+  async openWorkingTreeFileDiff(
+    relativePath: string,
+    ref: string,
+    refLabel: string,
+    opts: { preview: boolean; status?: string }
+  ): Promise<void> {
+    const left = await this.createVirtualUri(ref, relativePath);
+
+    let right: vscode.Uri;
+    const gitRoot = await this.git.getGitRoot();
+    const onDiskUri = vscode.Uri.file(path.join(gitRoot, relativePath));
+    const fileMissing = opts.status === 'D' || !(await this.fileExists(onDiskUri));
+    if (fileMissing) {
+      const normalized = relativePath.replaceAll(path.sep, '/');
+      right = vscode.Uri.parse(`intelligit:${encodeURIComponent('WORKTREE')}/${normalized}`);
+      this.contentProvider.setContent(right, '');
+    } else {
+      right = onDiskUri;
+    }
+
+    const title = `${refLabel} ↔ working tree · ${relativePath}`;
+    await vscode.commands.executeCommand('vscode.diff', left, right, title, {
+      preview: opts.preview,
+      preserveFocus: false
+    });
+  }
+
+  async openCompareWithRevisionForFile(
+    relativePath: string,
+    ref: string,
+    refLabel: string
+  ): Promise<void> {
+    await this.openWorkingTreeFileDiff(relativePath, ref, refLabel, { preview: false });
+  }
+
+  async openCompareWithRevisionForFolder(
+    folderRelPath: string,
+    ref: string,
+    refLabel: string
+  ): Promise<void> {
+    const scopeForGit = folderRelPath || undefined;
+    const scopeForView = folderRelPath || '.';
+    const files = await this.git.getFilesChangedBetweenWorkingTreeAndRef(ref, scopeForGit);
+    if (files.length === 0) {
+      void vscode.window.showInformationMessage(
+        `No differences in ${scopeForView} against ${refLabel}.`
+      );
+      return;
+    }
+
+    await this.commitFilesView.showWorkingTreeComparison({
+      ref,
+      refLabel,
+      scopePath: scopeForView,
+      files
+    });
+
+    const first = files[0];
+    await this.openWorkingTreeFileDiff(first.path, ref, refLabel, {
+      preview: true,
+      status: first.status
+    });
+  }
+
+  private async fileExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+      await vscode.workspace.fs.stat(uri);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async openFileAtRevision(ref: string, filePath: string): Promise<void> {
     const uri = await this.createVirtualUri(ref, filePath);
     const document = await vscode.workspace.openTextDocument(uri);
