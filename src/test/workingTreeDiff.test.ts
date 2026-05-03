@@ -5,102 +5,53 @@ import * as os from 'os';
 import * as path from 'path';
 import { describe, it, before, after } from 'node:test';
 import { parseNameStatusZ } from '../services/gitParsing';
+import { GitService } from '../services/gitService';
 
 // ---------------------------------------------------------------------------
-// Helpers for integration-style fixture repo
+// Minimal stub implementations for GitService constructor dependencies.
+// GitService requires: RepositoryContext, Logger, vscode.WorkspaceConfiguration.
+// We satisfy these via duck-typed plain objects — no real vscode APIs needed
+// for getFilesChangedBetweenWorkingTreeAndRef and resolveRevisionToCommit.
 // ---------------------------------------------------------------------------
 
-function spawnSync(args: string[], cwd: string): string {
+function makeLogger() {
+  return {
+    info: (_msg: string) => { /* noop */ },
+    warn: (_msg: string) => { /* noop */ },
+    error: (_msg: string, _err?: unknown) => { /* noop */ },
+    show: () => { /* noop */ },
+    dispose: () => { /* noop */ }
+  };
+}
+
+function makeConfig() {
+  return {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    get: <T>(key: string, defaultValue: T): T => {
+      if (key === 'gitPath') { return 'git' as unknown as T; }
+      if (key === 'commandTimeoutMs') { return 15000 as unknown as T; }
+      return defaultValue;
+    }
+  };
+}
+
+function makeRepositoryContext(repoRoot: string) {
+  return {
+    rootPath: repoRoot,
+    rootUri: { fsPath: repoRoot, toString: () => repoRoot }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers for fixture repo setup
+// ---------------------------------------------------------------------------
+
+function runGit(args: string[], cwd: string): string {
   const result = cp.spawnSync('git', args, { cwd, encoding: 'utf8' });
   if (result.status !== 0) {
     throw new Error(`git ${args.join(' ')} failed: ${result.stderr}`);
   }
   return result.stdout;
-}
-
-function runGit(args: string[], cwd: string): string {
-  return spawnSync(args, cwd);
-}
-
-/**
- * Minimal stub that delegates runGit to the fixture repo.
- * We only expose the two new methods under test so that the tests
- * stay self-contained without needing vscode at runtime.
- */
-function makeService(repoRoot: string) {
-  async function execGit(args: string[]): Promise<{ stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-      const child = cp.spawn('git', args, { cwd: repoRoot });
-      let stdout = '';
-      let stderr = '';
-      child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-      child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-      child.on('error', reject);
-      child.on('close', (code: number | null) => {
-        if (code === 0) {
-          resolve({ stdout, stderr });
-        } else {
-          reject(new Error(stderr || `exit ${code}`));
-        }
-      });
-    });
-  }
-
-  async function getFilesChangedBetweenWorkingTreeAndRef(
-    ref: string,
-    scopePath?: string
-  ): Promise<Array<{ status: string; path: string; untracked: boolean }>> {
-    const scopeArgs = scopePath ? ['--', scopePath] : [];
-
-    const trackedResult = await execGit(['diff', '--name-status', '-z', ref, ...scopeArgs]);
-    const trackedEntries = parseNameStatusZ(trackedResult.stdout).map(
-      (entry) => ({ status: entry.status, path: entry.path, untracked: false })
-    );
-
-    const untrackedResult = await execGit([
-      'ls-files', '--others', '--exclude-standard', '-z', ...scopeArgs
-    ]);
-    const untrackedEntries = untrackedResult.stdout
-      .split('\0')
-      .filter((p) => p.length > 0)
-      .map((p) => ({ status: 'A', path: p, untracked: true }));
-
-    const trackedPaths = new Set(trackedEntries.map((e) => e.path));
-    const merged = [
-      ...trackedEntries,
-      ...untrackedEntries.filter((e) => !trackedPaths.has(e.path))
-    ];
-    merged.sort((a, b) => a.path.localeCompare(b.path));
-    return merged;
-  }
-
-  async function resolveRevisionToCommit(
-    input: string
-  ): Promise<{ sha: string; subject: string; author: string; date: string } | undefined> {
-    try {
-      const verifyResult = await execGit(['rev-parse', '--verify', `${input}^{commit}`]);
-      const sha = verifyResult.stdout.trim();
-      if (!sha) {
-        return undefined;
-      }
-      const logResult = await execGit([
-        'log', '-1', '--format=%H%x00%s%x00%an%x00%ad', '--date=iso-strict', sha
-      ]);
-      const parts = logResult.stdout.trim().split('\0');
-      if (parts.length < 4) {
-        return undefined;
-      }
-      const [resolvedSha, subject, author, date] = parts;
-      if (!resolvedSha || !subject || !author || !date) {
-        return undefined;
-      }
-      return { sha: resolvedSha, subject, author, date };
-    } catch {
-      return undefined;
-    }
-  }
-
-  return { getFilesChangedBetweenWorkingTreeAndRef, resolveRevisionToCommit };
 }
 
 // ---------------------------------------------------------------------------
@@ -140,24 +91,31 @@ describe('parseNameStatusZ', () => {
     ]);
   });
 
-  it('skips malformed rename and copy entries without dropping later entries', () => {
-    const stdout = 'R100\0src/old.ts\0M\0src/a.ts\0C075\0src/old-copy.ts\0D\0src/b.ts\0';
-
+  it('correctly handles a single uppercase-letter filename after R/C without false-positiving', () => {
+    // A file genuinely named "A" is the new-path of a rename — must be emitted, not skipped.
+    const stdout = 'R100\0src/old.ts\0A\0';
     assert.deepStrictEqual(parseNameStatusZ(stdout), [
-      { status: 'M', path: 'src/a.ts' },
-      { status: 'D', path: 'src/b.ts' }
+      { status: 'R', path: 'A' }
+    ]);
+  });
+
+  it('stops safely when R/C entry is missing its new-path token (truncated input)', () => {
+    // Only oldPath follows R100; newPath is absent — stop without emitting the partial entry.
+    const stdout = 'M\0src/a.ts\0R100\0src/old.ts';
+    assert.deepStrictEqual(parseNameStatusZ(stdout), [
+      { status: 'M', path: 'src/a.ts' }
     ]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Integration-style tests using a fixture Git repo
+// Integration-style tests using a fixture Git repo + real GitService instance
 // ---------------------------------------------------------------------------
 
 describe('GitService working-tree diff helpers (fixture repo)', () => {
   let repoDir: string;
   let baseCommitSha: string;
-  let svc: ReturnType<typeof makeService>;
+  let git: GitService;
 
   before(() => {
     // Create a temp git repo with a known state
@@ -176,17 +134,27 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     fs.writeFileSync(path.join(repoDir, 'lib', 'util.ts'), 'export const y = 2;\n');
     fs.writeFileSync(path.join(repoDir, 'root.txt'), 'root content\n');
 
+    // Add a file that will later be deleted to exercise the D status path
+    fs.writeFileSync(path.join(repoDir, 'src', 'to-delete.ts'), 'export const del = 0;\n');
+
     runGit(['add', '.'], repoDir);
     runGit(['commit', '-m', 'Initial commit'], repoDir);
     baseCommitSha = runGit(['rev-parse', 'HEAD'], repoDir).trim();
 
-    // Modify a tracked file and create an untracked file
+    // Modify a tracked file, create untracked files, and delete a tracked file
     fs.writeFileSync(path.join(repoDir, 'src', 'index.ts'), 'export const x = 42;\n');
     fs.writeFileSync(path.join(repoDir, 'src', 'new-untracked.ts'), 'export const z = 3;\n');
     // Untracked in lib subfolder
     fs.writeFileSync(path.join(repoDir, 'lib', 'extra.ts'), 'export const w = 4;\n');
+    // Delete a tracked file (without staging) — git diff will report it as D
+    fs.unlinkSync(path.join(repoDir, 'src', 'to-delete.ts'));
 
-    svc = makeService(repoDir);
+    // Instantiate the real GitService with minimal stubs
+    git = new GitService(
+      makeRepositoryContext(repoDir) as never,
+      makeLogger() as never,
+      makeConfig() as never
+    );
   });
 
   after(() => {
@@ -196,9 +164,9 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     } catch { /* ignore cleanup errors */ }
   });
 
-  // (a) tracked modified + untracked file are both returned
+  // (a) tracked modified + untracked files are both returned
   it('returns tracked modified files and untracked files', async () => {
-    const changes = await svc.getFilesChangedBetweenWorkingTreeAndRef(baseCommitSha);
+    const changes = await git.getFilesChangedBetweenWorkingTreeAndRef(baseCommitSha);
 
     const paths = changes.map((c) => c.path);
     // src/index.ts is tracked-modified
@@ -216,9 +184,19 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     assert.strictEqual(newFile?.status, 'A');
   });
 
+  // (a-new) deleted tracked file appears with status D and untracked:false
+  it('reports a deleted tracked file with status D and untracked:false', async () => {
+    const changes = await git.getFilesChangedBetweenWorkingTreeAndRef(baseCommitSha);
+
+    const deleted = changes.find((c) => c.path === 'src/to-delete.ts');
+    assert.ok(deleted !== undefined, 'expected src/to-delete.ts to appear in results');
+    assert.strictEqual(deleted.status, 'D', `expected status D, got ${deleted?.status}`);
+    assert.strictEqual(deleted.untracked, false);
+  });
+
   // (b) scopePath restricts results to subfolder
   it('restricts results to a given scopePath', async () => {
-    const changes = await svc.getFilesChangedBetweenWorkingTreeAndRef(baseCommitSha, 'src');
+    const changes = await git.getFilesChangedBetweenWorkingTreeAndRef(baseCommitSha, 'src');
 
     const paths = changes.map((c) => c.path);
     // Only src/ entries
@@ -234,7 +212,7 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
 
   // (c) resolveRevisionToCommit with valid sha returns metadata
   it('resolves a valid commit sha to metadata', async () => {
-    const meta = await svc.resolveRevisionToCommit(baseCommitSha);
+    const meta = await git.resolveRevisionToCommit(baseCommitSha);
     assert.ok(meta !== undefined, 'expected metadata for valid sha');
     assert.strictEqual(meta.sha, baseCommitSha);
     assert.ok(typeof meta.subject === 'string' && meta.subject.length > 0, 'subject should be non-empty');
@@ -247,19 +225,19 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
   // (c continued) short sha prefix also resolves
   it('resolves a short sha prefix', async () => {
     const shortSha = baseCommitSha.slice(0, 7);
-    const meta = await svc.resolveRevisionToCommit(shortSha);
+    const meta = await git.resolveRevisionToCommit(shortSha);
     assert.ok(meta !== undefined, 'expected metadata for short sha');
     assert.strictEqual(meta.sha, baseCommitSha);
   });
 
   // (d) resolveRevisionToCommit with invalid ref returns undefined
   it('returns undefined for an invalid ref', async () => {
-    const meta = await svc.resolveRevisionToCommit('refs/heads/nonexistent-branch-xyz-123');
+    const meta = await git.resolveRevisionToCommit('refs/heads/nonexistent-branch-xyz-123');
     assert.strictEqual(meta, undefined);
   });
 
   it('returns undefined for a nonsense string', async () => {
-    const meta = await svc.resolveRevisionToCommit('not-a-real-ref-at-all-9999');
+    const meta = await git.resolveRevisionToCommit('not-a-real-ref-at-all-9999');
     assert.strictEqual(meta, undefined);
   });
 });
