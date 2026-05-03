@@ -5,11 +5,34 @@ import { BranchRef } from '../types';
 export interface BranchSearchHandlers {
   checkout(name: string): Promise<void>;
   openActions(name: string): Promise<void>;
+  runCommand(command: BranchSearchCommand, name: string): Promise<void>;
 }
+
+type BranchSearchCommand =
+  | 'intelliGit.branch.checkout'
+  | 'intelliGit.branch.compareWithCurrent'
+  | 'intelliGit.branch.rename'
+  | 'intelliGit.branch.delete'
+  | 'intelliGit.branch.track'
+  | 'intelliGit.branch.untrack'
+  | 'intelliGit.branch.mergeIntoCurrent'
+  | 'intelliGit.branch.rebaseOnto';
+
+const branchSearchCommands = new Set<string>([
+  'intelliGit.branch.checkout',
+  'intelliGit.branch.compareWithCurrent',
+  'intelliGit.branch.rename',
+  'intelliGit.branch.delete',
+  'intelliGit.branch.track',
+  'intelliGit.branch.untrack',
+  'intelliGit.branch.mergeIntoCurrent',
+  'intelliGit.branch.rebaseOnto'
+]);
 
 type IncomingMessage =
   | { type: 'checkout'; name: string }
   | { type: 'actions'; name: string }
+  | { type: 'branchCommand'; command: string; name: string }
   | { type: 'close' };
 
 export class BranchSearchView {
@@ -94,6 +117,11 @@ export class BranchSearchView {
       case 'actions':
         await this.handlers.openActions(message.name);
         return;
+      case 'branchCommand':
+        if (isBranchSearchCommand(message.command)) {
+          await this.handlers.runCommand(message.command, message.name);
+        }
+        return;
       case 'close':
         this.panel.dispose();
         return;
@@ -107,4 +135,8 @@ export class BranchSearchView {
       BranchSearchView.current = undefined;
     }
   }
+}
+
+function isBranchSearchCommand(command: string): command is BranchSearchCommand {
+  return branchSearchCommands.has(command);
 }

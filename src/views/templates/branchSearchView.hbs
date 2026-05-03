@@ -3,6 +3,9 @@
     :root {
       --row-hover: color-mix(in srgb, var(--accent), transparent 85%);
       --row-active: color-mix(in srgb, var(--accent), transparent 70%);
+      --menu-bg: color-mix(in srgb, var(--bg), black 8%);
+      --menu-hover: color-mix(in srgb, var(--accent), transparent 75%);
+      --menu-separator: color-mix(in srgb, var(--border), transparent 25%);
     }
     {{> partials/styles/bodyBase background="var(--bg)" padding="16px 20px" gap="12px"}}
     .header {
@@ -133,6 +136,41 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .context-menu {
+      position: fixed;
+      z-index: 1000;
+      min-width: 240px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      background: var(--menu-bg);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+      display: none;
+      backdrop-filter: blur(12px);
+    }
+    .context-menu.visible {
+      display: block;
+    }
+    .menu-item {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--fg);
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .menu-item:hover {
+      background: var(--menu-hover);
+    }
+    .menu-separator {
+      height: 1px;
+      margin: 6px 2px;
+      background: var(--menu-separator);
+      border: 0;
+    }
   </style>
 </head>
 <body>
@@ -145,16 +183,29 @@
     </div>
   </div>
   <div id="list" class="list"></div>
+  <div id="branch-context-menu" class="context-menu" role="menu" aria-label="Branch context menu">
+    <button class="menu-item" data-command="intelliGit.branch.checkout">Checkout Branch</button>
+    <button class="menu-item" data-command="intelliGit.branch.compareWithCurrent">Compare With Current Branch</button>
+    <button class="menu-item" data-command="intelliGit.branch.rename">Rename Branch</button>
+    <button class="menu-item" data-command="intelliGit.branch.delete">Delete Branch</button>
+    <div class="menu-separator"></div>
+    <button class="menu-item" data-command="intelliGit.branch.track">Track Remote Branch</button>
+    <button class="menu-item" data-command="intelliGit.branch.untrack">Untrack Branch</button>
+    <button class="menu-item" data-command="intelliGit.branch.mergeIntoCurrent">Merge Into Current</button>
+    <button class="menu-item" data-command="intelliGit.branch.rebaseOnto">Rebase Current Onto Branch</button>
+  </div>
 
   <script>
     const vscode = acquireVsCodeApi();
     const searchInput = document.getElementById('search');
     const listEl = document.getElementById('list');
     const countEl = document.getElementById('count');
+    const menu = document.getElementById('branch-context-menu');
 
     let branches = [];
     let filtered = [];
     let focusedIndex = 0;
+    let selectedBranchName = null;
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -290,11 +341,39 @@
       if (row) row.scrollIntoView({ block: 'nearest' });
     }
 
-    searchInput.addEventListener('input', applyFilter);
+    function closeMenu() {
+      menu.classList.remove('visible');
+      selectedBranchName = null;
+    }
+
+    function openMenu(x, y, name) {
+      selectedBranchName = name;
+      menu.style.left = '0px';
+      menu.style.top = '0px';
+      menu.classList.add('visible');
+
+      const menuRect = menu.getBoundingClientRect();
+      const maxX = Math.max(8, window.innerWidth - menuRect.width - 8);
+      const maxY = Math.max(8, window.innerHeight - menuRect.height - 8);
+      const targetX = Math.max(8, Math.min(x, maxX));
+      const targetY = Math.max(8, Math.min(y, maxY));
+
+      menu.style.left = targetX + 'px';
+      menu.style.top = targetY + 'px';
+    }
+
+    searchInput.addEventListener('input', () => {
+      closeMenu();
+      applyFilter();
+    });
 
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        if (menu.classList.contains('visible')) {
+          closeMenu();
+          return;
+        }
         vscode.postMessage({ type: 'close' });
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -310,6 +389,47 @@
           vscode.postMessage({ type: 'checkout', name: row.dataset.name });
         }
       }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (menu.classList.contains('visible') && !menu.contains(event.target)) {
+        closeMenu();
+      }
+    });
+
+    document.addEventListener('contextmenu', (event) => {
+      const row = event.target && event.target.closest ? event.target.closest('.row') : null;
+      if (!row) {
+        closeMenu();
+        return;
+      }
+
+      event.preventDefault();
+      const name = row.dataset.name;
+      if (!name) {
+        return;
+      }
+
+      const idx = Number(row.dataset.index);
+      if (Number.isFinite(idx)) {
+        focusRow(idx);
+      }
+      openMenu(event.clientX, event.clientY, name);
+    });
+
+    menu.addEventListener('click', (event) => {
+      const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-command]') : null;
+      if (!target || !selectedBranchName) {
+        return;
+      }
+
+      const command = target.getAttribute('data-command');
+      if (!command) {
+        return;
+      }
+
+      vscode.postMessage({ type: 'branchCommand', command, name: selectedBranchName });
+      closeMenu();
     });
 
     listEl.addEventListener('click', (e) => {

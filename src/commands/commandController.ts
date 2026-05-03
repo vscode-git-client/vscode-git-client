@@ -77,6 +77,20 @@ export class CommandController {
 
       return undefined;
     };
+    const toBranchName = (value: unknown): string | undefined => {
+      const item = asBranchItem(value);
+      if (item) {
+        return item.branch.name;
+      }
+      if (typeof value !== 'string') {
+        return undefined;
+      }
+      const raw = value.trim();
+      if (!raw) {
+        return undefined;
+      }
+      return this.resolveBranchNameForActionHub(raw) ?? raw;
+    };
     const toRepoFilePath = (value: unknown): string | undefined => {
       if (typeof value === 'string') {
         const trimmed = value.trim();
@@ -148,6 +162,9 @@ export class CommandController {
           },
           openActions: async (name: string) => {
             await vscode.commands.executeCommand('intelliGit.branch.actionHub', name);
+          },
+          runCommand: async (command, name) => {
+            await vscode.commands.executeCommand(command, name);
           }
         },
         () => this.state.branches,
@@ -156,8 +173,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.checkout', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const branchName = item?.branch.name ?? (await this.pickBranchName());
+      const branchName = toBranchName(arg) ?? (await this.pickBranchName());
       if (!branchName) {
         return;
       }
@@ -270,8 +286,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.rename', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const from = item?.branch.name ?? (await this.pickBranchName('Pick branch to rename'));
+      const from = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
       if (!from) {
         return;
       }
@@ -291,8 +306,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.delete', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const branch = item?.branch.name ?? (await this.pickBranchName('Pick branch to delete'));
+      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
       if (!branch) {
         return;
       }
@@ -311,8 +325,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.track', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const local = item?.branch.name ?? (await this.pickBranchName('Pick local branch to track'));
+      const local = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
       if (!local) {
         return;
       }
@@ -327,8 +340,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.untrack', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const branch = item?.branch.name ?? (await this.pickBranchName('Pick local branch to untrack'));
+      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
       if (!branch) {
         return;
       }
@@ -338,8 +350,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.mergeIntoCurrent', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const branch = item?.branch.name ?? (await this.pickBranchName('Pick branch to merge into current branch'));
+      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
       if (!branch) {
         return;
       }
@@ -358,8 +369,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.rebaseOnto', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
-      const onto = item?.branch.name ?? (await this.pickBranchName('Pick branch to rebase onto'));
+      const onto = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
       if (!onto) {
         return;
       }
@@ -406,9 +416,8 @@ export class CommandController {
     });
 
     register('intelliGit.branch.compareWithCurrent', async (arg?: unknown) => {
-      const item = asBranchItem(arg);
       const current = await this.git.getCurrentBranch();
-      const target = item?.branch.name ?? (await this.pickBranchName('Pick branch to compare with current'));
+      const target = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
       if (!target) {
         return;
       }
