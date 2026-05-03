@@ -16,9 +16,9 @@ import { GitService } from '../services/gitService';
 
 function makeLogger() {
   return {
-    info: (_msg: string) => { /* noop */ },
-    warn: (_msg: string) => { /* noop */ },
-    error: (_msg: string, _err?: unknown) => { /* noop */ },
+    info: () => { /* noop */ },
+    warn: () => { /* noop */ },
+    error: () => { /* noop */ },
     show: () => { /* noop */ },
     dispose: () => { /* noop */ }
   };
@@ -26,7 +26,6 @@ function makeLogger() {
 
 function makeConfig() {
   return {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     get: <T>(key: string, defaultValue: T): T => {
       if (key === 'gitPath') { return 'git' as unknown as T; }
       if (key === 'commandTimeoutMs') { return 15000 as unknown as T; }
