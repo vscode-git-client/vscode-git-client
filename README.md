@@ -1,27 +1,22 @@
 # IntelliGit Client (VS Code Extension)
 
-IntelliGit is an IntelliJ-like Git client extension for VS Code focused on core parity and your requested UI:
+IntelliGit is an IntelliJ-like Git client extension for VS Code focused on core parity. It adds a dedicated Activity Bar container with branch/graph/commit views, a Stashes panel in the SCM sidebar, a Repo Structure panel for worktrees and submodules, inline gutter change markers, commit message templates, and full merge/diff/compare workflows.
 
-- Left sidebar sections: `Changes`, `Branches`, `Stashes`, `Git Graph`
-- Main editor workflows: `3-way merge`, `side-by-side diff`, `branch comparison`
+**Panel layout:**
+- **IntelliGit** (Activity Bar): `Branches`, `Commit Details`, `Git Graph`
+- **Source Control** (SCM panel): `Stashes`
+- **Repo Structure** (bottom panel): `Worktrees`, `Submodules`
+- **Editor**: Gutter change markers, side-by-side diff, 3-way merge editor, branch comparison
 
 ## Implemented Features
 
-### Changes (Webview)
-- Working tree and index status grouped by state (modified, staged, untracked, conflicted)
-- File diff from change entry
-- Conflict resolution shortcuts:
-  - Accept Ours
-  - Accept Theirs
-  - Accept Both (open merge editor)
-- In-progress operation banner (merge / rebase / cherry-pick) with Continue, Skip, Abort actions
-- Stash selected changes
-
 ### Branches (Tree View)
-- Hierarchical branch tree grouped by prefix (`feature/*`, `release/*`, etc.)
+
+Hierarchical branch tree grouped by prefix (`feature/*`, `release/*`, etc.) plus a Recent group.
+
 - Local + remote branches
-- Current branch marker + upstream/ahead/behind info
-- Branch actions:
+- Current branch marker with upstream tracking, ahead/behind counts
+- Branch actions (right-click or Branch Action Hub):
   - Checkout
   - Create
   - Rename
@@ -31,111 +26,192 @@ IntelliGit is an IntelliJ-like Git client extension for VS Code focused on core 
   - Rebase current onto selected branch
   - Reset current branch to selected commit (`soft|mixed|hard`) with confirmation
   - Compare with current branch
-- Branch search/filter command
+  - Open branch commits in Git Graph
+- Branch search/filter command (toolbar)
+- **Branch Action Hub** — quick-access picker accessible from the SCM title bar and the built-in `git.branch` menu
 
-### Stashes (Tree View)
-- Stash list with message, author, timestamp, file count
-- Stash actions:
-  - Create stash (include untracked, keep index)
-  - Apply
-  - Pop
-  - Drop (guarded)
-  - Rename message
-  - Patch preview (diff document)
-  - Unshelve (apply stash to working tree without removing)
-  - Stash selected changes from Changes view
+#### Tags
+
+Tags appear in the Branches tree alongside branches. Tag actions:
+- Checkout (detached)
+- Checkout New Branch from tag
+- Copy Revision Number
+- View Repository At Revision
+- Compare With Current
+- Create Patch
+- Open Tag Commits in Git Graph
+
+### Stashes (Tree View — SCM panel)
+
+Stash list with message, author, timestamp, file count. Stash actions:
+- Create stash (include untracked, keep index)
+- Apply
+- Pop
+- Drop (guarded)
+- Rename message
+- Patch preview (diff document)
+- Unshelve (apply without removing from stash list)
+- Shelve a specific SCM resource directly from the Source Control file list
 
 ### Git Graph (Tree View)
-- Commit list with graph-like glyph, refs, metadata, author/date
-- Commit details view:
-  - Full message
-  - Parent SHAs
-  - Changed files
-  - Stats (files/insertions/deletions)
-- Commit actions:
-  - Checkout commit (detached, guarded)
-  - Create branch at commit
-  - Create tag at commit
-  - Cherry-pick commit
-  - Revert commit
-  - Cherry-pick range
-  - Compare commit with current branch
-  - Interactive rebase from selected commit
-  - Go to parent commit
-  - Create patch from commit
-  - Open file at revision
-  - Show repository at revision
-- Graph filters:
-  - branch/ref
-  - author
-  - message text
-  - since / until dates
+
+Commit list with graph-like glyph, refs, author, date, and message. Each commit is expandable to show its changed files.
+
+**Commit actions:**
+- Open Commit Details (loads the Commit Details sidebar view)
+- Checkout commit (detached, guarded)
+- Create branch at commit
+- Create tag at commit
+- Cherry-pick commit
+- Revert commit
+- Cherry-pick range
+- Compare commit with current branch
+- Interactive rebase from selected commit
+- Go to parent commit
+- Create patch from commit
+- Open file at revision
+- Show repository at revision
+
+**Graph filters (toolbar):**
+- branch/ref
+- author
+- message text
+- since / until dates
+
+### Commit Details (Tree View — sidebar)
+
+A dedicated sidebar view that appears when a commit is selected from Git Graph. Shows the full list of changed files for that commit.
+
+- Open file diff (commit vs parent) inline in the editor
+- Revert selected file changes back to the commit's parent
+- Cherry-pick selected file changes onto the current working tree
+
+### Worktrees (Tree View — Repo Structure panel)
+
+Worktrees are grouped into: **Current**, **Other Worktrees**, **Locked**, **Prunable / Stale**.
+
+- Open worktree in this window or a new window
+- Reveal in Finder / Explorer
+- Open Terminal in worktree directory
+- Add worktree from an existing branch
+- Add worktree with a new branch
+- Add detached worktree
+- Lock / Unlock
+- Remove / Force Remove (with confirmation)
+- Preview prunable worktrees
+- Prune stale worktrees
+
+### Submodules (Tree View — Repo Structure panel)
+
+Submodules are grouped into: **Needs Attention**, **Clean**, **Uninitialized**, **Nested**.
+
+- Init submodule / Init all submodules
+- Update submodule / Update all / Update recursive
+- Sync submodule URL / Sync all
+- Open submodule in this window or a new window
+- Checkout recorded commit (when pointer is out of sync)
+- Pull tracked branch
+- Show pointer diff
+- Stage pointer change
+- Deinit submodule
+
+### Gutter Change Markers
+
+Inline gutter decorations show lines added, modified, or deleted relative to HEAD, updated as you type (debounced). Controlled by the `intelliGit.gutterMarkers.enabled` setting.
+
+### SCM Integration
+
+IntelliGit integrates with VS Code's native Source Control panel:
+
+- **Commit message templates** — pick a template from a configurable list; placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}`. Templates are defined in `intelliGit.commitMessageTemplates`.
+- **AI-generated commit messages** — generates a commit message from staged diff; timeout is configurable via `intelliGit.aiGenerateTimeoutMs`.
+- **Amend from SCM input** — amend the last commit with the text currently in the SCM input box.
+- **Shelve resource** — right-click any unstaged file in Source Control to create a stash from that single file.
+- Commit shortcut: `Ctrl+Enter` / `Cmd+Enter`
 
 ### Main Editor Workflows
-- 3-way merge: integrates with VS Code merge editor
-  - Open conflicted file in merge editor
-  - Next/previous conflict commands
-  - Finalize guard: blocks if unresolved conflicts remain
-- Side-by-side diff entry points:
-  - Working tree vs HEAD
-  - Index vs HEAD
-  - Commit vs parent
-  - Any two refs for a file
-- Branch comparison tab:
-  - Dedicated webview for `A..B`, `B..A`, changed files
-  - Drill down into file-level diff
-  - Recent compare pairs persisted in workspace state
-- Shared commit context menu for Filter Graph and Branch Comparison. See `docs/context-menus.md`.
+
+**3-way merge:**
+- Open conflicted file in VS Code's built-in merge editor
+- Next/previous conflict navigation commands
+- Finalize guard: blocks completion if unresolved conflicts remain
+
+**Side-by-side diff entry points:**
+- Working tree vs HEAD
+- Index vs HEAD
+- Commit vs parent
+- Any two refs for a file
+
+**Branch comparison tab:**
+- Dedicated webview for `A..B` / `B..A` commit and changed-file summaries
+- Drill down into file-level diff
+- Recent compare pairs persisted in workspace state
 
 ### Cross-cutting Features
+
 - Quick Git Actions command palette entry
 - Push/pull previews (incoming/outgoing commit summaries)
-- Fetch --prune
+- Fetch `--prune`
 - Partial staging (`git add -p`)
 - Stage file / unstage file
 - Amend last commit
-- File history and blame from active editor file
+- File history and blame from active editor file (also available in Explorer right-click)
 - Guardrails for destructive operations with modal confirmation
 - Output channel logging of executed Git commands
 - Deterministic state refresh after mutating operations
 
 ## Architecture
 
-- `src/services/gitService.ts`
-  - Native `git` CLI wrapper with typed methods
-  - Error normalization and command logging
-- `src/state/stateStore.ts`
-  - Central cached state for branches/stashes/graph/compare
-  - Auto-refresh on `.git` file changes
-- `src/providers/*TreeProvider.ts`
-  - Branch, stash, and graph sidebar tree providers
-- `src/providers/changesWebviewProvider.ts`
-  - Webview-based Changes panel (working tree status, conflict resolution, operation banner)
-- `src/commands/commandController.ts`
-  - Command registration, action orchestration, guardrails
-- `src/editor/editorOrchestrator.ts`
-  - Merge/diff/compare tab orchestration
-- `src/views/compareView.ts`
-  - Branch comparison webview UI
+| Module | Purpose |
+|---|---|
+| `src/services/gitService.ts` | Native `git` CLI wrapper with typed methods, error normalisation, command logging |
+| `src/services/gitParsing.ts` | Output parsers for branches, stashes, log, status, blame |
+| `src/services/repositoryContext.ts` | Resolves the active Git repository root |
+| `src/services/submoduleService.ts` / `submoduleParsing.ts` | Submodule discovery and command wrappers |
+| `src/services/worktreeParsing.ts` | Worktree list parser |
+| `src/state/stateStore.ts` | Central cached state for branches/stashes/graph/compare; auto-refresh on `.git` file changes |
+| `src/state/changelistStore.ts` | Tracks selected changes in the Commit Details view |
+| `src/state/commitTemplates.ts` | Loads and resolves commit message templates |
+| `src/providers/branchTreeProvider.ts` | Branch (and tag) sidebar tree provider |
+| `src/providers/stashTreeProvider.ts` | Stash sidebar tree provider |
+| `src/providers/graphTreeProvider.ts` | Git Graph sidebar tree provider |
+| `src/providers/commitFilesTreeProvider.ts` | Commit Details sidebar tree provider |
+| `src/providers/commitFileDecorationProvider.ts` | File decoration badges in Commit Details view |
+| `src/providers/worktreeTreeProvider.ts` | Worktrees sidebar tree provider |
+| `src/providers/submoduleTreeProvider.ts` | Submodules sidebar tree provider |
+| `src/commands/commandController.ts` | Command registration, action orchestration, guardrails |
+| `src/editor/editorOrchestrator.ts` | Merge / diff / compare tab orchestration |
+| `src/editor/gutterDecorationController.ts` | Inline gutter change markers vs HEAD |
+| `src/editor/lineDiff.ts` | Line-level diff computation for gutter markers |
+| `src/editor/virtualGitContentProvider.ts` | Virtual document provider (`intelligit://`) for showing file content at a revision |
+| `src/views/compareView.ts` | Branch comparison webview UI |
+| `src/views/graphFilterView.ts` | Graph filter webview/input |
+| `src/views/branchSearchView.ts` | Branch search webview/input |
+| `src/views/commitActions.ts` | Shared context-menu actions for commits |
+| `src/views/templateRenderer.ts` | Handlebars-based template rendering for webviews |
 
 ## Available Commands
 
-Not exhaustive list of key command IDs:
+Key command IDs (not exhaustive):
 
-- `intelliGit.quickActions`
-- `intelliGit.refresh`
-- `intelliGit.branch.*`
-- `intelliGit.stash.*`
-- `intelliGit.graph.*`
-- `intelliGit.diff.open`
-- `intelliGit.compare.open`
-- `intelliGit.merge.*`
-- `intelliGit.conflict.*` (acceptOurs, acceptTheirs, acceptBoth)
-- `intelliGit.operation.*` (abort, continue, skip)
-- `intelliGit.git.*`
-- `intelliGit.stage.*`
-- `intelliGit.changes.*`
-- `intelliGit.commit.amend`
+- `intelliGit.quickActions` — Quick Git Actions palette
+- `intelliGit.refresh` — Refresh all views
+- `intelliGit.branch.*` — Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
+- `intelliGit.tag.*` — Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
+- `intelliGit.stash.*` — Create, apply, pop, drop, rename, previewPatch, unshelve
+- `intelliGit.graph.*` — openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
+- `intelliGit.commit.*` — revertSelectedChanges, cherryPickSelectedChanges, amend
+- `intelliGit.diff.open` — Open diff for a file
+- `intelliGit.compare.open` — Open branch comparison
+- `intelliGit.merge.*` — openConflict, next, previous, finalize
+- `intelliGit.conflict.*` — acceptOurs, acceptTheirs, acceptBoth
+- `intelliGit.operation.*` — abort, continue, skip (merge/rebase/cherry-pick)
+- `intelliGit.git.*` — pushWithPreview, pullWithPreview, fetchPrune
+- `intelliGit.stage.*` — patch (hunk staging), file
+- `intelliGit.unstage.file`
+- `intelliGit.scm.*` — shelveResource, commitTemplate, generateCommitMessage, amendFromInput
+- `intelliGit.worktree.*` — open, openInNewWindow, addFromBranch, addNewBranch, addDetached, remove, removeForce, lock, unlock, prunePreview, prune, revealInFinder, openTerminal
+- `intelliGit.submodule.*` — init, initAll, update, updateAll, updateRecursive, sync, syncAll, open, openInNewWindow, checkoutRecorded, pullTrackedBranch, diffPointer, stagePointerChange, deinit
 - `intelliGit.fileHistory.open`
 - `intelliGit.fileBlame.open`
 
@@ -157,16 +233,35 @@ npm run compile
 
 4. In the launched window, open Activity Bar > `IntelliGit`.
 
-## Notes / Current v1 Boundaries
+## Settings
+
+| Setting | Default | Description |
+|---|---|---|
+| `intelliGit.gitPath` | `"git"` | Git executable path |
+| `intelliGit.commandTimeoutMs` | `15000` | Timeout for Git commands (ms) |
+| `intelliGit.maxGraphCommits` | `200` | Maximum commits shown in Git Graph |
+| `intelliGit.recentBranchesCount` | `3` | Number of branches shown in the Recent group (1–10) |
+| `intelliGit.gutterMarkers.enabled` | `true` | Show inline gutter markers for lines added/modified/deleted vs HEAD |
+| `intelliGit.commitMessageTemplates` | *(see below)* | Reusable commit message templates. Each item: `{label, template}`. Placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}` |
+| `intelliGit.commitMessageTicketPattern` | `"[A-Z]+-\\d+"` | Regex to extract a ticket ID from the branch name for the `{ticket}` placeholder |
+| `intelliGit.aiGenerateTimeoutMs` | `5000` | Timeout (ms) for AI commit message generation |
+
+**Default commit message templates:**
+
+```json
+[
+  { "label": "feat",   "template": "feat({scope}): {cursor}" },
+  { "label": "fix",    "template": "fix({scope}): {cursor}" },
+  { "label": "chore",  "template": "chore: {cursor}" },
+  { "label": "ticket", "template": "[{ticket}] {cursor}" }
+]
+```
+
+## Notes / Current Boundaries
 
 - Single-repo per window (first workspace folder)
 - Native Git CLI required on system path (or configure `intelliGit.gitPath`)
 - Uses built-in VS Code merge/diff editors for reliability
-- Graph is tree-based rendering (with glyph hints), not a fully custom canvas DAG yet
+- Graph is tree-based rendering with glyph hints, not a fully custom canvas DAG
+- AI commit message generation requires a compatible language model provider; it times out gracefully if unavailable
 - PR/issue tracker integrations are intentionally not included in this core-parity scope
-
-## Settings
-
-- `intelliGit.gitPath` (default: `git`)
-- `intelliGit.commandTimeoutMs` (default: `15000`)
-- `intelliGit.maxGraphCommits` (default: `200`)
