@@ -170,20 +170,20 @@
   <script>
     const vscode = acquireVsCodeApi();
     const allAuthors = {{{authorsJson}}};
-    const menu = document.getElementById('commit-context-menu');
     const authorInput = document.getElementById('filter-author');
     const authorAutocomplete = document.getElementById('author-autocomplete');
     const sinceInput = document.getElementById('filter-since');
     const untilInput = document.getElementById('filter-until');
     const clearButton = document.getElementById('filter-clear');
     const fieldClearButtons = Array.from(document.querySelectorAll('.field-clear'));
-    let selectedCommit = null;
     let authorSuggestions = [];
     let authorActiveIndex = -1;
 
+    {{> partials/scripts/commitContextMenu}}
+
     document.addEventListener('click', (event) => {
-      if (menu.classList.contains('visible')) {
-        if (!menu.contains(event.target)) { closeMenu(); }
+      if (commitContextMenu.isVisible()) {
+        if (!commitContextMenu.contains(event.target)) { commitContextMenu.close(); }
         return;
       }
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
@@ -200,70 +200,20 @@
       vscode.postMessage({ type: 'commitClick', sha, subject });
     });
 
-    const closeMenu = () => {
-      menu.classList.remove('visible');
-      selectedCommit = null;
-    };
-
-    const openMenu = (x, y, payload) => {
-      selectedCommit = payload;
-      menu.style.left = '0px';
-      menu.style.top = '0px';
-      menu.classList.add('visible');
-
-      const menuRect = menu.getBoundingClientRect();
-      const maxX = Math.max(8, window.innerWidth - menuRect.width - 8);
-      const maxY = Math.max(8, window.innerHeight - menuRect.height - 8);
-      const targetX = Math.max(8, Math.min(x, maxX));
-      const targetY = Math.max(8, Math.min(y, maxY));
-
-      menu.style.left = targetX + 'px';
-      menu.style.top = targetY + 'px';
-    };
-
     document.addEventListener('contextmenu', (event) => {
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
       if (!row) {
-        closeMenu();
+        commitContextMenu.close();
         return;
       }
-
-      event.preventDefault();
-      const sha = row.getAttribute('data-sha') || '';
-      if (!sha) {
-        return;
-      }
-
-      openMenu(event.clientX, event.clientY, { sha });
-    });
-
-    menu.addEventListener('click', (event) => {
-      const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-action]') : null;
-      if (!target || !selectedCommit) {
-        return;
-      }
-
-      const action = target.getAttribute('data-action');
-      if (!action) {
-        return;
-      }
-
-      vscode.postMessage({
-        type: 'commitAction',
-        action,
-        sha: selectedCommit.sha
-      });
-      closeMenu();
+      commitContextMenu.openForRow(event, row);
     });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
-        closeMenu();
+        commitContextMenu.close();
       }
     });
-
-    window.addEventListener('blur', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
 
     const scoreAuthorMatch = (authorLower, keywordLower) => {
       if (!keywordLower) {

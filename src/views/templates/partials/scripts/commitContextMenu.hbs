@@ -1,0 +1,61 @@
+    const commitContextMenu = (() => {
+      const menu = document.getElementById('commit-context-menu');
+      let selectedCommit = null;
+
+      const close = () => {
+        menu.classList.remove('visible');
+        selectedCommit = null;
+      };
+
+      const open = (x, y, payload) => {
+        selectedCommit = payload;
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+        menu.classList.add('visible');
+
+        const menuRect = menu.getBoundingClientRect();
+        const maxX = Math.max(8, window.innerWidth - menuRect.width - 8);
+        const maxY = Math.max(8, window.innerHeight - menuRect.height - 8);
+        const targetX = Math.max(8, Math.min(x, maxX));
+        const targetY = Math.max(8, Math.min(y, maxY));
+
+        menu.style.left = targetX + 'px';
+        menu.style.top = targetY + 'px';
+      };
+
+      const openForRow = (event, row) => {
+        event.preventDefault();
+        const sha = row.getAttribute('data-sha') || '';
+        if (!sha) {
+          return;
+        }
+        open(event.clientX, event.clientY, { sha });
+      };
+
+      const contains = (target) => menu.contains(target);
+      const isVisible = () => menu.classList.contains('visible');
+
+      menu.addEventListener('click', (event) => {
+        const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-action]') : null;
+        if (!target || target.disabled || !selectedCommit) {
+          return;
+        }
+
+        const action = target.getAttribute('data-action');
+        if (!action) {
+          return;
+        }
+
+        vscode.postMessage({
+          type: 'commitAction',
+          action,
+          sha: selectedCommit.sha
+        });
+        close();
+      });
+
+      window.addEventListener('blur', close);
+      window.addEventListener('scroll', close, true);
+
+      return { close, contains, isVisible, openForRow };
+    })();

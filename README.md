@@ -85,6 +85,7 @@ IntelliGit is an IntelliJ-like Git client extension for VS Code focused on core 
   - Dedicated webview for `A..B`, `B..A`, changed files
   - Drill down into file-level diff
   - Recent compare pairs persisted in workspace state
+- Shared commit context menu for Filter Graph and Branch Comparison. See `docs/context-menus.md`.
 
 ### Cross-cutting Features
 - Quick Git Actions command palette entry

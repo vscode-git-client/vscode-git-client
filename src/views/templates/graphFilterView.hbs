@@ -336,9 +336,9 @@
     const untilInput = document.getElementById('until');
     const previewHeader = document.getElementById('preview-header');
     const previewBody = document.getElementById('preview-body');
-    const menu = document.getElementById('commit-context-menu');
     const fieldClearButtons = Array.from(document.querySelectorAll('.field-clear'));
-    let selectedCommit = null;
+
+    {{> partials/scripts/commitContextMenu}}
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -513,30 +513,9 @@
       }).join('');
     }
 
-    const closeMenu = () => {
-      menu.classList.remove('visible');
-      selectedCommit = null;
-    };
-
-    const openMenu = (x, y, payload) => {
-      selectedCommit = payload;
-      menu.style.left = '0px';
-      menu.style.top = '0px';
-      menu.classList.add('visible');
-
-      const menuRect = menu.getBoundingClientRect();
-      const maxX = Math.max(8, window.innerWidth - menuRect.width - 8);
-      const maxY = Math.max(8, window.innerHeight - menuRect.height - 8);
-      const targetX = Math.max(8, Math.min(x, maxX));
-      const targetY = Math.max(8, Math.min(y, maxY));
-
-      menu.style.left = targetX + 'px';
-      menu.style.top = targetY + 'px';
-    };
-
     document.addEventListener('click', (event) => {
-      if (menu.classList.contains('visible')) {
-        if (!menu.contains(event.target)) { closeMenu(); }
+      if (commitContextMenu.isVisible()) {
+        if (!commitContextMenu.contains(event.target)) { commitContextMenu.close(); }
         return;
       }
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
@@ -566,40 +545,11 @@
     document.addEventListener('contextmenu', (event) => {
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
       if (!row) {
-        closeMenu();
+        commitContextMenu.close();
         return;
       }
-
-      event.preventDefault();
-      const sha = row.getAttribute('data-sha') || '';
-      if (!sha) {
-        return;
-      }
-
-      openMenu(event.clientX, event.clientY, { sha });
+      commitContextMenu.openForRow(event, row);
     });
-
-    menu.addEventListener('click', (event) => {
-      const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-action]') : null;
-      if (!target || target.disabled || !selectedCommit) {
-        return;
-      }
-
-      const action = target.getAttribute('data-action');
-      if (!action) {
-        return;
-      }
-
-      vscode.postMessage({
-        type: 'commitAction',
-        action,
-        sha: selectedCommit.sha
-      });
-      closeMenu();
-    });
-
-    window.addEventListener('blur', closeMenu);
-    window.addEventListener('scroll', closeMenu, true);
 
     function createAutocomplete(input, list) {
       const model = { source: [], suggestions: [], activeIndex: -1 };
@@ -745,8 +695,8 @@
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (menu.classList.contains('visible')) {
-          closeMenu();
+        if (commitContextMenu.isVisible()) {
+          commitContextMenu.close();
           return;
         }
         vscode.postMessage({ type: 'close' });
