@@ -382,7 +382,7 @@
       },
       {
         "command": "intelliGit.compareWithRevision",
-        "title": "Compare with Revision…"
+        "title": "Compare with Revision"
       },
       {
         "command": "intelliGit.workingTreeCompare.openFileDiff",
@@ -898,12 +898,12 @@
         {
           "command": "intelliGit.fileHistory.open",
           "when": "explorerResourceIsFolder == false && resourceScheme == file",
-          "group": "navigation@9"
+          "group": "z_intelliGit@1"
         },
         {
           "command": "intelliGit.compareWithRevision",
           "when": "resourceScheme == file",
-          "group": "navigation@10"
+          "group": "z_intelliGit@2"
         }
       ],
       "commandPalette": [
