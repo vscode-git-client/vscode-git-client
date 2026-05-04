@@ -19,4 +19,4 @@ docs/
 scripts/
 eslint.config.*
 .gitignore
-
+.worktrees/

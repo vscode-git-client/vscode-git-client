@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "IntelliGit Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows, inspired by IntelliJ Git integration.",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "publisher": "thanhtunguet",
   "icon": "media/intelligit.png",
   "main": "./dist/extension.js",
@@ -46,13 +46,6 @@
           "title": "IntelliGit",
           "icon": "media/intelligit.svg"
         }
-      ],
-      "panel": [
-        {
-          "id": "intelliGitRepoStructure",
-          "title": "Repo Structure",
-          "icon": "media/icon-repo-structure.svg"
-        }
       ]
     },
     "views": {
@@ -77,18 +70,7 @@
           "contextualTitle": "Visual commit history and branch graph",
           "visibility": "visible",
           "icon": "media/icon-graph.svg"
-        }
-      ],
-      "scm": [
-        {
-          "id": "intelliGit.stashes",
-          "name": "Stashes",
-          "contextualTitle": "Stashed changes",
-          "visibility": "visible",
-          "icon": "media/icon-stashes.svg"
-        }
-      ],
-      "intelliGitRepoStructure": [
+        },
         {
           "id": "intelliGit.worktrees",
           "name": "Worktrees",
@@ -102,6 +84,15 @@
           "contextualTitle": "Manage nested git submodule repositories",
           "visibility": "visible",
           "icon": "media/icon-submodules.svg"
+        }
+      ],
+      "scm": [
+        {
+          "id": "intelliGit.stashes",
+          "name": "Stashes",
+          "contextualTitle": "Stashed changes",
+          "visibility": "visible",
+          "icon": "media/icon-stashes.svg"
         }
       ]
     },
