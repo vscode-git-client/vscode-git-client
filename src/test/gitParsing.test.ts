@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
-import { formatComparisonSummary, parseRevListComparison, parseTrack } from '../services/gitParsing';
+import { formatComparisonSummary, parsePorcelainStatusZ, parseRevListComparison, parseTrack } from '../services/gitParsing';
 import { parseSubmoduleConfig, parseSubmoduleStatus } from '../services/submoduleParsing';
 import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from '../services/worktreeParsing';
 
@@ -19,6 +19,17 @@ describe('Git parsing utilities', () => {
 
   it('formats comparison count summaries', () => {
     assert.strictEqual(formatComparisonSummary('origin/main', 3, 1), 'Compared with origin/main: ahead 3, behind 1');
+  });
+
+  it('parses NUL-separated porcelain status output', () => {
+    const raw = ' M src/changed.ts\0A  src/staged.ts\0?? src/new.ts\0R  src/old.ts\0src/new-name.ts\0';
+
+    assert.deepStrictEqual(parsePorcelainStatusZ(raw), [
+      { status: ' M', path: 'src/changed.ts' },
+      { status: 'A ', path: 'src/staged.ts' },
+      { status: '??', path: 'src/new.ts' },
+      { status: 'R ', path: 'src/new-name.ts' }
+    ]);
   });
 
   it('parses shortstat line', () => {

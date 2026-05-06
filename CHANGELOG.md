@@ -53,6 +53,10 @@ All notable changes to this project are documented in this file.
 - Added initial test scaffold (`src/test/gitParsing.test.ts`).
 
 ### Changed
+- IntelliGit now activates lazily from its views and commands instead of doing a full Git refresh at VS Code startup.
+- Reworked state refreshes to be scoped and coalesced, so save/focus changes update working-tree state without reloading all Git views.
+- Reduced Windows Git process pressure with an internal Git command queue and lazy loading for expensive branch, tag, stash, worktree, and submodule details.
+- Gutter markers now skip generated folders and large files using configurable size and line-count limits.
 - Removed user-visible `IntelliGit:` prefix from command titles for cleaner command palette entries.
 - Enhanced Git Graph UX:
   - each commit node is now expandable (caret toggler)
@@ -68,6 +72,7 @@ All notable changes to this project are documented in this file.
   - `Cmd+Enter` (macOS)
 
 ### Fixed
+- Fixed Windows submodule command path handling by resolving submodule working directories with platform-aware path utilities.
 - Fixed Git `--format` argument handling to prevent errors like:
   - `fatal: ambiguous argument '%m?...'`
 - Updated all relevant Git commands to use safe format argument forms.

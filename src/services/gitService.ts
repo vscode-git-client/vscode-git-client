@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from '../logger';
+import { GitCommandQueue } from './gitCommandQueue';
 import {
   BranchRef,
   CommitFilters,
@@ -14,7 +15,6 @@ import {
   GitOperationState,
   GraphCommit,
   MergeConflictFile,
-  RefComparison,
   RepositoryContext,
   ResolvedCommitMeta,
   StashEntry,
@@ -30,7 +30,7 @@ import {
 } from '../types';
 import { SubmoduleService } from './submoduleService';
 import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from './worktreeParsing';
-import { parseRevListComparison, parseTrack, parseNameStatusZ } from './gitParsing';
+import { parseTrack, parseNameStatusZ, parsePorcelainStatusZ } from './gitParsing';
 
 const FIELD_SEPARATOR = '|~|';
 const RECORD_SEPARATOR = '|#|';
@@ -50,6 +50,7 @@ interface VsCodeGitRepository {
     readonly mergeChanges: readonly VsCodeGitChange[];
     readonly workingTreeChanges: readonly VsCodeGitChange[];
     readonly untrackedChanges: readonly VsCodeGitChange[];
+    readonly onDidChange?: vscode.Event<void>;
   };
   status(): Promise<void>;
   add(paths: string[]): Promise<void>;
@@ -86,6 +87,7 @@ export class GitService {
   private _gitRootCache: string | undefined;
   private _vscodeGitApi: Promise<VsCodeGitApi | undefined> | undefined;
   private _vscodeGitRepository: VsCodeGitRepository | undefined;
+  private readonly gitCommandQueue = new GitCommandQueue(process.platform === 'win32' ? 2 : 4);
 
   constructor(
     private readonly context: RepositoryContext,
@@ -210,19 +212,7 @@ export class GitService {
         return branch.type !== 'remote' || branch.name.includes('/');
       });
 
-    const withComparisons = await Promise.all(
-      parsed.map(async (branch) => {
-        const comparisonRef = resolveBranchComparisonRef(branch, parsed);
-        if (!comparisonRef) {
-          return branch;
-        }
-
-        const comparison = await this.getRefComparison(branch.name, comparisonRef);
-        return comparison ? { ...branch, comparison } : branch;
-      })
-    );
-
-    return withComparisons
+    return parsed
       .sort((a, b) => {
         if (a.current) {
           return -1;
@@ -245,7 +235,6 @@ export class GitService {
       'refs/tags'
     ]);
 
-    const currentRef = await this.getCurrentBranch().catch(() => 'HEAD');
     const parsed = result.stdout
       .split(RECORD_SEPARATOR)
       .map((line) => line.trim())
@@ -261,14 +250,7 @@ export class GitService {
         };
       });
 
-    const withComparisons = await Promise.all(
-      parsed.map(async (tag) => {
-        const comparison = await this.getRefComparison(tag.sha ?? tag.name, currentRef);
-        return comparison ? { ...tag, comparison } : tag;
-      })
-    );
-
-    return withComparisons
+    return parsed
       .sort((a, b) => {
         const left = a.lastCommitEpoch ?? 0;
         const right = b.lastCommitEpoch ?? 0;
@@ -277,16 +259,6 @@ export class GitService {
         }
         return a.name.localeCompare(b.name);
       });
-  }
-
-  private async getRefComparison(ref: string, comparisonRef: string): Promise<RefComparison | undefined> {
-    try {
-      const result = await this.runGit(['rev-list', '--left-right', '--count', `${ref}...${comparisonRef}`]);
-      const { ahead, behind } = parseRevListComparison(result.stdout);
-      return { ref: comparisonRef, ahead, behind };
-    } catch {
-      return undefined;
-    }
   }
 
   async createBranch(name: string, base?: string): Promise<void> {
@@ -599,6 +571,11 @@ export class GitService {
     return repository;
   }
 
+  async onDidChangeRepositoryState(listener: () => void): Promise<vscode.Disposable | undefined> {
+    const repository = await this.getVsCodeRepository();
+    return repository?.state.onDidChange?.(listener);
+  }
+
   private toAbsoluteRepoPath(relativeOrAbsolutePath: string): string {
     return path.isAbsolute(relativeOrAbsolutePath)
       ? relativeOrAbsolutePath
@@ -607,6 +584,48 @@ export class GitService {
 
   private uniqueChangePaths(changes: readonly VsCodeGitChange[]): string[] {
     return [...new Set(changes.map((change) => change.uri.fsPath))];
+  }
+
+  private async getChangedFilesFromVsCodeGit(): Promise<WorkingTreeChange[] | undefined> {
+    const repository = await this.getVsCodeRepository();
+    if (!repository) {
+      return undefined;
+    }
+
+    try {
+      await repository.status();
+    } catch {
+      return undefined;
+    }
+
+    const changes = new Map<string, string>();
+    const setStatus = (change: VsCodeGitChange, status: string): void => {
+      const relativePath = this.toRepoRelative(change.uri.fsPath);
+      if (!relativePath) {
+        return;
+      }
+
+      if (status === '??' || status === 'UU') {
+        changes.set(relativePath, status);
+        return;
+      }
+
+      const existing = changes.get(relativePath) ?? '  ';
+      const next = [
+        status[0] !== ' ' ? status[0] : existing[0],
+        status[1] !== ' ' ? status[1] : existing[1]
+      ].join('');
+      changes.set(relativePath, next);
+    };
+
+    repository.state.indexChanges.forEach((change) => setStatus(change, 'M '));
+    repository.state.workingTreeChanges.forEach((change) => setStatus(change, ' M'));
+    repository.state.untrackedChanges.forEach((change) => setStatus(change, '??'));
+    repository.state.mergeChanges.forEach((change) => setStatus(change, 'UU'));
+
+    return [...changes.entries()]
+      .map(([path, status]) => ({ path, status }))
+      .sort((a, b) => a.path.localeCompare(b.path));
   }
 
   private samePath(left: string, right: string): boolean {
@@ -710,14 +729,12 @@ export class GitService {
       const index = Number(refMatch?.[1] ?? entries.length);
       const ref = `stash@{${index}}`;
       const message = subject.replace(/^(?:On|WIP on)\s+[^:]+:\s*/, '').trim() || subject;
-      const fileCount = await this.getStashFileCount(ref);
       entries.push({
         index,
         ref,
         message: message || subject,
         author: author || undefined,
         timestamp: timestamp || undefined,
-        fileCount,
         sha: sha || undefined
       });
     }
@@ -933,15 +950,13 @@ export class GitService {
   }
 
   async getChangedFiles(): Promise<WorkingTreeChange[]> {
-    const result = await this.runGit(['status', '--porcelain']);
-    return result.stdout
-      .split('\n')
-      .map((line) => line.replace(/\r$/, ''))
-      .filter(Boolean)
-      .map((line) => ({
-        status: line.slice(0, 2),
-        path: line.slice(3)
-      }));
+    const vscodeGitChanges = await this.getChangedFilesFromVsCodeGit();
+    if (vscodeGitChanges) {
+      return vscodeGitChanges;
+    }
+
+    const result = await this.runGit(['status', '--porcelain=v1', '-z']);
+    return parsePorcelainStatusZ(result.stdout);
   }
 
   async stashFiles(
@@ -1415,18 +1430,6 @@ export class GitService {
     return result.stdout;
   }
 
-  private async getStashFileCount(ref: string): Promise<number> {
-    try {
-      const result = await this.runGit(['stash', 'show', '--name-only', ref]);
-      return result.stdout
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean).length;
-    } catch {
-      return 0;
-    }
-  }
-
   async getWorktrees(): Promise<WorktreeEntry[]> {
     const result = await this.runGit(['worktree', 'list', '--porcelain']);
     const raw = parseWorktreeListPorcelain(result.stdout);
@@ -1553,27 +1556,43 @@ export class GitService {
     return this.submoduleSvc.stageSubmodulePointer(submodulePath);
   }
 
+  private logGitDuration(command: string, startedAt: number): void {
+    const shouldLog = this.config.get<boolean>('performance.logGitCommands', false);
+    const durationMs = Date.now() - startedAt;
+    if (shouldLog && durationMs >= 500) {
+      this.logger.info(`[perf] git command took ${durationMs}ms: ${command}`);
+    }
+  }
+
   private async runGitAt(cwd: string, args: string[]): Promise<GitCommandResult> {
     const gitPath = this.config.get<string>('gitPath', 'git');
     const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
 
-    return new Promise<GitCommandResult>((resolve, reject) => {
+    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
+      const command = `${gitPath} ${args.join(' ')}`;
+      const startedAt = Date.now();
       const child = cp.spawn(gitPath, args, { cwd, windowsHide: true });
       const timer = setTimeout(() => {
         child.kill();
+        this.logGitDuration(command, startedAt);
         reject(new Error(`Git command timed out: git ${args.join(' ')}`));
       }, timeoutMs);
       let stdout = '';
       let stderr = '';
       child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
       child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-      child.on('error', (error: Error) => { clearTimeout(timer); reject(error); });
+      child.on('error', (error: Error) => {
+        clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
+        reject(error);
+      });
       child.on('close', (code: number | null) => {
         clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
         if (code === 0) { resolve({ stdout, stderr }); return; }
         reject(new Error(stderr || `Git command failed with exit code ${code}`));
       });
-    });
+    }));
   }
 
   async runGit(args: string[]): Promise<GitCommandResult> {
@@ -1582,7 +1601,8 @@ export class GitService {
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
-    return new Promise<GitCommandResult>((resolve, reject) => {
+    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
+      const startedAt = Date.now();
       const child = cp.spawn(gitPath, args, {
         cwd: this.gitRoot,
         windowsHide: true
@@ -1590,6 +1610,7 @@ export class GitService {
 
       const timer = setTimeout(() => {
         child.kill();
+        this.logGitDuration(command, startedAt);
         reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
       }, timeoutMs);
 
@@ -1606,11 +1627,13 @@ export class GitService {
 
       child.on('error', (error) => {
         clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
         reject(error);
       });
 
       child.on('close', (code) => {
         clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
         if (code === 0) {
           resolve({ stdout, stderr });
           return;
@@ -1619,7 +1642,7 @@ export class GitService {
         const error = new Error(stderr || `Git command failed with exit code ${code}: ${command}`);
         reject(error);
       });
-    });
+    }));
   }
 
   private async applyCommitFilesPatch(ref: string, filePaths: string[], reverse: boolean): Promise<void> {
@@ -1645,7 +1668,8 @@ export class GitService {
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
-    return new Promise<GitCommandResult>((resolve, reject) => {
+    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
+      const startedAt = Date.now();
       const child = cp.spawn(gitPath, args, {
         cwd: this.gitRoot,
         windowsHide: true
@@ -1653,6 +1677,7 @@ export class GitService {
 
       const timer = setTimeout(() => {
         child.kill();
+        this.logGitDuration(command, startedAt);
         reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
       }, timeoutMs);
 
@@ -1669,11 +1694,13 @@ export class GitService {
 
       child.on('error', (error) => {
         clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
         reject(error);
       });
 
       child.on('close', (code) => {
         clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
         if (code === 0) {
           resolve({ stdout, stderr });
           return;
@@ -1684,25 +1711,8 @@ export class GitService {
       });
 
       child.stdin.end(stdin);
-    });
+    }));
   }
-}
-
-function resolveBranchComparisonRef(branch: BranchRef, branches: BranchRef[]): string | undefined {
-  if (branch.type === 'local') {
-    if (branch.upstream) {
-      return branch.upstream;
-    }
-
-    const exactOrigin = branches.find((candidate) => candidate.type === 'remote' && candidate.name === `origin/${branch.name}`);
-    if (exactOrigin) {
-      return exactOrigin.name;
-    }
-
-    return branches.find((candidate) => candidate.type === 'remote' && candidate.shortName === branch.name)?.name;
-  }
-
-  return branches.find((candidate) => candidate.type === 'local' && candidate.name === branch.shortName)?.name;
 }
 
 function parseGraphRows(raw: string): GraphCommit[] {

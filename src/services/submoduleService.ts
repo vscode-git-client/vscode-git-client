@@ -1,4 +1,5 @@
 import * as cp from 'child_process';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import {
   SubmoduleConfigEntry,
@@ -6,9 +7,12 @@ import {
   SubmoduleStatusEntry,
   GitCommandResult
 } from '../types';
+import { GitCommandQueue } from './gitCommandQueue';
 import { parseSubmoduleConfig, parseSubmoduleStatus } from './submoduleParsing';
 
 export class SubmoduleService {
+  private readonly gitCommandQueue = new GitCommandQueue(process.platform === 'win32' ? 2 : 4);
+
   constructor(
     private readonly config: vscode.WorkspaceConfiguration,
     private readonly gitRoot: string,
@@ -124,9 +128,9 @@ export class SubmoduleService {
   private async runGitAt(cwd: string, args: string[]): Promise<GitCommandResult> {
     const gitPath = this.config.get<string>('gitPath', 'git');
     const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
-    const fullCwd = cwd.startsWith('/') ? cwd : `${this.gitRoot}/${cwd}`;
+    const fullCwd = resolveSubmoduleCwd(this.gitRoot, cwd);
 
-    return new Promise<GitCommandResult>((resolve, reject) => {
+    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
       const child = cp.spawn(gitPath, args, { cwd: fullCwd, windowsHide: true });
       const timer = setTimeout(() => {
         child.kill();
@@ -142,7 +146,7 @@ export class SubmoduleService {
         if (code === 0) { resolve({ stdout, stderr }); return; }
         reject(new Error(stderr || `Git command failed with exit code ${code}`));
       });
-    });
+    }));
   }
 
   private async getSubmoduleWorktreeStatus(
@@ -171,6 +175,10 @@ export class SubmoduleService {
       return undefined;
     }
   }
+}
+
+export function resolveSubmoduleCwd(gitRoot: string, cwd: string): string {
+  return path.isAbsolute(cwd) ? cwd : path.join(gitRoot, cwd);
 }
 
 function parseTrack(value: string): { ahead: number; behind: number } {

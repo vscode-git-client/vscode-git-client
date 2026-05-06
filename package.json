@@ -18,14 +18,21 @@
     "url": "https://github.com/thanhtunguet/IntelliGit"
   },
   "activationEvents": [
-    "onStartupFinished",
     "onView:intelliGit.stashes",
     "onView:intelliGit.branches",
     "onView:intelliGit.graph",
     "onView:intelliGit.commitView",
     "onView:intelliGit.worktrees",
     "onView:intelliGit.submodules",
-    "onCommand:intelliGit.quickActions"
+    "onCommand:intelliGit.quickActions",
+    "onCommand:intelliGit.branch.actionHub",
+    "onCommand:intelliGit.fileHistory.open",
+    "onCommand:intelliGit.compareWithRevision",
+    "onCommand:intelliGit.fileBlame.open",
+    "onCommand:intelliGit.scm.shelveResource",
+    "onCommand:intelliGit.scm.commitTemplate",
+    "onCommand:intelliGit.scm.generateCommitMessage",
+    "onCommand:intelliGit.scm.amendFromInput"
   ],
   "scripts": {
     "clean": "node scripts/clean-dist.js",
@@ -36,7 +43,7 @@
     "vscode:prepublish": "npm run check-types && npm run bundle",
     "watch": "tsc -watch -p .",
     "lint": "eslint src --ext .ts",
-    "test": "npm run compile && node --test dist/test/*.test.js"
+    "test": "npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/*.test.js"
   },
   "contributes": {
     "viewsContainers": {
@@ -952,6 +959,23 @@
           "type": "boolean",
           "default": true,
           "description": "Show inline gutter markers for lines added, modified, or deleted relative to HEAD."
+        },
+        "intelliGit.gutterMarkers.maxFileSizeKb": {
+          "type": "number",
+          "default": 512,
+          "minimum": 1,
+          "description": "Skip inline gutter marker computation for files larger than this size in KB."
+        },
+        "intelliGit.gutterMarkers.maxLineCount": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1,
+          "description": "Skip inline gutter marker computation for files with more lines than this value."
+        },
+        "intelliGit.performance.logGitCommands": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log Git commands that take 500ms or longer to the IntelliGit output channel."
         },
         "intelliGit.commitMessageTemplates": {
           "type": "array",

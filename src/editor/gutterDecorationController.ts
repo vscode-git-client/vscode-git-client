@@ -2,6 +2,12 @@ import * as vscode from 'vscode';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
 import { StateStore } from '../state/stateStore';
+import {
+  DEFAULT_GUTTER_MAX_FILE_SIZE_KB,
+  DEFAULT_GUTTER_MAX_LINE_COUNT,
+  isGeneratedPath,
+  shouldSkipGutterDocument
+} from './gutterGuards';
 import { computeLineHunks, LineHunk } from './lineDiff';
 
 const UPDATE_DEBOUNCE_MS = 250;
@@ -22,6 +28,7 @@ export class GutterDecorationController implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private readonly decorations: DecorationSet;
   private readonly updateTimers = new WeakMap<vscode.TextEditor, ReturnType<typeof setTimeout>>();
+  private readonly updateVersions = new WeakMap<vscode.TextEditor, number>();
   private readonly headCache = new Map<string, HeadCacheEntry>();
   private currentHeadSha = '';
   private enabled: boolean;
@@ -57,7 +64,11 @@ export class GutterDecorationController implements vscode.Disposable {
         this.headCache.delete(doc.uri.toString());
       }),
       this.stateStore.onDidChange(() => {
-        void this.refreshHeadSha().then(() => this.updateAllVisible());
+        void this.refreshHeadSha().then((changed) => {
+          if (changed) {
+            this.updateAllVisible();
+          }
+        });
       }),
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('intelliGit.gutterMarkers.enabled')) {
@@ -111,20 +122,27 @@ export class GutterDecorationController implements vscode.Disposable {
     }
   }
 
-  private async refreshHeadSha(): Promise<void> {
+  private async refreshHeadSha(): Promise<boolean> {
     try {
       const sha = await this.gitService.getCurrentHeadSha();
       if (sha !== this.currentHeadSha) {
         this.currentHeadSha = sha;
         this.headCache.clear();
+        return true;
       }
     } catch {
+      const changed = this.currentHeadSha !== '';
       this.currentHeadSha = '';
       this.headCache.clear();
+      return changed;
     }
+    return false;
   }
 
   private async update(editor: vscode.TextEditor): Promise<void> {
+    const updateVersion = (this.updateVersions.get(editor) ?? 0) + 1;
+    this.updateVersions.set(editor, updateVersion);
+
     if (!this.enabled) {
       return;
     }
@@ -138,7 +156,15 @@ export class GutterDecorationController implements vscode.Disposable {
     }
 
     try {
+      if (await this.shouldSkipDocument(doc, relativePath)) {
+        this.applyHunks(editor, []);
+        return;
+      }
+
       const headContent = await this.getHeadContent(doc.uri, relativePath);
+      if (this.updateVersions.get(editor) !== updateVersion) {
+        return;
+      }
       if (headContent === null) {
         this.applyHunks(editor, [
           { kind: 'add', newStart: 0, newCount: doc.lineCount, oldCount: 0 }
@@ -171,6 +197,23 @@ export class GutterDecorationController implements vscode.Disposable {
 
   private getRelativePath(uri: vscode.Uri): string | undefined {
     return this.gitService.toRepoRelative(uri.fsPath);
+  }
+
+  private async shouldSkipDocument(doc: vscode.TextDocument, relativePath: string): Promise<boolean> {
+    const config = vscode.workspace.getConfiguration('intelliGit');
+    const maxLineCount = config.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
+    const maxFileSizeKb = config.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
+
+    if (isGeneratedPath(relativePath)) {
+      return true;
+    }
+
+    try {
+      const stat = await vscode.workspace.fs.stat(doc.uri);
+      return shouldSkipGutterDocument(doc.lineCount, stat.size, maxLineCount, maxFileSizeKb);
+    } catch {
+      return shouldSkipGutterDocument(doc.lineCount, 0, maxLineCount, maxFileSizeKb);
+    }
   }
 
   private applyHunks(editor: vscode.TextEditor, hunks: LineHunk[]): void {

@@ -44,7 +44,7 @@ export interface StashEntry {
   readonly message: string;
   readonly author?: string;
   readonly timestamp?: string;
-  readonly fileCount: number;
+  readonly fileCount?: number;
   readonly sha?: string;
 }
 
