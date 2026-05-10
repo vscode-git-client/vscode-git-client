@@ -275,11 +275,13 @@ export class StateStore {
     const modulesWatcher = vscode.workspace.createFileSystemWatcher('**/.git/modules/**');
     const gitmodulesWatcher = vscode.workspace.createFileSystemWatcher('**/.gitmodules');
 
+    // Debounce worktree/submodule watchers: on Windows, ReadDirectoryChangesW emits
+    // multiple events per logical change; without delay each event spawns a git process.
     const onWorktreeChange = async (): Promise<void> => {
-      try { await this.refreshWorktrees(); } catch (e) { this.logger.warn(`Worktree refresh failed: ${String(e)}`); }
+      try { await this.requestRefresh(['worktrees'], { delayMs: 250 }); } catch (e) { this.logger.warn(`Worktree refresh failed: ${String(e)}`); }
     };
     const onSubmoduleChange = async (): Promise<void> => {
-      try { await this.refreshSubmodules(); } catch (e) { this.logger.warn(`Submodule refresh failed: ${String(e)}`); }
+      try { await this.requestRefresh(['submodules'], { delayMs: 250 }); } catch (e) { this.logger.warn(`Submodule refresh failed: ${String(e)}`); }
     };
 
     worktreeWatcher.onDidCreate(onWorktreeChange, this, context.subscriptions);

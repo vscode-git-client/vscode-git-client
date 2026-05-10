@@ -32,13 +32,18 @@ export class GutterDecorationController implements vscode.Disposable {
   private readonly headCache = new Map<string, HeadCacheEntry>();
   private currentHeadSha = '';
   private enabled: boolean;
+  private maxLineCount: number;
+  private maxFileSizeKb: number;
 
   constructor(
     private readonly gitService: GitService,
     private readonly stateStore: StateStore,
     private readonly logger: Logger
   ) {
-    this.enabled = vscode.workspace.getConfiguration('intelliGit').get<boolean>('gutterMarkers.enabled', true);
+    const cfg = vscode.workspace.getConfiguration('intelliGit');
+    this.enabled = cfg.get<boolean>('gutterMarkers.enabled', true);
+    this.maxLineCount = cfg.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
+    this.maxFileSizeKb = cfg.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
     this.decorations = createDecorations();
 
     this.disposables.push(
@@ -71,10 +76,11 @@ export class GutterDecorationController implements vscode.Disposable {
         });
       }),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('intelliGit.gutterMarkers.enabled')) {
-          this.enabled = vscode.workspace
-            .getConfiguration('intelliGit')
-            .get<boolean>('gutterMarkers.enabled', true);
+        if (event.affectsConfiguration('intelliGit.gutterMarkers')) {
+          const cfg = vscode.workspace.getConfiguration('intelliGit');
+          this.enabled = cfg.get<boolean>('gutterMarkers.enabled', true);
+          this.maxLineCount = cfg.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
+          this.maxFileSizeKb = cfg.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
           if (!this.enabled) {
             this.clearAllVisible();
           } else {
@@ -200,19 +206,15 @@ export class GutterDecorationController implements vscode.Disposable {
   }
 
   private async shouldSkipDocument(doc: vscode.TextDocument, relativePath: string): Promise<boolean> {
-    const config = vscode.workspace.getConfiguration('intelliGit');
-    const maxLineCount = config.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
-    const maxFileSizeKb = config.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
-
     if (isGeneratedPath(relativePath)) {
       return true;
     }
 
     try {
       const stat = await vscode.workspace.fs.stat(doc.uri);
-      return shouldSkipGutterDocument(doc.lineCount, stat.size, maxLineCount, maxFileSizeKb);
+      return shouldSkipGutterDocument(doc.lineCount, stat.size, this.maxLineCount, this.maxFileSizeKb);
     } catch {
-      return shouldSkipGutterDocument(doc.lineCount, 0, maxLineCount, maxFileSizeKb);
+      return shouldSkipGutterDocument(doc.lineCount, 0, this.maxLineCount, this.maxFileSizeKb);
     }
   }
 

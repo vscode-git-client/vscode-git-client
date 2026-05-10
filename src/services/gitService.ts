@@ -447,8 +447,19 @@ export class GitService {
       }
     };
 
+    // Run all existence checks in parallel to avoid sequential FS round-trips.
+    // On Windows each stat goes through Defender; sequential calls add up to 50-250 ms.
+    const [hasMergeRebase, hasApplyRebase, hasMergeHead, hasCherryPick, hasRevert] =
+      await Promise.all([
+        exists('rebase-merge'),
+        exists('rebase-apply'),
+        exists('MERGE_HEAD'),
+        exists('CHERRY_PICK_HEAD'),
+        exists('REVERT_HEAD'),
+      ]);
+
     // Rebase: interactive/merge backend
-    if (await exists('rebase-merge')) {
+    if (hasMergeRebase) {
       const [head, onto, msgnum, end] = await Promise.all([
         readFile('rebase-merge/head-name'),
         readFile('rebase-merge/onto'),
@@ -465,7 +476,7 @@ export class GitService {
     }
 
     // Rebase: apply backend
-    if (await exists('rebase-apply')) {
+    if (hasApplyRebase) {
       const [head, onto, next, last] = await Promise.all([
         readFile('rebase-apply/head-name'),
         readFile('rebase-apply/onto'),
@@ -481,7 +492,7 @@ export class GitService {
       };
     }
 
-    if (await exists('MERGE_HEAD')) {
+    if (hasMergeHead) {
       const [mergeHead, mergeMsg] = await Promise.all([
         readFile('MERGE_HEAD'),
         readFile('MERGE_MSG')
@@ -493,12 +504,12 @@ export class GitService {
       };
     }
 
-    if (await exists('CHERRY_PICK_HEAD')) {
+    if (hasCherryPick) {
       const head = await readFile('CHERRY_PICK_HEAD');
       return { kind: 'cherry-pick', headShort: await shortenRef(head) };
     }
 
-    if (await exists('REVERT_HEAD')) {
+    if (hasRevert) {
       const head = await readFile('REVERT_HEAD');
       return { kind: 'revert', headShort: await shortenRef(head) };
     }
