@@ -8,7 +8,6 @@ export type { RefreshScope } from './refreshScheduler';
 
 export class StateStore {
   private static readonly DEFAULT_REFRESH_DEBOUNCE_MS = 250;
-  private static readonly DEFAULT_STRUCTURE_REFRESH_DEBOUNCE_MS = 250;
   private _branches: BranchRef[] = [];
   private _tags: TagRef[] = [];
   private _stashes: StashEntry[] = [];
@@ -107,10 +106,6 @@ export class StateStore {
 
   private getRefreshDebounceMs(): number {
     return this.configuration.get<number>('performance.refreshDebounceMs', StateStore.DEFAULT_REFRESH_DEBOUNCE_MS);
-  }
-
-  private getStructureRefreshDebounceMs(): number {
-    return this.configuration.get<number>('performance.structureRefreshDebounceMs', StateStore.DEFAULT_STRUCTURE_REFRESH_DEBOUNCE_MS);
   }
 
   setRefreshScopeVisible(scope: RefreshScope, visible: boolean): void {
@@ -269,32 +264,8 @@ export class StateStore {
   }
 
   attachAutoRefresh(context: vscode.ExtensionContext): void {
-    const gitWatcher = vscode.workspace.createFileSystemWatcher('**/.git/{HEAD,index,refs/**,packed-refs,logs/**}');
-
-    const onGitChange = async (uri: vscode.Uri): Promise<void> => {
-      try {
-        const refreshDebounceMs = this.getRefreshDebounceMs();
-        const normalizedPath = uri.fsPath.replace(/\\/g, '/');
-        if (normalizedPath.endsWith('/index')) {
-          await this.requestRefresh(['changes'], { delayMs: refreshDebounceMs });
-          return;
-        }
-
-        const scopes: RefreshScope[] = ['refs'];
-        if (this.visibleScopes.has('graph')) {
-          scopes.push('graph');
-        }
-        await this.requestRefresh(scopes, { delayMs: refreshDebounceMs });
-      } catch (error) {
-        this.logger.warn(`Auto-refresh failed: ${String(error)}`);
-      }
-    };
-
-    gitWatcher.onDidCreate(onGitChange, this, context.subscriptions);
-    gitWatcher.onDidChange(onGitChange, this, context.subscriptions);
-    gitWatcher.onDidDelete(onGitChange, this, context.subscriptions);
-    context.subscriptions.push(gitWatcher);
-
+    // Keep auto-refresh event-driven via the VS Code Git API only.
+    // Avoid workspace-wide .git file-system watchers to prevent excessive churn.
     void this.git.onDidChangeRepositoryState(() => {
       void this.requestRefresh(['changes'], { delayMs: this.getRefreshDebounceMs() });
     }).then((disposable) => {
@@ -302,43 +273,6 @@ export class StateStore {
         context.subscriptions.push(disposable);
       }
     });
-
-    const worktreeWatcher = vscode.workspace.createFileSystemWatcher('**/.git/worktrees/**');
-    const modulesWatcher = vscode.workspace.createFileSystemWatcher('**/.git/modules/**');
-    const gitmodulesWatcher = vscode.workspace.createFileSystemWatcher('**/.gitmodules');
-
-    // Debounce worktree/submodule watchers: on Windows, ReadDirectoryChangesW emits
-    // multiple events per logical change; without delay each event spawns a git process.
-    const onWorktreeChange = async (): Promise<void> => {
-      try { await this.requestRefresh(['worktrees'], { delayMs: this.getStructureRefreshDebounceMs() }); } catch (e) { this.logger.warn(`Worktree refresh failed: ${String(e)}`); }
-    };
-    const onSubmoduleChange = async (): Promise<void> => {
-      try { await this.requestRefresh(['submodules'], { delayMs: this.getStructureRefreshDebounceMs() }); } catch (e) { this.logger.warn(`Submodule refresh failed: ${String(e)}`); }
-    };
-
-    worktreeWatcher.onDidCreate(onWorktreeChange, this, context.subscriptions);
-    worktreeWatcher.onDidChange(onWorktreeChange, this, context.subscriptions);
-    worktreeWatcher.onDidDelete(onWorktreeChange, this, context.subscriptions);
-    modulesWatcher.onDidCreate(onSubmoduleChange, this, context.subscriptions);
-    modulesWatcher.onDidChange(onSubmoduleChange, this, context.subscriptions);
-    modulesWatcher.onDidDelete(onSubmoduleChange, this, context.subscriptions);
-    gitmodulesWatcher.onDidCreate(onSubmoduleChange, this, context.subscriptions);
-    gitmodulesWatcher.onDidChange(onSubmoduleChange, this, context.subscriptions);
-    gitmodulesWatcher.onDidDelete(onSubmoduleChange, this, context.subscriptions);
-
-    context.subscriptions.push(worktreeWatcher, modulesWatcher, gitmodulesWatcher);
-
-    // Catch commits made outside VS Code (e.g. terminal, other Git clients):
-    // when `files.watcherExclude` blocks .git/index events, the git watcher
-    // never fires. Refreshing on window-focus guarantees the badge catches up
-    // the moment the user returns to the editor.
-    context.subscriptions.push(
-      vscode.window.onDidChangeWindowState((state) => {
-        if (state.focused) {
-          void this.requestRefresh(['changes'], { delayMs: this.getRefreshDebounceMs() });
-        }
-      })
-    );
   }
 
   private _scheduleRefreshChanges(): void {

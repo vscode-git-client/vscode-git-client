@@ -978,13 +978,7 @@
           "type": "number",
           "default": 250,
           "minimum": 0,
-          "description": "Debounce delay in milliseconds for working-tree and ref auto-refresh events."
-        },
-        "intelliGit.performance.structureRefreshDebounceMs": {
-          "type": "number",
-          "default": 250,
-          "minimum": 0,
-          "description": "Debounce delay in milliseconds for worktree and submodule watcher refresh events."
+          "description": "Debounce delay in milliseconds for VS Code Git repository-state auto-refresh events."
         },
         "intelliGit.performance.saveRefreshDebounceMs": {
           "type": "number",

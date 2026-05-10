@@ -301,8 +301,7 @@ npm run compile
 | `intelliGit.gutterMarkers.maxFileSizeKb`            | `512`           | Skip gutter marker computation for files larger than this size in KB                                                           |
 | `intelliGit.gutterMarkers.maxLineCount`             | `10000`         | Skip gutter marker computation for files with more lines than this value                                                       |
 | `intelliGit.performance.logGitCommands`             | `false`         | Log Git commands that take 500ms or longer to the IntelliGit output channel                                                    |
-| `intelliGit.performance.refreshDebounceMs`          | `250`           | Debounce delay (ms) for `.git` watcher and repository-state change refreshes                                                   |
-| `intelliGit.performance.structureRefreshDebounceMs` | `250`           | Debounce delay (ms) for worktree/submodule watcher refreshes                                                                   |
+| `intelliGit.performance.refreshDebounceMs`          | `250`           | Debounce delay (ms) for VS Code Git repository-state auto-refresh events                                                       |
 | `intelliGit.performance.saveRefreshDebounceMs`      | `150`           | Debounce delay (ms) for save-triggered changes refresh                                                                         |
 | `intelliGit.commitMessageTemplates`                 | *(see below)*   | Reusable commit message templates. Each item: `{label, template}`. Placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}` |
 | `intelliGit.commitMessageTicketPattern`             | `"[A-Z]+-\\d+"` | Regex to extract a ticket ID from the branch name for the `{ticket}` placeholder                                               |
@@ -310,14 +309,13 @@ npm run compile
 
 ## Performance Notes
 
-IntelliGit activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible, so saving a file or returning focus to VS Code refreshes working-tree state without reloading branches, tags, stashes, worktrees, submodules, and graph data.
+IntelliGit activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible, so save events and VS Code Git repository-state events refresh working-tree state without reloading branches, tags, stashes, worktrees, submodules, and graph data.
 
 ### Windows
 
 On Windows, Git command execution is queued with lower concurrency (2 vs 4 on macOS/Linux) to reduce `CreateProcess` pressure on the Extension Host. Additional mitigations applied in v0.15.4:
 
-- **Watcher debouncing** — worktree and submodule file watchers now use a 250 ms debounce (matching the main `.git` watcher). `ReadDirectoryChangesW` emits multiple events per logical change; without debouncing each event triggered an immediate `git` process spawn.
-- **Configurable debounce knobs** — debounce delays are now tunable via `intelliGit.performance.refreshDebounceMs`, `intelliGit.performance.structureRefreshDebounceMs`, and `intelliGit.performance.saveRefreshDebounceMs`.
+- **Configurable debounce knobs** — debounce delays are now tunable via `intelliGit.performance.refreshDebounceMs` and `intelliGit.performance.saveRefreshDebounceMs`.
 - **Parallel operation-state detection** — `git` dir stat checks for rebase/merge/cherry-pick state now run in parallel (`Promise.all`), reducing 5 sequential file-system round-trips to 1 on the happy path.
 - **Gutter config caching** — gutter-marker size/line-count limits are cached at startup and refreshed only on `onDidChangeConfiguration`, removing per-keystroke `getConfiguration()` calls.
 - **Save debounce** — `onDidSaveTextDocument` uses a 150 ms delay to coalesce rapid saves (e.g. format-on-save chains).
