@@ -111,6 +111,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     showCollapseAll: true,
     canSelectMany: true
   }, logger);
+  commitFilesProvider.attachView(commitView);
 
   const virtualProvider = new VirtualGitContentProvider();
   context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('intelligit', virtualProvider));

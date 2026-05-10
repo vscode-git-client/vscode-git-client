@@ -770,11 +770,6 @@
           "group": "navigation@4"
         },
         {
-          "command": "intelliGit.graph.openFileDiff",
-          "when": "view == intelliGit.commitView && viewItem == commitViewFile",
-          "group": "inline"
-        },
-        {
           "command": "intelliGit.commit.revertSelectedChanges",
           "when": "view == intelliGit.commitView && viewItem == commitViewFile && intelliGit.commitViewCanRevertSelected",
           "group": "navigation@1"

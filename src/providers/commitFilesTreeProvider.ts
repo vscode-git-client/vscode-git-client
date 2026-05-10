@@ -103,8 +103,14 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   private readonly emitter = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.emitter.event;
   private activeState: ActiveTreeState | undefined;
+  private view: vscode.TreeView<CommitViewNode> | undefined;
 
   constructor(private readonly git: GitService) { }
+
+  attachView(view: vscode.TreeView<CommitViewNode> | undefined): void {
+    this.view = view;
+    this.updateViewTitle('Commit Details');
+  }
 
   getTreeItem(element: CommitViewNode): vscode.TreeItem {
     return element;
@@ -154,6 +160,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     const files = await this.git.getFilesInCommitWithStatus(sha);
     const canRevert = await this.git.isCommitInCurrentBranch(sha);
     this.activeState = { mode: 'commit', sha, subject, files, canRevertSelected: canRevert };
+    this.updateViewTitle(`Commit Details ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', canRevert);
@@ -165,6 +172,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     const filePaths = await this.git.getFilesAtRevision(sha);
     const files = filePaths.map((filePath) => ({ path: filePath }));
     this.activeState = { mode: 'revision', sha, files };
+    this.updateViewTitle(`Repository ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
@@ -184,6 +192,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     files: WorkingTreeFileChange[];
   }): Promise<void> {
     this.activeState = { mode: 'workingTreeCompare', ref, refLabel, scopePath, files };
+    this.updateViewTitle('Commit Details');
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
@@ -193,6 +202,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
 
   async clear(): Promise<void> {
     this.activeState = undefined;
+    this.updateViewTitle('Commit Details');
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', false);
     await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
@@ -228,6 +238,13 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       canRevertSelected: activeCommit.canRevertSelected,
       canCherryPickSelected: !activeCommit.canRevertSelected
     };
+  }
+
+  private updateViewTitle(title: string): void {
+    if (!this.view) {
+      return;
+    }
+    this.view.title = title;
   }
 }
 
@@ -336,4 +353,15 @@ function normalizedStatus(statusRaw: string): string {
   const token = (statusRaw ?? '').trim();
   if (!token) return '?';
   return token[0].toUpperCase();
+}
+
+function formatRevisionNumber(revision: string): string {
+  const token = (revision ?? '').trim();
+  if (!token) {
+    return '';
+  }
+  if (/^[0-9a-f]{9,}$/i.test(token)) {
+    return token.slice(0, 8);
+  }
+  return token;
 }
