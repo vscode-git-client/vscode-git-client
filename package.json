@@ -47,7 +47,8 @@
         {
           "id": "intelliGit",
           "title": "IntelliGit",
-          "icon": "media/intelligit.svg"
+          "icon": "media/intelligit.svg",
+          "order": 4
         }
       ]
     },
@@ -95,7 +96,10 @@
           "name": "Stashes",
           "contextualTitle": "Stashed changes",
           "visibility": "visible",
-          "icon": "media/icon-stashes.svg"
+          "icon": "media/icon-stashes.svg",
+          "initialSize": 0,
+          "type": "tree",
+          "accessibilityHelpContent": "IntelliGit: View stashed changes"
         }
       ]
     },
