@@ -24,9 +24,7 @@ import {
   WorktreeEntry,
   WorktreePruneEntry,
   WorktreeStatus,
-  SubmoduleEntry,
-  SubmoduleConfigEntry,
-  SubmoduleStatusEntry
+  SubmoduleEntry
 } from '../types';
 import { SubmoduleService } from './submoduleService';
 import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from './worktreeParsing';
@@ -331,15 +329,6 @@ export class GitService {
 
   async untrackBranch(localBranch: string): Promise<void> {
     await this.runGit(['branch', '--unset-upstream', localBranch]);
-  }
-
-  async hasUpstream(localBranch: string): Promise<boolean> {
-    try {
-      await this.runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', `${localBranch}@{upstream}`]);
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   async mergeIntoCurrent(branch: string): Promise<void> {
@@ -704,11 +693,6 @@ export class GitService {
     }
   }
 
-  async getRevision(ref: string): Promise<string> {
-    const result = await this.runGit(['rev-parse', ref]);
-    return result.stdout.trim();
-  }
-
   async getStashes(): Promise<StashEntry[]> {
     let result: GitCommandResult;
     try {
@@ -904,21 +888,6 @@ export class GitService {
     return result.stdout;
   }
 
-  async getRevisionForFile(filePath: string, refSpec: string): Promise<string | undefined> {
-    const result = await this.runGit(['ls-tree', '-r', refSpec, '--', filePath]);
-    const row = result.stdout
-      .split('\n')
-      .map((line) => line.trim())
-      .find(Boolean);
-
-    if (!row) {
-      return undefined;
-    }
-
-    const split = row.split(/\s+/);
-    return split.length >= 3 ? split[2] : undefined;
-  }
-
   async getCompare(leftRef: string, rightRef: string): Promise<CompareResult> {
     const leftOnly = await this.runGit([
       'log',
@@ -1007,15 +976,6 @@ export class GitService {
         const [status, path] = line.split('\t');
         return { status, path };
       });
-  }
-
-  async openDiffRange(leftSpec: string, rightSpec: string, relativePath: string): Promise<{ leftContent: string; rightContent: string }> {
-    const left = await this.getFileContentFromRef(leftSpec, relativePath);
-    const right = await this.getFileContentFromRef(rightSpec, relativePath);
-    return {
-      leftContent: left,
-      rightContent: right
-    };
   }
 
   async getFileContentFromRef(refSpec: string, relativePath: string): Promise<string> {
@@ -1273,51 +1233,9 @@ export class GitService {
     await this.runGit(['commit', '-m', message]);
   }
 
-  async commitOnly(message: string, paths: readonly string[]): Promise<void> {
-    if (paths.length === 0) {
-      throw new Error('No paths provided for changelist commit.');
-    }
-    // `git commit --only` commits only the given paths without touching previously staged
-    // changes on other files, and it stages untracked paths automatically.
-    await this.runGit(['commit', '--only', '-m', message, '--', ...paths]);
-  }
-
   async getHeadCommitMessage(): Promise<string> {
     const result = await this.runGit(['log', '-1', '--pretty=%B']);
     return result.stdout.trim();
-  }
-
-  async unstageAll(): Promise<void> {
-    const repository = await this.getVsCodeRepository();
-    if (repository) {
-      this.logger.info('vscode.git restore --staged all');
-      await repository.status();
-      const paths = this.uniqueChangePaths(repository.state.indexChanges);
-      if (paths.length > 0) {
-        await repository.restore(paths, { staged: true });
-      }
-      return;
-    }
-    await this.runGit(['restore', '--staged', '.']);
-  }
-
-  async discardFile(filePath: string, isUntracked: boolean): Promise<void> {
-    const repository = await this.getVsCodeRepository();
-    if (repository) {
-      this.logger.info(`vscode.git ${isUntracked ? 'clean' : 'restore'} ${filePath}`);
-      const absolutePath = this.toAbsoluteRepoPath(filePath);
-      if (isUntracked) {
-        await repository.clean([absolutePath]);
-      } else {
-        await repository.revert([absolutePath]);
-      }
-      return;
-    }
-    if (isUntracked) {
-      await this.runGit(['clean', '-f', '--', filePath]);
-    } else {
-      await this.runGit(['restore', '--', filePath]);
-    }
   }
 
   async generateCommitMessage(token?: vscode.CancellationToken): Promise<string> {
@@ -1511,14 +1429,6 @@ export class GitService {
 
   async getSubmodules(): Promise<SubmoduleEntry[]> {
     return this.submoduleSvc.getSubmodules();
-  }
-
-  async getSubmoduleConfig(): Promise<SubmoduleConfigEntry[]> {
-    return this.submoduleSvc.getSubmoduleConfig();
-  }
-
-  async getSubmoduleStatus(recursive = false): Promise<SubmoduleStatusEntry[]> {
-    return this.submoduleSvc.getSubmoduleStatus(recursive);
   }
 
   async initSubmodule(submodulePath: string): Promise<void> {
