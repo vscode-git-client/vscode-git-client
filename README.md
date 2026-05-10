@@ -202,6 +202,8 @@ IntelliGit integrates with VS Code's native Source Control panel:
 - Dedicated webview for `A..B` / `B..A` commit and changed-file summaries
 - Drill down into file-level diff
 - Multi-select commits with `Shift` / `Ctrl` / `Cmd`; context menu enables only actions that support batch execution
+- Inline filters for author, exclude-message regex, and from/to date range
+- Optional compare filters: ignore merge commits, and hide cross-side matching messages (`author + date time + message`) to reduce cherry-pick noise
 - Recent compare pairs persisted in workspace state
 
 ### Cross-cutting Features

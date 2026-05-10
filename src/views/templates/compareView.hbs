@@ -12,7 +12,7 @@
     }
     .filters {
       display: grid;
-      grid-template-columns: minmax(180px, 1fr) minmax(150px, 180px) minmax(150px, 180px) auto;
+      grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 180px) minmax(150px, 180px) auto;
       gap: 8px;
       margin-bottom: 12px;
       align-items: end;
@@ -38,6 +38,9 @@
       font: inherit;
       padding: 6px 8px;
     }
+    .filter-input.invalid {
+      border-color: var(--vscode-inputValidation-errorBorder, #d93025);
+    }
     .input-shell .filter-input {
       padding-right: 28px;
     }
@@ -59,6 +62,27 @@
     }
     .filter-clear:hover {
       background: color-mix(in srgb, var(--accent), transparent 90%);
+    }
+    .filter-options {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px;
+      padding-top: 2px;
+    }
+    .filter-checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .filter-checkbox-label input {
+      margin: 0;
+      cursor: pointer;
     }
     {{> partials/styles/autocomplete listClass="author-autocomplete" optionClass="author-option" shadowAlpha="0.2"}}
     .card {
@@ -151,21 +175,38 @@
       </div>
     </label>
     <label class="filter-field">
-      <span class="filter-label">Từ ngày</span>
+      <span class="filter-label">Exclude message (regex)</span>
       <div class="input-shell">
-        <input id="filter-since" class="filter-input" type="date" />
-        {{> partials/fieldClearButton target="filter-since" label="Từ ngày"}}
+        <input id="filter-exclude-message" class="filter-input" type="text" autocomplete="off" placeholder="Merge pull request|WIP" spellcheck="false" />
+        {{> partials/fieldClearButton target="filter-exclude-message" label="Exclude message regex"}}
       </div>
     </label>
     <label class="filter-field">
-      <span class="filter-label">Đến ngày</span>
+      <span class="filter-label">From date</span>
+      <div class="input-shell">
+        <input id="filter-since" class="filter-input" type="date" />
+        {{> partials/fieldClearButton target="filter-since" label="From date"}}
+      </div>
+    </label>
+    <label class="filter-field">
+      <span class="filter-label">To date</span>
       <div class="input-shell">
         <input id="filter-until" class="filter-input" type="date" />
-        {{> partials/fieldClearButton target="filter-until" label="Đến ngày"}}
+        {{> partials/fieldClearButton target="filter-until" label="To date"}}
       </div>
     </label>
     <div class="filter-actions">
       <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
+    </div>
+    <div class="filter-options">
+      <label class="filter-checkbox-label" for="filter-ignore-merges">
+        <input id="filter-ignore-merges" type="checkbox" />
+        <span>Ignore merge commits (hide merge branch commits)</span>
+      </label>
+      <label class="filter-checkbox-label" for="filter-matching-messages">
+        <input id="filter-matching-messages" type="checkbox" />
+        <span>Matching messages (match by author + date time + message)</span>
+      </label>
     </div>
   </section>
   <div class="grid">
@@ -181,8 +222,11 @@
     const allAuthors = {{{authorsJson}}};
     const authorInput = document.getElementById('filter-author');
     const authorAutocomplete = document.getElementById('author-autocomplete');
+    const excludeMessageInput = document.getElementById('filter-exclude-message');
     const sinceInput = document.getElementById('filter-since');
     const untilInput = document.getElementById('filter-until');
+    const ignoreMergesCheckbox = document.getElementById('filter-ignore-merges');
+    const matchingMessagesCheckbox = document.getElementById('filter-matching-messages');
     const clearButton = document.getElementById('filter-clear');
     const fieldClearButtons = Array.from(document.querySelectorAll('.field-clear'));
     let authorSuggestions = [];
@@ -410,6 +454,32 @@
       return Number.isFinite(timestamp) ? timestamp : undefined;
     };
 
+    const setInvalidRegexState = (isInvalid) => {
+      if (!excludeMessageInput) {
+        return;
+      }
+      excludeMessageInput.classList.toggle('invalid', isInvalid);
+      excludeMessageInput.title = isInvalid ? 'Invalid regex' : '';
+    };
+
+    const parseExcludeMessageRegex = () => {
+      const source = (excludeMessageInput && excludeMessageInput.value ? excludeMessageInput.value : '').trim();
+      if (!source) {
+        setInvalidRegexState(false);
+        return undefined;
+      }
+      try {
+        const regex = new RegExp(source, 'i');
+        setInvalidRegexState(false);
+        return regex;
+      } catch (_error) {
+        setInvalidRegexState(true);
+        return undefined;
+      }
+    };
+
+    const isMergeLikeSubject = (subject) => /\bmerge\b/i.test(subject);
+
     const updateBannerCount = (side, visibleCount) => {
       const banner = document.querySelector('.section-banner[data-side="' + side + '"]');
       if (!banner) { return; }
@@ -433,22 +503,45 @@
 
     const applyFilters = () => {
       const authorFilter = (authorInput && authorInput.value ? authorInput.value : '').trim().toLowerCase();
+      const excludeRegex = parseExcludeMessageRegex();
       const sinceTs = parseSince(sinceInput ? sinceInput.value : '');
       const untilTs = parseUntil(untilInput ? untilInput.value : '');
+      const ignoreMerges = Boolean(ignoreMergesCheckbox && ignoreMergesCheckbox.checked);
+      const hideMatchingMessages = Boolean(matchingMessagesCheckbox && matchingMessagesCheckbox.checked);
       const visibleBySide = { left: 0, right: 0 };
-      const rows = document.querySelectorAll('tr.commit-row');
-
-      rows.forEach((row) => {
-        const author = (row.getAttribute('data-author') || '').toLowerCase();
+      const rows = Array.from(document.querySelectorAll('tr.commit-row'));
+      const oppositeKeysBySide = {
+        left: new Set(),
+        right: new Set()
+      };
+      const baseStates = rows.map((row) => {
+        const authorRaw = row.getAttribute('data-author') || '';
+        const author = authorRaw.toLowerCase();
         const side = row.getAttribute('data-side') || '';
+        const subjectRaw = row.getAttribute('data-subject') || '';
+        const subject = subjectRaw.toLowerCase();
         const timestamp = Number(row.getAttribute('data-timestamp') || '0');
         const authorOk = !authorFilter || author.includes(authorFilter);
+        const excludeOk = !excludeRegex || !excludeRegex.test(subjectRaw);
         const sinceOk = sinceTs === undefined || timestamp >= sinceTs;
         const untilOk = untilTs === undefined || timestamp <= untilTs;
-        const visible = authorOk && sinceOk && untilOk;
+        const mergeOk = !ignoreMerges || !isMergeLikeSubject(subjectRaw);
+        const baseVisible = authorOk && excludeOk && sinceOk && untilOk && mergeOk;
+        const matchingKey = [author, String(timestamp), subject].join('\u0000');
+        if (baseVisible && (side === 'left' || side === 'right')) {
+          oppositeKeysBySide[side].add(matchingKey);
+        }
+        return { row, side, baseVisible, matchingKey };
+      });
+
+      baseStates.forEach((state) => {
+        const oppositeSide = state.side === 'left' ? 'right' : 'left';
+        const hasMatchOnOpposite = (oppositeSide === 'left' || oppositeSide === 'right') && oppositeKeysBySide[oppositeSide].has(state.matchingKey);
+        const visible = state.baseVisible && (!hideMatchingMessages || !hasMatchOnOpposite);
+        const row = state.row;
         row.style.display = visible ? '' : 'none';
-        if (visible && (side === 'left' || side === 'right')) {
-          visibleBySide[side] += 1;
+        if (visible && (state.side === 'left' || state.side === 'right')) {
+          visibleBySide[state.side] += 1;
         }
       });
 
@@ -508,11 +601,24 @@
     if (untilInput) {
       untilInput.addEventListener('change', applyFilters);
     }
+    if (excludeMessageInput) {
+      excludeMessageInput.addEventListener('input', applyFilters);
+    }
+    if (ignoreMergesCheckbox) {
+      ignoreMergesCheckbox.addEventListener('change', applyFilters);
+    }
+    if (matchingMessagesCheckbox) {
+      matchingMessagesCheckbox.addEventListener('change', applyFilters);
+    }
     if (clearButton) {
       clearButton.addEventListener('click', () => {
         if (authorInput) { authorInput.value = ''; }
+        if (excludeMessageInput) { excludeMessageInput.value = ''; }
         if (sinceInput) { sinceInput.value = ''; }
         if (untilInput) { untilInput.value = ''; }
+        if (ignoreMergesCheckbox) { ignoreMergesCheckbox.checked = false; }
+        if (matchingMessagesCheckbox) { matchingMessagesCheckbox.checked = false; }
+        setInvalidRegexState(false);
         closeAuthorDropdown();
         applyFilters();
       });
