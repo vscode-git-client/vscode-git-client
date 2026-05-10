@@ -186,7 +186,7 @@ export class CommandController {
     };
 
     register('intelliGit.refresh', async () => {
-      await this.state.refreshAll();
+      await this.state.refreshVisible();
       void vscode.window.setStatusBarMessage('IntelliGit refreshed', 1500);
     });
 
@@ -208,6 +208,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.search', async () => {
+      await this.state.refreshBranches();
       BranchSearchView.open(
         {
           checkout: async (name: string) => {
@@ -1752,6 +1753,7 @@ export class CommandController {
   }
 
   private async openRefCommits(id: string, title: string, ref: string): Promise<void> {
+    await this.state.refreshBranches();
     const maxCommits = Math.max(1, vscode.workspace.getConfiguration('intelliGit').get<number>('maxGraphCommits', 200));
     const commits = await this.git.getGraph(maxCommits, { branch: ref });
     CommitListView.open(
@@ -2112,6 +2114,7 @@ export class CommandController {
   }
 
   private async pickBranchName(title = 'Pick branch', remoteOnly = false): Promise<string | undefined> {
+    await this.state.refreshBranches();
     const branches = this.state.branches.filter((branch) => {
       if (remoteOnly) {
         return branch.type === 'remote';
@@ -2133,11 +2136,12 @@ export class CommandController {
   }
 
   private async pickStashRef(title: string): Promise<string | undefined> {
+    await this.state.refreshStashes();
     const picked = await vscode.window.showQuickPick(
       this.state.stashes.map((stash) => ({
         label: stash.ref,
         description: stash.message,
-        detail: `${stash.fileCount} files`
+        detail: stash.fileCount === undefined ? 'files not loaded' : `${stash.fileCount} files`
       })),
       { title }
     );
@@ -2146,6 +2150,7 @@ export class CommandController {
   }
 
   private async pickCommitSha(title: string): Promise<string | undefined> {
+    await this.state.refreshGraph();
     const picked = await vscode.window.showQuickPick(
       this.state.graph.map((commit) => ({
         label: commit.shortSha,

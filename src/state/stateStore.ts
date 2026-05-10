@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
 import { BranchRef, CommitFilters, ComparePair, CompareResult, GitOperationState, GraphCommit, MergeConflictFile, StashEntry, SubmoduleEntry, TagRef, WorkingTreeChange, WorktreeEntry } from '../types';
+import { RefreshScheduler, RefreshScope } from './refreshScheduler';
+
+export type { RefreshScope } from './refreshScheduler';
 
 export class StateStore {
   private _branches: BranchRef[] = [];
@@ -19,6 +22,8 @@ export class StateStore {
   private readonly emitter = new vscode.EventEmitter<void>();
   readonly onDidChange = this.emitter.event;
   private _changesRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  private readonly visibleScopes = new Set<RefreshScope>();
+  private readonly refreshScheduler = new RefreshScheduler((scopes) => this.executeRefresh(scopes));
 
   constructor(
     private readonly git: GitService,
@@ -87,6 +92,30 @@ export class StateStore {
   }
 
   async refreshAll(): Promise<void> {
+    await this.requestRefresh(['full']);
+  }
+
+  requestRefresh(scopes: Iterable<RefreshScope>, options?: { delayMs?: number }): Promise<void> {
+    return this.refreshScheduler.request(scopes, options);
+  }
+
+  setRefreshScopeVisible(scope: RefreshScope, visible: boolean): void {
+    if (scope === 'full') {
+      return;
+    }
+    if (visible) {
+      this.visibleScopes.add(scope);
+      void this.requestRefresh([scope]);
+    } else {
+      this.visibleScopes.delete(scope);
+    }
+  }
+
+  async refreshVisible(): Promise<void> {
+    await this.requestRefresh(['full']);
+  }
+
+  private async executeRefresh(requestedScopes: ReadonlySet<RefreshScope>): Promise<void> {
     if (!(await this.git.isRepo())) {
       this._branches = [];
       this._tags = [];
@@ -102,59 +131,72 @@ export class StateStore {
       return;
     }
 
-    const maxGraphCommits = this.configuration.get<number>('maxGraphCommits', 200);
+    const scopes = this.expandScopes(requestedScopes);
+    const updates: Array<Promise<void>> = [];
 
-    const [branches, tags, stashes, changes, graph, operationState, conflicts, worktrees, submodules] = await Promise.all([
-      this.git.getBranches(),
-      this.git.getTags(),
-      this.git.getStashes(),
-      this.git.getChangedFiles(),
-      this.git.getGraph(maxGraphCommits, this._graphFilters),
-      this.git.getOperationState(),
-      this.git.getMergeConflicts(),
-      this.git.getWorktrees().catch(() => [] as WorktreeEntry[]),
-      this.git.getSubmodules().catch(() => [] as SubmoduleEntry[])
-    ]);
+    if (scopes.has('refs')) {
+      updates.push(this.loadRefs());
+    }
+    if (scopes.has('stashes')) {
+      updates.push(this.loadStashes());
+    }
+    if (scopes.has('changes')) {
+      updates.push(this.loadChanges());
+    }
+    if (scopes.has('graph')) {
+      updates.push(this.loadGraph());
+    }
+    if (scopes.has('worktrees')) {
+      updates.push(this.loadWorktrees());
+    }
+    if (scopes.has('submodules')) {
+      updates.push(this.loadSubmodules());
+    }
 
-    this._branches = branches;
-    this._tags = tags;
-    this._stashes = stashes;
-    this._changes = changes;
-    this._graph = graph;
-    this._operationState = operationState;
-    this._conflicts = conflicts;
-    this._worktrees = worktrees;
-    this._submodules = submodules;
-    void vscode.commands.executeCommand('setContext', 'intelliGit.operation', operationState.kind);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.hasConflicts', conflicts.length > 0);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.hasSubmodules', submodules.length > 0);
+    await Promise.all(updates);
     this.emitter.fire();
   }
 
   async refreshBranches(): Promise<void> {
-    const [branches, tags] = await Promise.all([this.git.getBranches(), this.git.getTags()]);
-    this._branches = branches;
-    this._tags = tags;
-    this.emitter.fire();
+    await this.requestRefresh(['refs']);
   }
 
   async refreshStashes(): Promise<void> {
-    this._stashes = await this.git.getStashes();
-    this.emitter.fire();
+    await this.requestRefresh(['stashes']);
   }
 
   async refreshWorktrees(): Promise<void> {
-    this._worktrees = await this.git.getWorktrees().catch(() => []);
-    this.emitter.fire();
+    await this.requestRefresh(['worktrees']);
   }
 
   async refreshSubmodules(): Promise<void> {
-    this._submodules = await this.git.getSubmodules().catch(() => []);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.hasSubmodules', this._submodules.length > 0);
-    this.emitter.fire();
+    await this.requestRefresh(['submodules']);
   }
 
   async refreshChanges(): Promise<void> {
+    await this.requestRefresh(['changes']);
+  }
+
+  private async loadRefs(): Promise<void> {
+    const [branches, tags] = await Promise.all([this.git.getBranches(), this.git.getTags()]);
+    this._branches = branches;
+    this._tags = tags;
+  }
+
+  private async loadStashes(): Promise<void> {
+    this._stashes = await this.git.getStashes();
+  }
+
+  private async loadWorktrees(): Promise<void> {
+    this._worktrees = await this.git.getWorktrees().catch(() => []);
+  }
+
+  private async loadSubmodules(): Promise<void> {
+    this._submodules = await this.git.getSubmodules().catch(() => []);
+    void vscode.commands.executeCommand('setContext', 'intelliGit.hasSubmodules', this._submodules.length > 0);
+  }
+
+  private async loadChanges(): Promise<void> {
     const [changes, operationState, conflicts] = await Promise.all([
       this.git.getChangedFiles(),
       this.git.getOperationState(),
@@ -165,21 +207,21 @@ export class StateStore {
     this._conflicts = conflicts;
     void vscode.commands.executeCommand('setContext', 'intelliGit.operation', operationState.kind);
     void vscode.commands.executeCommand('setContext', 'intelliGit.hasConflicts', conflicts.length > 0);
-    this.emitter.fire();
   }
 
   async refreshGraph(filters?: CommitFilters): Promise<void> {
     this._graphFilters = filters ? { ...filters } : this._graphFilters;
+    await this.requestRefresh(['graph']);
+  }
+
+  private async loadGraph(): Promise<void> {
     const maxGraphCommits = this.configuration.get<number>('maxGraphCommits', 200);
     this._graph = await this.git.getGraph(maxGraphCommits, this._graphFilters);
-    this.emitter.fire();
   }
 
   async clearGraphFilters(): Promise<void> {
     this._graphFilters = {};
-    const maxGraphCommits = this.configuration.get<number>('maxGraphCommits', 200);
-    this._graph = await this.git.getGraph(maxGraphCommits);
-    this.emitter.fire();
+    await this.requestRefresh(['graph']);
   }
 
   async compareBranches(leftRef: string, rightRef: string): Promise<CompareResult> {
@@ -198,18 +240,36 @@ export class StateStore {
   attachAutoRefresh(context: vscode.ExtensionContext): void {
     const gitWatcher = vscode.workspace.createFileSystemWatcher('**/.git/{HEAD,index,refs/**,packed-refs,logs/**}');
 
-    const onChange = async (): Promise<void> => {
+    const onGitChange = async (uri: vscode.Uri): Promise<void> => {
       try {
-        await this.refreshAll();
+        const normalizedPath = uri.fsPath.replace(/\\/g, '/');
+        if (normalizedPath.endsWith('/index')) {
+          await this.requestRefresh(['changes'], { delayMs: 250 });
+          return;
+        }
+
+        const scopes: RefreshScope[] = ['refs'];
+        if (this.visibleScopes.has('graph')) {
+          scopes.push('graph');
+        }
+        await this.requestRefresh(scopes, { delayMs: 250 });
       } catch (error) {
         this.logger.warn(`Auto-refresh failed: ${String(error)}`);
       }
     };
 
-    gitWatcher.onDidCreate(onChange, this, context.subscriptions);
-    gitWatcher.onDidChange(onChange, this, context.subscriptions);
-    gitWatcher.onDidDelete(onChange, this, context.subscriptions);
+    gitWatcher.onDidCreate(onGitChange, this, context.subscriptions);
+    gitWatcher.onDidChange(onGitChange, this, context.subscriptions);
+    gitWatcher.onDidDelete(onGitChange, this, context.subscriptions);
     context.subscriptions.push(gitWatcher);
+
+    void this.git.onDidChangeRepositoryState(() => {
+      void this.requestRefresh(['changes'], { delayMs: 250 });
+    }).then((disposable) => {
+      if (disposable) {
+        context.subscriptions.push(disposable);
+      }
+    });
 
     const worktreeWatcher = vscode.workspace.createFileSystemWatcher('**/.git/worktrees/**');
     const modulesWatcher = vscode.workspace.createFileSystemWatcher('**/.git/modules/**');
@@ -241,32 +301,38 @@ export class StateStore {
     context.subscriptions.push(
       vscode.window.onDidChangeWindowState((state) => {
         if (state.focused) {
-          void onChange();
+          void this.requestRefresh(['changes'], { delayMs: 250 });
         }
       })
     );
-
-    // Watch for new/deleted/modified files in the workspace to catch untracked changes.
-    const folders = vscode.workspace.workspaceFolders;
-    if (folders && folders.length > 0) {
-      const workspaceWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(folders[0], '**/*')
-      );
-      const scheduleChanges = (): void => { this._scheduleRefreshChanges(); };
-      workspaceWatcher.onDidCreate(scheduleChanges, this, context.subscriptions);
-      workspaceWatcher.onDidDelete(scheduleChanges, this, context.subscriptions);
-      workspaceWatcher.onDidChange(scheduleChanges, this, context.subscriptions);
-      context.subscriptions.push(workspaceWatcher);
-    }
   }
 
   private _scheduleRefreshChanges(): void {
     if (this._changesRefreshTimer) { clearTimeout(this._changesRefreshTimer); }
     this._changesRefreshTimer = setTimeout(() => {
-      void this.refreshChanges().catch((err) => {
+      void this.requestRefresh(['changes']).catch((err) => {
         this.logger.warn(`Auto-refresh changes failed: ${String(err)}`);
       });
     }, 400);
+  }
+
+  private expandScopes(requestedScopes: ReadonlySet<RefreshScope>): Set<RefreshScope> {
+    const scopes = new Set<RefreshScope>();
+    for (const scope of requestedScopes) {
+      if (scope !== 'full') {
+        scopes.add(scope);
+      }
+    }
+
+    if (requestedScopes.has('full')) {
+      scopes.add('changes');
+      scopes.add('refs');
+      for (const visibleScope of this.visibleScopes) {
+        scopes.add(visibleScope);
+      }
+    }
+
+    return scopes;
   }
 
   private pushComparePair(pair: ComparePair): void {

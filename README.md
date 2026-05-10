@@ -168,6 +168,8 @@ Submodules are grouped into: **Needs Attention**, **Clean**, **Uninitialized**, 
 
 Inline gutter decorations show lines added, modified, or deleted relative to HEAD, updated as you type (debounced). Controlled by the `intelliGit.gutterMarkers.enabled` setting.
 
+To keep editing responsive on Windows and large repositories, gutter markers automatically skip generated folders and files above the configured line-count or file-size limits.
+
 ### SCM Integration
 
 IntelliGit integrates with VS Code's native Source Control panel:
@@ -292,9 +294,18 @@ npm run compile
 | `intelliGit.maxGraphCommits`            | `200`           | Maximum commits shown in Git Graph                                                                                             |
 | `intelliGit.recentBranchesCount`        | `3`             | Number of branches shown in the Recent group (1–10)                                                                            |
 | `intelliGit.gutterMarkers.enabled`      | `true`          | Show inline gutter markers for lines added/modified/deleted vs HEAD                                                            |
+| `intelliGit.gutterMarkers.maxFileSizeKb` | `512`           | Skip gutter marker computation for files larger than this size in KB                                                           |
+| `intelliGit.gutterMarkers.maxLineCount` | `10000`         | Skip gutter marker computation for files with more lines than this value                                                       |
+| `intelliGit.performance.logGitCommands` | `false`         | Log Git commands that take 500ms or longer to the IntelliGit output channel                                                    |
 | `intelliGit.commitMessageTemplates`     | *(see below)*   | Reusable commit message templates. Each item: `{label, template}`. Placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}` |
 | `intelliGit.commitMessageTicketPattern` | `"[A-Z]+-\\d+"` | Regex to extract a ticket ID from the branch name for the `{ticket}` placeholder                                               |
 | `intelliGit.aiGenerateTimeoutMs`        | `5000`          | Timeout (ms) for AI commit message generation                                                                                  |
+
+## Performance Notes
+
+IntelliGit activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible, so saving a file or returning focus to VS Code refreshes working-tree state without reloading branches, tags, stashes, worktrees, submodules, and graph data.
+
+On Windows, Git command execution is queued with lower concurrency to avoid process-startup pressure on the VS Code Extension Host. If a workspace still feels slow, enable `intelliGit.performance.logGitCommands` and inspect the IntelliGit output channel for slow Git operations.
 
 **Default commit message templates:**
 

@@ -7,7 +7,9 @@ export class StashTreeItem extends vscode.TreeItem {
     super(stash.ref, vscode.TreeItemCollapsibleState.None);
     this.contextValue = 'stashEntry';
     this.id = `stash:${stash.ref}`;
-    this.description = `${stash.message} · files ${stash.fileCount}`;
+    this.description = stash.fileCount === undefined
+      ? stash.message
+      : `${stash.message} · files ${stash.fileCount}`;
     this.tooltip = `${stash.ref}\n${stash.message}${stash.author ? `\nauthor: ${stash.author}` : ''}`;
     this.iconPath = new vscode.ThemeIcon('archive');
 

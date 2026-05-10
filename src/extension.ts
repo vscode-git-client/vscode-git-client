@@ -13,7 +13,7 @@ import { WorktreeTreeProvider } from './providers/worktreeTreeProvider';
 import { SubmoduleTreeProvider } from './providers/submoduleTreeProvider';
 import { GitService } from './services/gitService';
 import { getRepositoryContext } from './services/repositoryContext';
-import { StateStore } from './state/stateStore';
+import { RefreshScope, StateStore } from './state/stateStore';
 
 type GitBaseApi = {
   registerRemoteSourceProvider(provider: {
@@ -140,27 +140,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
   commandController.register(context);
   await registerBranchActionHubInGitCheckout(context, logger);
+
+  attachRefreshScopeVisibility(context, branchView, 'refs', stateStore);
+  attachRefreshScopeVisibility(context, stashView, 'stashes', stateStore);
+  attachRefreshScopeVisibility(context, graphView, 'graph', stateStore);
+  attachRefreshScopeVisibility(context, worktreeView, 'worktrees', stateStore);
+  attachRefreshScopeVisibility(context, submoduleView, 'submodules', stateStore);
+
   stateStore.attachAutoRefresh(context);
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(async () => {
-      await stateStore.refreshAll();
+      await stateStore.refreshChanges();
     })
   );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      await stateStore.refreshAll();
+      await stateStore.refreshVisible();
     })
   );
 
-  try {
-    await stateStore.refreshAll();
-    logger.info('IntelliGit activated.');
-  } catch (error) {
-    logger.error('Initial refresh failed', error);
-    void vscode.window.showWarningMessage('IntelliGit activated with partial state. Check output channel for details.');
-  }
+  logger.info('IntelliGit activated.');
 }
 
 export function deactivate(): void {
@@ -186,6 +187,24 @@ function createTreeViewSafely<T>(
 
 function compactTreeViews<T>(views: Array<vscode.TreeView<T> | undefined>): vscode.TreeView<T>[] {
   return views.filter((view): view is vscode.TreeView<T> => Boolean(view));
+}
+
+function attachRefreshScopeVisibility<T>(
+  context: vscode.ExtensionContext,
+  view: vscode.TreeView<T> | undefined,
+  scope: RefreshScope,
+  stateStore: StateStore
+): void {
+  if (!view) {
+    return;
+  }
+
+  stateStore.setRefreshScopeVisible(scope, view.visible);
+  context.subscriptions.push(
+    view.onDidChangeVisibility((event) => {
+      stateStore.setRefreshScopeVisible(scope, event.visible);
+    })
+  );
 }
 
 async function registerBranchActionHubInGitCheckout(

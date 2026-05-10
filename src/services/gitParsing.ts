@@ -28,6 +28,11 @@ export interface NameStatusEntry {
   readonly path: string;
 }
 
+export interface PorcelainStatusEntry {
+  readonly status: string;
+  readonly path: string;
+}
+
 export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
   if (!stdout) {
     return [];
@@ -58,6 +63,44 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
     const path = tokens[index++];
     if (!path) {
       break;
+    }
+
+    entries.push({ status, path });
+  }
+
+  return entries;
+}
+
+export function parsePorcelainStatusZ(stdout: string): PorcelainStatusEntry[] {
+  if (!stdout) {
+    return [];
+  }
+
+  const tokens = stdout.split('\0').filter((token) => token.length > 0);
+  const entries: PorcelainStatusEntry[] = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.length < 4) {
+      continue;
+    }
+
+    const status = token.slice(0, 2);
+    const path = token.slice(3);
+    const statusCode = status.trim()[0]?.toUpperCase();
+
+    if (statusCode === 'R' || statusCode === 'C') {
+      // `git status --porcelain=v1 -z` emits renames/copies as
+      // `XY <new>\0<old>\0` — the destination is in the status token,
+      // followed by the source in the next token. Keep `path` (new)
+      // and consume the trailing source token.
+      const origPath = tokens[index + 1];
+      if (!origPath) {
+        break;
+      }
+      entries.push({ status, path });
+      index += 1;
+      continue;
     }
 
     entries.push({ status, path });
