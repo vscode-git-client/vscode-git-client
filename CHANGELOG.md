@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 - **Gutter-marker config caching** — `GutterDecorationController` now caches `gutterMarkers.maxLineCount` and `gutterMarkers.maxFileSizeKb` in constructor-initialised fields and refreshes them only when `onDidChangeConfiguration` fires. Previously `getConfiguration()` was called on every debounced gutter update (every 250 ms while typing).
 - **Save-event debounce** — `onDidSaveTextDocument` in `extension.ts` now schedules `requestRefresh(['changes'], { delayMs: 150 })` instead of calling `refreshChanges()` immediately, coalescing rapid saves produced by format-on-save toolchains.
 - **Configurable refresh debouncing** — debounce delays are now configurable through `intelliGit.performance.refreshDebounceMs`, `intelliGit.performance.structureRefreshDebounceMs`, and `intelliGit.performance.saveRefreshDebounceMs`, so Windows-heavy repos can be tuned without code changes.
+- **SCM state feedback-loop prevention** — `GitService.getChangedFilesFromVsCodeGit()` no longer invokes `repository.status()` on every IntelliGit refresh cycle; this avoids re-triggering VS Code Git state-change events and prevents continuous reload churn in the default Source Control view.
 
 ## [Unreleased] - 2026-04-18
 

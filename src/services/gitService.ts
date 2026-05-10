@@ -603,12 +603,6 @@ export class GitService {
       return undefined;
     }
 
-    try {
-      await repository.status();
-    } catch {
-      return undefined;
-    }
-
     const changes = new Map<string, string>();
     const setStatus = (change: VsCodeGitChange, status: string): void => {
       const relativePath = this.toRepoRelative(change.uri.fsPath);
