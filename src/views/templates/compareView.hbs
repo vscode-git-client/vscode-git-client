@@ -225,7 +225,7 @@
         <span>Matching messages (match by author + date time + message)</span>
       </label>
       <div class="filter-options-actions">
-        <button id="filter-export-excel" class="filter-export" type="button" title="Export visible commits in both panes to Excel">Export Excel</button>
+        <button id="filter-export-excel" class="filter-export" type="button" title="{{exportButtonLabel}}">{{exportButtonLabel}}</button>
       </div>
     </div>
   </section>
@@ -762,7 +762,8 @@
     if (exportExcelButton) {
       exportExcelButton.addEventListener('click', () => {
         vscode.postMessage({
-          type: 'exportExcel',
+          type: 'exportCompare',
+          format: '{{exportFormat}}',
           leftRef: getPaneRef('left'),
           rightRef: getPaneRef('right'),
           leftCommits: serializeVisibleCommits('left'),

@@ -988,6 +988,15 @@
           "minimum": 0,
           "description": "Debounce delay in milliseconds for save-triggered working-tree refresh events."
         },
+        "intelliGit.compare.exportFormat": {
+          "type": "string",
+          "enum": [
+            "csv",
+            "excel"
+          ],
+          "default": "csv",
+          "description": "Default export format for Compare Branches webview. CSV exports two branch-specific files; Excel exports one .xlsx with two sheets."
+        },
         "intelliGit.commitMessageTemplates": {
           "type": "array",
           "default": [

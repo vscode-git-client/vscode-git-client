@@ -18,8 +18,11 @@ interface CompareExportCommit {
   readonly date: string;
 }
 
-interface ExportExcelMessage {
-  readonly type: 'exportExcel';
+type CompareExportFormat = 'csv' | 'excel';
+
+interface ExportCompareMessage {
+  readonly type: 'exportCompare';
+  readonly format?: CompareExportFormat;
   readonly leftRef: string;
   readonly rightRef: string;
   readonly leftCommits: CompareExportCommit[];
@@ -70,7 +73,7 @@ export class CompareView {
   render(result: CompareResult): void {
     this.currentResult = result;
     this.panel.title = `Compare ${result.leftRef} <> ${result.rightRef}`;
-    this.panel.webview.html = renderCompareHtml(result);
+    this.panel.webview.html = renderCompareHtml(result, this.getCompareExportFormat());
   }
 
   private async handleMessage(message: unknown): Promise<void> {
@@ -79,8 +82,8 @@ export class CompareView {
       return;
     }
 
-    if (isExportExcelMessage(message)) {
-      await this.exportToExcel(message);
+    if (isExportCompareMessage(message)) {
+      await this.exportCompare(message);
       return;
     }
 
@@ -91,7 +94,23 @@ export class CompareView {
     await handleCommitAction(message);
   }
 
-  private async exportToExcel(message: ExportExcelMessage): Promise<void> {
+  private getCompareExportFormat(): CompareExportFormat {
+    const configured = vscode.workspace.getConfiguration('intelliGit').get<string>('compare.exportFormat', 'csv');
+    return configured === 'excel' ? 'excel' : 'csv';
+  }
+
+  private async exportCompare(message: ExportCompareMessage): Promise<void> {
+    const format = message.format === 'excel' || message.format === 'csv'
+      ? message.format
+      : this.getCompareExportFormat();
+    if (format === 'excel') {
+      await this.exportAsExcel(message);
+      return;
+    }
+    await this.exportAsCsv(message);
+  }
+
+  private async exportAsExcel(message: ExportCompareMessage): Promise<void> {
     const leftRef = message.leftRef || this.currentResult?.leftRef || 'left';
     const rightRef = message.rightRef || this.currentResult?.rightRef || 'right';
     const defaultFileName = `${sanitizeFileNameSegment(leftRef)}-vs-${sanitizeFileNameSegment(rightRef)}.xlsx`;
@@ -137,9 +156,37 @@ export class CompareView {
     void vscode.window.showInformationMessage(`IntelliGit: Exported compare commits to ${targetUri.fsPath}`);
   }
 
+  private async exportAsCsv(message: ExportCompareMessage): Promise<void> {
+    const leftRef = message.leftRef || this.currentResult?.leftRef || 'left';
+    const rightRef = message.rightRef || this.currentResult?.rightRef || 'right';
+    const defaultFileName = `${sanitizeFileNameSegment(leftRef)}-vs-${sanitizeFileNameSegment(rightRef)}.csv`;
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, defaultFileName) : undefined;
+    const targetUri = await vscode.window.showSaveDialog({
+      title: 'Export Compare Branches As CSV',
+      saveLabel: 'Export',
+      defaultUri,
+      filters: {
+        CSV: ['csv']
+      }
+    });
+
+    if (!targetUri) {
+      return;
+    }
+
+    const [leftUri, rightUri] = buildCsvUris(targetUri, leftRef, rightRef);
+    const headers = ['SHA', 'Subject', 'Author', 'Date'];
+    const leftRows = message.leftCommits.map((commit) => [commit.sha, commit.subject, commit.author, commit.date]);
+    const rightRows = message.rightCommits.map((commit) => [commit.sha, commit.subject, commit.author, commit.date]);
+    await vscode.workspace.fs.writeFile(leftUri, Buffer.from(toCsv(headers, leftRows), 'utf8'));
+    await vscode.workspace.fs.writeFile(rightUri, Buffer.from(toCsv(headers, rightRows), 'utf8'));
+    void vscode.window.showInformationMessage(`IntelliGit: Exported compare commits to ${leftUri.fsPath} and ${rightUri.fsPath}`);
+  }
+
 }
 
-function renderCompareHtml(result: CompareResult): string {
+function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFormat): string {
   return renderTemplate('compareView.hbs', {
     leftRef: result.leftRef,
     leftTotal: result.commitsOnlyLeft.length,
@@ -147,7 +194,9 @@ function renderCompareHtml(result: CompareResult): string {
     rightRef: result.rightRef,
     rightTotal: result.commitsOnlyRight.length,
     rightCommits: renderCommitRows(result.commitsOnlyRight, 'right'),
-    authorsJson: toInlineJson(collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight))
+    authorsJson: toInlineJson(collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight)),
+    exportFormat,
+    exportButtonLabel: exportFormat === 'excel' ? 'Export Excel' : 'Export CSV'
   });
 }
 
@@ -210,13 +259,13 @@ function isCommitClickMessage(value: unknown): value is CommitClickMessage {
   return c.type === 'commitClick' && typeof c.sha === 'string';
 }
 
-function isExportExcelMessage(value: unknown): value is ExportExcelMessage {
+function isExportCompareMessage(value: unknown): value is ExportCompareMessage {
   if (!value || typeof value !== 'object') {
     return false;
   }
 
   const candidate = value as Record<string, unknown>;
-  if (candidate.type !== 'exportExcel') {
+  if (candidate.type !== 'exportCompare') {
     return false;
   }
 
@@ -258,4 +307,34 @@ function sanitizeFileNameSegment(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
   return cleaned || 'branch';
+}
+
+function buildCsvUris(baseUri: vscode.Uri, leftRef: string, rightRef: string): [vscode.Uri, vscode.Uri] {
+  const basePath = baseUri.path.replace(/\.csv$/i, '');
+  const leftSegment = sanitizeFileNameSegment(leftRef);
+  const rightSegment = sanitizeFileNameSegment(rightRef);
+  if (leftSegment !== rightSegment) {
+    return [
+      baseUri.with({ path: `${basePath}-${leftSegment}.csv` }),
+      baseUri.with({ path: `${basePath}-${rightSegment}.csv` })
+    ];
+  }
+
+  return [
+    baseUri.with({ path: `${basePath}-${leftSegment}-left.csv` }),
+    baseUri.with({ path: `${basePath}-${rightSegment}-right.csv` })
+  ];
+}
+
+function toCsv(headers: string[], rows: string[][]): string {
+  const lines = [headers, ...rows].map((row) => row.map(escapeCsvCell).join(','));
+  return `${lines.join('\n')}\n`;
+}
+
+function escapeCsvCell(value: string): string {
+  const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  if (!/[",\n]/.test(normalized)) {
+    return normalized;
+  }
+  return `"${normalized.replace(/"/g, '""')}"`;
 }

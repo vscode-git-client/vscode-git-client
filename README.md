@@ -205,7 +205,9 @@ IntelliGit integrates with VS Code's native Source Control panel:
 - Quick keyboard selection helpers: `Cmd/Ctrl+A` selects all visible commits in the active pane, `Esc` clears commit selection
 - Inline filters for author, exclude-message regex, and from/to date range
 - Optional compare filters: ignore merge commits, and hide cross-side matching messages (`author + date time + message`) to reduce cherry-pick noise
-- Export visible compare results to Excel (`.xlsx`) with two sheets (one per branch/pane)
+- Export visible compare results using a configurable format:
+  - `CSV` (default): exports two files, one per branch/pane
+  - `Excel`: exports one `.xlsx` with two sheets (one per branch/pane)
 - Recent compare pairs persisted in workspace state
 
 ### Cross-cutting Features
@@ -309,6 +311,7 @@ npm run compile
 | `intelliGit.performance.logGitCommands`             | `false`         | Log Git commands that take 500ms or longer to the IntelliGit output channel                                                    |
 | `intelliGit.performance.refreshDebounceMs`          | `250`           | Debounce delay (ms) for VS Code Git repository-state auto-refresh events                                                       |
 | `intelliGit.performance.saveRefreshDebounceMs`      | `150`           | Debounce delay (ms) for save-triggered changes refresh                                                                         |
+| `intelliGit.compare.exportFormat`                   | `"csv"`         | Compare Branches export format: `csv` (two files, one per branch) or `excel` (single `.xlsx` with two sheets)                |
 | `intelliGit.commitMessageTemplates`                 | *(see below)*   | Reusable commit message templates. Each item: `{label, template}`. Placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}` |
 | `intelliGit.commitMessageTicketPattern`             | `"[A-Z]+-\\d+"` | Regex to extract a ticket ID from the branch name for the `{ticket}` placeholder                                               |
 | `intelliGit.aiGenerateTimeoutMs`                    | `5000`          | Timeout (ms) for AI commit message generation                                                                                  |
