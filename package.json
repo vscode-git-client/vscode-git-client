@@ -974,6 +974,24 @@
           "default": false,
           "description": "Log Git commands that take 500ms or longer to the IntelliGit output channel."
         },
+        "intelliGit.performance.refreshDebounceMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "description": "Debounce delay in milliseconds for working-tree and ref auto-refresh events."
+        },
+        "intelliGit.performance.structureRefreshDebounceMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "description": "Debounce delay in milliseconds for worktree and submodule watcher refresh events."
+        },
+        "intelliGit.performance.saveRefreshDebounceMs": {
+          "type": "number",
+          "default": 150,
+          "minimum": 0,
+          "description": "Debounce delay in milliseconds for save-triggered working-tree refresh events."
+        },
         "intelliGit.commitMessageTemplates": {
           "type": "array",
           "default": [

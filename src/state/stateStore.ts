@@ -7,6 +7,8 @@ import { RefreshScheduler, RefreshScope } from './refreshScheduler';
 export type { RefreshScope } from './refreshScheduler';
 
 export class StateStore {
+  private static readonly DEFAULT_REFRESH_DEBOUNCE_MS = 250;
+  private static readonly DEFAULT_STRUCTURE_REFRESH_DEBOUNCE_MS = 250;
   private _branches: BranchRef[] = [];
   private _tags: TagRef[] = [];
   private _stashes: StashEntry[] = [];
@@ -97,6 +99,18 @@ export class StateStore {
 
   requestRefresh(scopes: Iterable<RefreshScope>, options?: { delayMs?: number }): Promise<void> {
     return this.refreshScheduler.request(scopes, options);
+  }
+
+  getSaveRefreshDebounceMs(): number {
+    return this.configuration.get<number>('performance.saveRefreshDebounceMs', 150);
+  }
+
+  private getRefreshDebounceMs(): number {
+    return this.configuration.get<number>('performance.refreshDebounceMs', StateStore.DEFAULT_REFRESH_DEBOUNCE_MS);
+  }
+
+  private getStructureRefreshDebounceMs(): number {
+    return this.configuration.get<number>('performance.structureRefreshDebounceMs', StateStore.DEFAULT_STRUCTURE_REFRESH_DEBOUNCE_MS);
   }
 
   setRefreshScopeVisible(scope: RefreshScope, visible: boolean): void {
@@ -242,9 +256,10 @@ export class StateStore {
 
     const onGitChange = async (uri: vscode.Uri): Promise<void> => {
       try {
+        const refreshDebounceMs = this.getRefreshDebounceMs();
         const normalizedPath = uri.fsPath.replace(/\\/g, '/');
         if (normalizedPath.endsWith('/index')) {
-          await this.requestRefresh(['changes'], { delayMs: 250 });
+          await this.requestRefresh(['changes'], { delayMs: refreshDebounceMs });
           return;
         }
 
@@ -252,7 +267,7 @@ export class StateStore {
         if (this.visibleScopes.has('graph')) {
           scopes.push('graph');
         }
-        await this.requestRefresh(scopes, { delayMs: 250 });
+        await this.requestRefresh(scopes, { delayMs: refreshDebounceMs });
       } catch (error) {
         this.logger.warn(`Auto-refresh failed: ${String(error)}`);
       }
@@ -264,7 +279,7 @@ export class StateStore {
     context.subscriptions.push(gitWatcher);
 
     void this.git.onDidChangeRepositoryState(() => {
-      void this.requestRefresh(['changes'], { delayMs: 250 });
+      void this.requestRefresh(['changes'], { delayMs: this.getRefreshDebounceMs() });
     }).then((disposable) => {
       if (disposable) {
         context.subscriptions.push(disposable);
@@ -278,10 +293,10 @@ export class StateStore {
     // Debounce worktree/submodule watchers: on Windows, ReadDirectoryChangesW emits
     // multiple events per logical change; without delay each event spawns a git process.
     const onWorktreeChange = async (): Promise<void> => {
-      try { await this.requestRefresh(['worktrees'], { delayMs: 250 }); } catch (e) { this.logger.warn(`Worktree refresh failed: ${String(e)}`); }
+      try { await this.requestRefresh(['worktrees'], { delayMs: this.getStructureRefreshDebounceMs() }); } catch (e) { this.logger.warn(`Worktree refresh failed: ${String(e)}`); }
     };
     const onSubmoduleChange = async (): Promise<void> => {
-      try { await this.requestRefresh(['submodules'], { delayMs: 250 }); } catch (e) { this.logger.warn(`Submodule refresh failed: ${String(e)}`); }
+      try { await this.requestRefresh(['submodules'], { delayMs: this.getStructureRefreshDebounceMs() }); } catch (e) { this.logger.warn(`Submodule refresh failed: ${String(e)}`); }
     };
 
     worktreeWatcher.onDidCreate(onWorktreeChange, this, context.subscriptions);
@@ -303,7 +318,7 @@ export class StateStore {
     context.subscriptions.push(
       vscode.window.onDidChangeWindowState((state) => {
         if (state.focused) {
-          void this.requestRefresh(['changes'], { delayMs: 250 });
+          void this.requestRefresh(['changes'], { delayMs: this.getRefreshDebounceMs() });
         }
       })
     );

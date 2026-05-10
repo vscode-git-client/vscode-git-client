@@ -153,7 +153,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidSaveTextDocument(() => {
       // Debounce: rapid saves (e.g. format-on-save + prettier) would otherwise
       // queue multiple back-to-back git-status processes, noticeable on Windows.
-      void stateStore.requestRefresh(['changes'], { delayMs: 150 });
+      void stateStore.requestRefresh(['changes'], { delayMs: stateStore.getSaveRefreshDebounceMs() });
     })
   );
 

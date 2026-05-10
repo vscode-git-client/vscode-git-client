@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 - **Parallel operation-state detection** — `GitService.getOperationState()` now runs all five `.git` directory existence checks (`rebase-merge`, `rebase-apply`, `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`) in a single `Promise.all()` instead of sequentially. On the happy path (no active operation) this reduces 5 serial file-system round-trips to 1, cutting 50–250 ms of latency per change-refresh cycle on machines with Windows Defender active.
 - **Gutter-marker config caching** — `GutterDecorationController` now caches `gutterMarkers.maxLineCount` and `gutterMarkers.maxFileSizeKb` in constructor-initialised fields and refreshes them only when `onDidChangeConfiguration` fires. Previously `getConfiguration()` was called on every debounced gutter update (every 250 ms while typing).
 - **Save-event debounce** — `onDidSaveTextDocument` in `extension.ts` now schedules `requestRefresh(['changes'], { delayMs: 150 })` instead of calling `refreshChanges()` immediately, coalescing rapid saves produced by format-on-save toolchains.
+- **Configurable refresh debouncing** — debounce delays are now configurable through `intelliGit.performance.refreshDebounceMs`, `intelliGit.performance.structureRefreshDebounceMs`, and `intelliGit.performance.saveRefreshDebounceMs`, so Windows-heavy repos can be tuned without code changes.
 
 ## [Unreleased] - 2026-04-18
 

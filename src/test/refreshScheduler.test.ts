@@ -43,4 +43,18 @@ describe('RefreshScheduler', () => {
     assert.strictEqual(maxActive, 1);
     assert.deepStrictEqual(batches, [['changes'], ['graph']]);
   });
+
+  it('coalesces delayed requests into a single batch', async () => {
+    const batches: RefreshScope[][] = [];
+    const scheduler = new RefreshScheduler(async (scopes) => {
+      batches.push([...scopes].sort());
+    });
+
+    void scheduler.request(['changes'], { delayMs: 20 });
+    void scheduler.request(['refs'], { delayMs: 20 });
+
+    await delay(60);
+
+    assert.deepStrictEqual(batches, [['changes', 'refs']]);
+  });
 });
