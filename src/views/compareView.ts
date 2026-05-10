@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import XLSX from 'xlsx';
 import { renderTemplate } from './templateRenderer';
 import { handleCommitAction, isCommitActionMessage } from './commitActions';
 import { formatCommitDate } from './commitDate';
@@ -10,9 +11,25 @@ interface CommitClickMessage {
   readonly subject: string;
 }
 
+interface CompareExportCommit {
+  readonly sha: string;
+  readonly subject: string;
+  readonly author: string;
+  readonly date: string;
+}
+
+interface ExportExcelMessage {
+  readonly type: 'exportExcel';
+  readonly leftRef: string;
+  readonly rightRef: string;
+  readonly leftCommits: CompareExportCommit[];
+  readonly rightCommits: CompareExportCommit[];
+}
+
 export class CompareView {
   private readonly panel: vscode.WebviewPanel;
   private disposeCallback: (() => void) | undefined;
+  private currentResult: CompareResult | undefined;
 
   constructor(private readonly onCommitClick: (sha: string, subject: string) => Promise<void>) {
     this.panel = vscode.window.createWebviewPanel(
@@ -51,6 +68,7 @@ export class CompareView {
   }
 
   render(result: CompareResult): void {
+    this.currentResult = result;
     this.panel.title = `Compare ${result.leftRef} <> ${result.rightRef}`;
     this.panel.webview.html = renderCompareHtml(result);
   }
@@ -61,11 +79,62 @@ export class CompareView {
       return;
     }
 
+    if (isExportExcelMessage(message)) {
+      await this.exportToExcel(message);
+      return;
+    }
+
     if (!isCommitActionMessage(message)) {
       return;
     }
 
     await handleCommitAction(message);
+  }
+
+  private async exportToExcel(message: ExportExcelMessage): Promise<void> {
+    const leftRef = message.leftRef || this.currentResult?.leftRef || 'left';
+    const rightRef = message.rightRef || this.currentResult?.rightRef || 'right';
+    const defaultFileName = `${sanitizeFileNameSegment(leftRef)}-vs-${sanitizeFileNameSegment(rightRef)}.xlsx`;
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, defaultFileName) : undefined;
+    const targetUri = await vscode.window.showSaveDialog({
+      title: 'Export Compare Branches As Excel',
+      saveLabel: 'Export',
+      defaultUri,
+      filters: {
+        'Excel Workbook': ['xlsx']
+      }
+    });
+
+    if (!targetUri) {
+      return;
+    }
+
+    const workbook = XLSX.utils.book_new();
+    const [leftSheetName, rightSheetName] = buildSheetNames(leftRef, rightRef);
+    const leftSheet = XLSX.utils.json_to_sheet(
+      message.leftCommits.map((commit) => ({
+        SHA: commit.sha,
+        Subject: commit.subject,
+        Author: commit.author,
+        Date: commit.date
+      }))
+    );
+    const rightSheet = XLSX.utils.json_to_sheet(
+      message.rightCommits.map((commit) => ({
+        SHA: commit.sha,
+        Subject: commit.subject,
+        Author: commit.author,
+        Date: commit.date
+      }))
+    );
+
+    XLSX.utils.book_append_sheet(workbook, leftSheet, leftSheetName);
+    XLSX.utils.book_append_sheet(workbook, rightSheet, rightSheetName);
+    const workbookBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const bytes = workbookBuffer instanceof Uint8Array ? workbookBuffer : Buffer.from(workbookBuffer);
+    await vscode.workspace.fs.writeFile(targetUri, bytes);
+    void vscode.window.showInformationMessage(`IntelliGit: Exported compare commits to ${targetUri.fsPath}`);
   }
 
 }
@@ -139,4 +208,54 @@ function isCommitClickMessage(value: unknown): value is CommitClickMessage {
   }
   const c = value as Record<string, unknown>;
   return c.type === 'commitClick' && typeof c.sha === 'string';
+}
+
+function isExportExcelMessage(value: unknown): value is ExportExcelMessage {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (candidate.type !== 'exportExcel') {
+    return false;
+  }
+
+  return (
+    typeof candidate.leftRef === 'string' &&
+    typeof candidate.rightRef === 'string' &&
+    Array.isArray(candidate.leftCommits) &&
+    Array.isArray(candidate.rightCommits)
+  );
+}
+
+function buildSheetNames(leftRef: string, rightRef: string): [string, string] {
+  const left = sanitizeSheetName(leftRef, 'left');
+  const right = sanitizeSheetName(rightRef, 'right');
+  if (left !== right) {
+    return [left, right];
+  }
+
+  const leftSuffix = ' (1)';
+  const rightSuffix = ' (2)';
+  const maxLength = 31;
+  const sharedPrefixLength = Math.max(0, maxLength - leftSuffix.length);
+  const prefix = left.slice(0, sharedPrefixLength);
+  return [`${prefix}${leftSuffix}`, `${prefix}${rightSuffix}`];
+}
+
+function sanitizeSheetName(ref: string, fallback: string): string {
+  const cleaned = ref
+    .replace(/[\\/?*\[\]:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const safe = cleaned || fallback;
+  return safe.slice(0, 31);
+}
+
+function sanitizeFileNameSegment(value: string): string {
+  const cleaned = value
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || 'branch';
 }

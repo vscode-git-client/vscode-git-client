@@ -71,6 +71,23 @@
       gap: 16px;
       padding-top: 2px;
     }
+    .filter-options-actions {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+    }
+    .filter-export {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--fg);
+      font: inherit;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    .filter-export:hover {
+      background: color-mix(in srgb, var(--accent), transparent 90%);
+    }
     .filter-checkbox-label {
       display: inline-flex;
       align-items: center;
@@ -207,6 +224,9 @@
         <input id="filter-matching-messages" type="checkbox" />
         <span>Matching messages (match by author + date time + message)</span>
       </label>
+      <div class="filter-options-actions">
+        <button id="filter-export-excel" class="filter-export" type="button" title="Export visible commits in both panes to Excel">Export Excel</button>
+      </div>
     </div>
   </section>
   <div class="grid">
@@ -228,6 +248,7 @@
     const ignoreMergesCheckbox = document.getElementById('filter-ignore-merges');
     const matchingMessagesCheckbox = document.getElementById('filter-matching-messages');
     const clearButton = document.getElementById('filter-clear');
+    const exportExcelButton = document.getElementById('filter-export-excel');
     const fieldClearButtons = Array.from(document.querySelectorAll('.field-clear'));
     let authorSuggestions = [];
     let authorActiveIndex = -1;
@@ -235,10 +256,14 @@
     {{> partials/scripts/commitContextMenu}}
 
     let selectionAnchorSha = null;
+    let activePane = 'left';
 
     const getVisibleCommitRows = () =>
       Array.from(document.querySelectorAll('.commit-row')).filter((row) => row.style.display !== 'none');
+    const getVisibleCommitRowsBySide = (side) =>
+      getVisibleCommitRows().filter((row) => row.getAttribute('data-side') === side);
     const getCommitSha = (row) => (row && row.getAttribute ? row.getAttribute('data-sha') || '' : '');
+    const getCommitSide = (row) => (row && row.getAttribute ? row.getAttribute('data-side') || '' : '');
     const isCommitRowSelected = (row) => Boolean(row && row.classList && row.classList.contains('selected'));
     const setCommitRowSelected = (row, selected) => {
       if (!row || !row.classList) { return; }
@@ -252,6 +277,48 @@
       Array.from(document.querySelectorAll('.commit-row.selected')).filter((row) => row.style.display !== 'none');
     const getSelectedCommitShas = () =>
       Array.from(new Set(getSelectedCommitRows().map((row) => getCommitSha(row)).filter(Boolean)));
+    const getPaneRef = (side) => document.querySelector('.section-banner[data-side="' + side + '"]')?.getAttribute('data-ref') || side;
+    const isTextInputTarget = (target) => Boolean(
+      target &&
+      (
+        (target.tagName === 'INPUT' && target.type !== 'checkbox' && target.type !== 'radio') ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      )
+    );
+
+    const resolveActivePane = () => {
+      if (activePane === 'left' || activePane === 'right') {
+        return activePane;
+      }
+      const selected = getSelectedCommitRows();
+      const firstSide = selected.length > 0 ? getCommitSide(selected[0]) : '';
+      return firstSide === 'right' ? 'right' : 'left';
+    };
+
+    const selectAllVisibleRowsInPane = (side) => {
+      const rows = getVisibleCommitRowsBySide(side);
+      if (rows.length === 0) {
+        clearCommitSelection();
+        selectionAnchorSha = null;
+        return;
+      }
+      clearCommitSelection();
+      rows.forEach((row) => setCommitRowSelected(row, true));
+      selectionAnchorSha = getCommitSha(rows[0]) || null;
+      activePane = side;
+    };
+
+    const serializeVisibleCommits = (side) =>
+      getVisibleCommitRowsBySide(side).map((row) => {
+        const dateCell = row.querySelector('.col-date span');
+        return {
+          sha: row.getAttribute('data-sha') || '',
+          subject: row.getAttribute('data-subject') || '',
+          author: row.getAttribute('data-author') || '',
+          date: (dateCell && (dateCell.getAttribute('title') || dateCell.textContent)) || ''
+        };
+      });
 
     const selectRange = (targetRow, additive) => {
       const visibleRows = getVisibleCommitRows();
@@ -287,6 +354,10 @@
       const toggle = Boolean(event && (event.ctrlKey || event.metaKey));
       const range = Boolean(event && event.shiftKey);
       const sha = getCommitSha(row);
+      const side = getCommitSide(row);
+      if (side === 'left' || side === 'right') {
+        activePane = side;
+      }
 
       if (range) {
         selectRange(row, toggle);
@@ -354,8 +425,21 @@
     });
 
     document.addEventListener('keydown', (event) => {
+      const key = (event.key || '').toLowerCase();
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && key === 'a') {
+        if (isTextInputTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+        selectAllVisibleRowsInPane(resolveActivePane());
+        return;
+      }
+
       if (event.key === 'Escape') {
+        event.preventDefault();
         commitContextMenu.close();
+        clearCommitSelection();
+        selectionAnchorSha = null;
       }
     });
 
@@ -667,5 +751,24 @@
       }
       closeAuthorDropdown();
     });
+    Array.from(document.querySelectorAll('.commit-row')).forEach((row) => {
+      row.addEventListener('mouseenter', () => {
+        const side = row.getAttribute('data-side') || '';
+        if (side === 'left' || side === 'right') {
+          activePane = side;
+        }
+      });
+    });
+    if (exportExcelButton) {
+      exportExcelButton.addEventListener('click', () => {
+        vscode.postMessage({
+          type: 'exportExcel',
+          leftRef: getPaneRef('left'),
+          rightRef: getPaneRef('right'),
+          leftCommits: serializeVisibleCommits('left'),
+          rightCommits: serializeVisibleCommits('right')
+        });
+      });
+    }
   </script>
 {{> partials/documentEnd}}
