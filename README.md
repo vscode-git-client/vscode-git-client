@@ -109,6 +109,8 @@ Commit list with graph-like glyph, refs, author/date metadata, subject-first tit
 - Cherry-pick commit
 - Cherry-pick feedback states: success, conflict (with continue/abort guidance), failure, and nothing-to-cherry-pick
 - On cherry-pick conflicts, IntelliGit opens conflict files in merge editors automatically (fallback: opens SCM view) and shows bottom status-bar actions for `Continue` / `Abort` while cherry-pick is in progress
+- Rebase feedback states: conflict-aware start/continue flow, conflict-file auto-open, iterative continue across multi-commit rebase steps, and abort support
+- While `rebase` or `cherry-pick` is active, IntelliGit shows bottom status-bar actions for `Continue` / `Skip` / `Abort` (including step progress for rebase when available)
 - Revert commit
 - Cherry-pick range
 - Compare commit with current branch

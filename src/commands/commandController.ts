@@ -29,6 +29,7 @@ interface QuickAction {
 }
 
 type CherryPickIssueKind = 'conflict' | 'nothingToCherryPick' | 'failed';
+type RebaseIssueKind = 'conflict' | 'failed';
 
 type GitScmRepository = {
   rootUri: vscode.Uri;
@@ -507,8 +508,7 @@ export class CommandController {
         return;
       }
 
-      await this.git.rebaseCurrentOnto(onto);
-      await this.state.refreshAll();
+      await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(onto));
     });
 
     register('intelliGit.branch.resetCurrentToCommit', async (arg?: unknown) => {
@@ -834,7 +834,7 @@ export class CommandController {
       }
 
       if (conflictSha) {
-        await this.openCherryPickConflictEditors();
+        await this.openOperationConflictEditors('cherry-pick');
         void vscode.window.showWarningMessage(
           'There are some conflicts. You have to resolve them first.'
         );
@@ -988,8 +988,7 @@ export class CommandController {
         return;
       }
 
-      await this.git.rebaseInteractive(base);
-      await this.state.refreshAll();
+      await this.startRebaseOperation(() => this.git.rebaseInteractive(base));
     });
 
     register('intelliGit.graph.goToParentCommit', async (arg?: unknown) => {
@@ -1173,6 +1172,10 @@ export class CommandController {
       }
       const conflicts = await this.git.getMergeConflicts();
       if (conflicts.length > 0) {
+        if (state.kind === 'rebase') {
+          await this.handleRebaseConflict();
+          return;
+        }
         void vscode.window.showWarningMessage(`Resolve all conflicts before continuing (${conflicts.length} remaining).`);
         return;
       }
@@ -1181,11 +1184,31 @@ export class CommandController {
           await vscode.commands.executeCommand('intelliGit.merge.finalize');
           return;
         }
-        if (state.kind === 'rebase') { await this.git.rebaseContinue(); }
-        else if (state.kind === 'cherry-pick') { await this.git.cherryPickContinue(); }
-        else if (state.kind === 'revert') { await this.git.revertContinue(); }
+        if (state.kind === 'rebase') {
+          try {
+            await this.git.rebaseContinue();
+          } catch (error) {
+            const issue = this.classifyRebaseIssue(error);
+            await this.state.refreshAll();
+            if (issue.kind === 'conflict') {
+              await this.handleRebaseConflict();
+              return;
+            }
+            throw error;
+          }
+          await this.state.refreshAll();
+          await this.showRebaseProgressFeedback();
+          return;
+        }
+        if (state.kind === 'cherry-pick') {
+          await this.git.cherryPickContinue();
+        } else if (state.kind === 'revert') {
+          await this.git.revertContinue();
+        }
       } finally {
-        await this.state.refreshAll();
+        if (state.kind !== 'rebase') {
+          await this.state.refreshAll();
+        }
       }
     });
 
@@ -2058,8 +2081,7 @@ export class CommandController {
             return;
           }
 
-          await this.git.rebaseCurrentOnto(branchName);
-          await this.state.refreshAll();
+          await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(branchName));
         }
       });
     }
@@ -2432,6 +2454,25 @@ export class CommandController {
     return { kind: 'failed', message };
   }
 
+  private classifyRebaseIssue(error: unknown): { kind: RebaseIssueKind; message?: string } {
+    const message = this.getErrorSummary(error);
+    const normalized = message.toLowerCase();
+
+    const conflictMarkers = [
+      'conflict',
+      'could not apply',
+      'unmerged files',
+      'resolve all conflicts manually',
+      'after resolving the conflicts',
+      'fix conflicts and then run'
+    ];
+    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
+      return { kind: 'conflict', message };
+    }
+
+    return { kind: 'failed', message };
+  }
+
   private getErrorSummary(error: unknown): string {
     const raw = error instanceof Error ? error.message : String(error);
     const firstLine = raw
@@ -2441,7 +2482,52 @@ export class CommandController {
     return firstLine ?? 'Unknown git error.';
   }
 
-  private async openCherryPickConflictEditors(): Promise<void> {
+  private async startRebaseOperation(run: () => Promise<void>): Promise<void> {
+    try {
+      await run();
+    } catch (error) {
+      const issue = this.classifyRebaseIssue(error);
+      await this.state.refreshAll();
+      if (issue.kind === 'conflict') {
+        await this.handleRebaseConflict();
+        return;
+      }
+      throw error;
+    }
+
+    await this.state.refreshAll();
+    await this.showRebaseProgressFeedback();
+  }
+
+  private async handleRebaseConflict(): Promise<void> {
+    await this.openOperationConflictEditors('rebase');
+    void vscode.window.showWarningMessage('There are some conflicts. You have to resolve them first.');
+  }
+
+  private async showRebaseProgressFeedback(): Promise<void> {
+    const state = this.state.operationState;
+    if (state.kind !== 'rebase') {
+      void vscode.window.showInformationMessage('Rebase completed successfully.');
+      return;
+    }
+
+    const progress = state.stepCurrent && state.stepTotal
+      ? ` (${state.stepCurrent}/${state.stepTotal})`
+      : '';
+    const conflicts = this.state.conflicts.length > 0
+      ? this.state.conflicts
+      : await this.git.getMergeConflicts();
+    if (conflicts.length > 0) {
+      await this.handleRebaseConflict();
+      return;
+    }
+
+    void vscode.window.showInformationMessage(
+      `Rebase is still in progress${progress}. Continue to process remaining commits or Abort.`
+    );
+  }
+
+  private async openOperationConflictEditors(operation: 'cherry-pick' | 'rebase'): Promise<void> {
     const conflicts = this.state.conflicts.length > 0
       ? this.state.conflicts
       : await this.git.getMergeConflicts();
@@ -2456,7 +2542,7 @@ export class CommandController {
         await this.editor.openMergeConflict(conflict.path);
         openedCount += 1;
       } catch (error) {
-        this.logger.warn(`Failed to open merge editor for conflict file ${conflict.path}: ${String(error)}`);
+        this.logger.warn(`Failed to open merge editor for ${operation} conflict file ${conflict.path}: ${String(error)}`);
       }
     }
 

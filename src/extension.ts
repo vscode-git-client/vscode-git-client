@@ -165,7 +165,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   attachRefreshScopeVisibility(context, submoduleView, 'submodules', stateStore);
 
   stateStore.attachAutoRefresh(context);
-  attachCherryPickStatusBarActions(context, stateStore);
+  attachOperationStatusBarActions(context, stateStore);
 
   context.subscriptions.push(
     vscode.workspace.onDidSaveTextDocument(() => {
@@ -265,37 +265,55 @@ async function registerBranchActionHubInGitCheckout(
   }
 }
 
-function attachCherryPickStatusBarActions(
+function attachOperationStatusBarActions(
   context: vscode.ExtensionContext,
   stateStore: StateStore
 ): void {
   const continueItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 30);
-  continueItem.name = 'IntelliGit Cherry-pick Continue';
+  continueItem.name = 'IntelliGit Operation Continue';
   continueItem.command = 'intelliGit.operation.continue';
   continueItem.text = '$(check) Continue';
-  continueItem.tooltip = 'Continue cherry-pick after resolving conflicts';
+  continueItem.tooltip = 'Continue current operation';
 
   const abortItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 29);
-  abortItem.name = 'IntelliGit Cherry-pick Abort';
+  abortItem.name = 'IntelliGit Operation Abort';
   abortItem.command = 'intelliGit.operation.abort';
   abortItem.text = '$(close) Abort';
-  abortItem.tooltip = 'Abort current cherry-pick operation';
+  abortItem.tooltip = 'Abort current operation';
+
+  const skipItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 28);
+  skipItem.name = 'IntelliGit Rebase Skip';
+  skipItem.command = 'intelliGit.operation.skip';
+  skipItem.text = '$(debug-step-over) Skip';
+  skipItem.tooltip = 'Skip current commit during rebase/cherry-pick';
 
   const update = () => {
-    const isCherryPickActive = stateStore.operationState.kind === 'cherry-pick';
-    if (isCherryPickActive) {
+    const operation = stateStore.operationState.kind;
+    const isRebaseActive = operation === 'rebase';
+    const isCherryPickActive = operation === 'cherry-pick';
+    const isActionable = isRebaseActive || isCherryPickActive;
+
+    if (isActionable) {
+      if (isRebaseActive && stateStore.operationState.stepCurrent && stateStore.operationState.stepTotal) {
+        continueItem.text = `$(check) Continue (${stateStore.operationState.stepCurrent}/${stateStore.operationState.stepTotal})`;
+      } else {
+        continueItem.text = '$(check) Continue';
+      }
       continueItem.show();
       abortItem.show();
-      return;
+      skipItem.show();
+    } else {
+      continueItem.hide();
+      abortItem.hide();
+      skipItem.hide();
     }
-    continueItem.hide();
-    abortItem.hide();
   };
 
   update();
   context.subscriptions.push(
     continueItem,
     abortItem,
+    skipItem,
     stateStore.onDidChange(update)
   );
 }
