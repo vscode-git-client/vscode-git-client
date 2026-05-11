@@ -24,37 +24,14 @@
       gap: 8px;
       grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(132px, 160px) minmax(132px, 160px);
       align-items: end;
+      --filter-label-weight: 600;
+      --filter-input-border: var(--vscode-input-border, var(--border));
+      --filter-input-background: var(--vscode-input-background);
+      --filter-input-color: var(--vscode-input-foreground);
+      --filter-input-padding: 7px 8px;
+      --filter-input-font-family: var(--vscode-font-family);
     }
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 0;
-      position: relative;
-    }
-    .field-label {
-      font-size: 11px;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .field-label .note {
-      font-weight: 400;
-      margin-left: 4px;
-    }
-    .filter-input {
-      width: 100%;
-      padding: 7px 28px 7px 8px;
-      font-size: 12px;
-      background: var(--vscode-input-background);
-      color: var(--vscode-input-foreground);
-      border: 1px solid var(--vscode-input-border, var(--border));
-      border-radius: 6px;
-      outline: none;
-      font-family: var(--vscode-font-family);
-    }
-    .filter-input:focus {
-      border-color: var(--accent);
-    }
+    {{> partials/styles/filterFieldAtoms}}
     {{> partials/styles/fieldClear}}
     {{> partials/styles/autocomplete listClass="autocomplete-list" optionClass="autocomplete-option" shadowAlpha="0.25"}}
     .actions {
@@ -286,43 +263,52 @@
 
   <form id="form">
     <section class="filters-inline">
-      <div class="field">
-        <label class="field-label" for="message">Message <span class="note">(subject/id)</span></label>
-        <div class="input-shell">
-          <input id="message" name="message" class="filter-input" type="text" placeholder="fix login, HOTFIX-123, short SHA" autofocus spellcheck="false" />
-          {{> partials/fieldClearButton target="message" label="message"}}
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label" for="branch">Branch</label>
-        <div class="input-shell">
-          <input id="branch" name="branch" class="filter-input" type="text" placeholder="main, feature/login" spellcheck="false" autocomplete="off" />
-          {{> partials/fieldClearButton target="branch" label="branch"}}
-          {{> partials/autocompleteList id="branch-list" className="autocomplete-list" label="Branch suggestions"}}
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label" for="author">Author</label>
-        <div class="input-shell">
-          <input id="author" name="author" class="filter-input" type="text" placeholder="name or email" spellcheck="false" autocomplete="off" />
-          {{> partials/fieldClearButton target="author" label="author"}}
-          {{> partials/autocompleteList id="author-list" className="autocomplete-list" label="Author suggestions"}}
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label" for="since">Since</label>
-        <div class="input-shell">
-          <input id="since" name="since" class="filter-input" type="date" />
-          {{> partials/fieldClearButton target="since" label="since"}}
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label" for="until">Until</label>
-        <div class="input-shell">
-          <input id="until" name="until" class="filter-input" type="date" />
-          {{> partials/fieldClearButton target="until" label="until"}}
-        </div>
-      </div>
+      {{> partials/molecules/textFilterField
+        id="message"
+        name="message"
+        label="Message"
+        note="(subject/id)"
+        placeholder="fix login, HOTFIX-123, short SHA"
+        clearLabel="message"
+        autofocus=true
+        spellcheck="false"
+      }}
+      {{> partials/molecules/textFilterField
+        id="branch"
+        name="branch"
+        label="Branch"
+        placeholder="main, feature/login"
+        clearLabel="branch"
+        autocompleteAttr="off"
+        spellcheck="false"
+        autocompleteId="branch-list"
+        autocompleteClass="autocomplete-list"
+        autocompleteLabel="Branch suggestions"
+      }}
+      {{> partials/molecules/textFilterField
+        id="author"
+        name="author"
+        label="Author"
+        placeholder="name or email"
+        clearLabel="author"
+        autocompleteAttr="off"
+        spellcheck="false"
+        autocompleteId="author-list"
+        autocompleteClass="autocomplete-list"
+        autocompleteLabel="Author suggestions"
+      }}
+      {{> partials/molecules/dateFilterField
+        id="since"
+        name="since"
+        label="Since"
+        clearLabel="since"
+      }}
+      {{> partials/molecules/dateFilterField
+        id="until"
+        name="until"
+        label="Until"
+        clearLabel="until"
+      }}
     </section>
 
     <section class="commit-preview">

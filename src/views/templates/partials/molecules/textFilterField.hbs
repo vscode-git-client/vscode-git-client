@@ -1,0 +1,19 @@
+<div class="filter-field">
+  {{> partials/atoms/filterLabel for=id text=label note=note}}
+  <div class="input-shell">
+    <input
+      id="{{id}}"
+      {{#if name}}name="{{name}}"{{/if}}
+      class="filter-input{{#if inputClass}} {{inputClass}}{{/if}}"
+      type="text"
+      {{#if placeholder}}placeholder="{{placeholder}}"{{/if}}
+      {{#if autocompleteAttr}}autocomplete="{{autocompleteAttr}}"{{/if}}
+      {{#if autofocus}}autofocus{{/if}}
+      {{#if spellcheck}}spellcheck="{{spellcheck}}"{{/if}}
+    />
+    {{> partials/fieldClearButton target=id label=clearLabel}}
+    {{#if autocompleteId}}
+      {{> partials/autocompleteList id=autocompleteId className=autocompleteClass label=autocompleteLabel}}
+    {{/if}}
+  </div>
+</div>

@@ -16,33 +16,16 @@
       gap: 8px;
       margin-bottom: 12px;
       align-items: end;
+      --filter-label-weight: 400;
+      --filter-input-border: var(--border);
+      --filter-input-background: color-mix(in srgb, var(--bg), white 4%);
+      --filter-input-color: var(--fg);
+      --filter-input-padding: 6px 8px;
+      --filter-input-font-family: inherit;
     }
-    .filter-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      min-width: 0;
-      position: relative;
-    }
-    .filter-label {
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .filter-input {
-      width: 100%;
-      box-sizing: border-box;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: color-mix(in srgb, var(--bg), white 4%);
-      color: var(--fg);
-      font: inherit;
-      padding: 6px 8px;
-    }
+    {{> partials/styles/filterFieldAtoms}}
     .filter-input.invalid {
       border-color: var(--vscode-inputValidation-errorBorder, #d93025);
-    }
-    .input-shell .filter-input {
-      padding-right: 28px;
     }
     {{> partials/styles/fieldClear}}
     .filter-actions {
@@ -183,35 +166,34 @@
 </head>
 <body>
   <section class="filters">
-    <label class="filter-field">
-      <span class="filter-label">Author</span>
-      <div class="input-shell">
-        <input id="filter-author" class="filter-input" type="text" autocomplete="off" placeholder="Type author name" />
-        {{> partials/fieldClearButton target="filter-author" label="Author"}}
-        {{> partials/autocompleteList id="author-autocomplete" className="author-autocomplete" label="Author suggestions"}}
-      </div>
-    </label>
-    <label class="filter-field">
-      <span class="filter-label">Exclude message (regex)</span>
-      <div class="input-shell">
-        <input id="filter-exclude-message" class="filter-input" type="text" autocomplete="off" placeholder="Merge pull request|WIP" spellcheck="false" />
-        {{> partials/fieldClearButton target="filter-exclude-message" label="Exclude message regex"}}
-      </div>
-    </label>
-    <label class="filter-field">
-      <span class="filter-label">From date</span>
-      <div class="input-shell">
-        <input id="filter-since" class="filter-input" type="date" />
-        {{> partials/fieldClearButton target="filter-since" label="From date"}}
-      </div>
-    </label>
-    <label class="filter-field">
-      <span class="filter-label">To date</span>
-      <div class="input-shell">
-        <input id="filter-until" class="filter-input" type="date" />
-        {{> partials/fieldClearButton target="filter-until" label="To date"}}
-      </div>
-    </label>
+    {{> partials/molecules/textFilterField
+      id="filter-author"
+      label="Author"
+      placeholder="Type author name"
+      clearLabel="Author"
+      autocompleteAttr="off"
+      autocompleteId="author-autocomplete"
+      autocompleteClass="author-autocomplete"
+      autocompleteLabel="Author suggestions"
+    }}
+    {{> partials/molecules/textFilterField
+      id="filter-exclude-message"
+      label="Exclude message (regex)"
+      placeholder="Merge pull request|WIP"
+      clearLabel="Exclude message regex"
+      autocompleteAttr="off"
+      spellcheck="false"
+    }}
+    {{> partials/molecules/dateFilterField
+      id="filter-since"
+      label="From date"
+      clearLabel="From date"
+    }}
+    {{> partials/molecules/dateFilterField
+      id="filter-until"
+      label="To date"
+      clearLabel="To date"
+    }}
     <div class="filter-actions">
       <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
     </div>

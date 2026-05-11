@@ -1,0 +1,12 @@
+<div class="filter-field">
+  {{> partials/atoms/filterLabel for=id text=label note=note}}
+  <div class="input-shell">
+    <input
+      id="{{id}}"
+      {{#if name}}name="{{name}}"{{/if}}
+      class="filter-input{{#if inputClass}} {{inputClass}}{{/if}}"
+      type="date"
+    />
+    {{> partials/fieldClearButton target=id label=clearLabel}}
+  </div>
+</div>

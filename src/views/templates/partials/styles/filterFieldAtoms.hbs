@@ -1,0 +1,34 @@
+    .filter-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      position: relative;
+    }
+    .filter-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: var(--filter-label-weight, 400);
+    }
+    .filter-label .note {
+      font-weight: 400;
+      margin-left: 4px;
+    }
+    .filter-input {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--filter-input-border, var(--border));
+      border-radius: 6px;
+      background: var(--filter-input-background, var(--vscode-input-background));
+      color: var(--filter-input-color, var(--vscode-input-foreground));
+      font-size: var(--filter-input-font-size, 12px);
+      font-family: var(--filter-input-font-family, var(--vscode-font-family));
+      padding: var(--filter-input-padding, 6px 8px);
+      outline: none;
+    }
+    .filter-input:focus {
+      border-color: var(--accent);
+    }
+    .input-shell .filter-input {
+      padding-right: 28px;
+    }
