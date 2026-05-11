@@ -28,6 +28,8 @@ interface QuickAction {
   run: () => Promise<void>;
 }
 
+type CherryPickIssueKind = 'conflict' | 'nothingToCherryPick' | 'failed';
+
 type GitScmRepository = {
   rootUri: vscode.Uri;
   inputBox: {
@@ -801,10 +803,74 @@ export class CommandController {
         selectedShas.push(picked);
       }
 
-      for (const sha of selectedShas) {
-        await this.git.cherryPick(sha);
+      const pickedShas: string[] = [];
+      const emptyShas: string[] = [];
+      const failedShas: string[] = [];
+      let conflictSha: string | undefined;
+      let issueMessage: string | undefined;
+
+      try {
+        for (const sha of selectedShas) {
+          try {
+            await this.git.cherryPick(sha);
+            pickedShas.push(sha);
+          } catch (error) {
+            const issue = this.classifyCherryPickIssue(error);
+            issueMessage = issue.message;
+            if (issue.kind === 'nothingToCherryPick') {
+              emptyShas.push(sha);
+              continue;
+            }
+            if (issue.kind === 'conflict') {
+              conflictSha = sha;
+              break;
+            }
+            failedShas.push(sha);
+            break;
+          }
+        }
+      } finally {
+        await this.state.refreshAll();
       }
-      await this.state.refreshAll();
+
+      if (conflictSha) {
+        const detail = issueMessage ? ` ${issueMessage}` : '';
+        void vscode.window.showWarningMessage(
+          `Cherry-pick conflicted at ${conflictSha.slice(0, 8)}.${detail} Resolve conflicts, then run Continue or Abort.`
+        );
+        return;
+      }
+
+      if (failedShas.length > 0) {
+        const detail = issueMessage ? ` ${issueMessage}` : '';
+        const prefix = pickedShas.length > 0
+          ? `Cherry-pick stopped after applying ${pickedShas.length} commit(s).`
+          : 'Cherry-pick failed.';
+        void vscode.window.showErrorMessage(`${prefix}${detail}`);
+        return;
+      }
+
+      if (pickedShas.length > 0 && emptyShas.length === 0) {
+        const message = pickedShas.length === 1
+          ? `Cherry-pick succeeded for ${pickedShas[0].slice(0, 8)}.`
+          : `Cherry-pick succeeded for ${pickedShas.length} commit(s).`;
+        void vscode.window.showInformationMessage(message);
+        return;
+      }
+
+      if (pickedShas.length === 0 && emptyShas.length > 0) {
+        const message = emptyShas.length === 1
+          ? `Nothing to cherry-pick for ${emptyShas[0].slice(0, 8)} (already applied or empty).`
+          : `Nothing to cherry-pick for ${emptyShas.length} commit(s) (already applied or empty).`;
+        void vscode.window.showInformationMessage(message);
+        return;
+      }
+
+      if (pickedShas.length > 0 && emptyShas.length > 0) {
+        void vscode.window.showInformationMessage(
+          `Cherry-pick completed: ${pickedShas.length} applied, ${emptyShas.length} already applied or empty.`
+        );
+      }
     });
 
     register('intelliGit.graph.cherryPickRange', async () => {
@@ -2333,6 +2399,43 @@ export class CommandController {
       return value;
     }
     return undefined;
+  }
+
+  private classifyCherryPickIssue(error: unknown): { kind: CherryPickIssueKind; message?: string } {
+    const message = this.getErrorSummary(error);
+    const normalized = message.toLowerCase();
+
+    const emptyMarkers = [
+      'nothing to cherry-pick',
+      'the previous cherry-pick is now empty',
+      'nothing to commit, working tree clean',
+      'the patch is empty'
+    ];
+    if (emptyMarkers.some((marker) => normalized.includes(marker))) {
+      return { kind: 'nothingToCherryPick', message };
+    }
+
+    const conflictMarkers = [
+      'conflict',
+      'could not apply',
+      'after resolving the conflicts',
+      'fix conflicts and then commit the result',
+      'cherry-pick failed'
+    ];
+    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
+      return { kind: 'conflict', message };
+    }
+
+    return { kind: 'failed', message };
+  }
+
+  private getErrorSummary(error: unknown): string {
+    const raw = error instanceof Error ? error.message : String(error);
+    const firstLine = raw
+      .split('\n')
+      .map((line) => line.trim())
+      .find(Boolean);
+    return firstLine ?? 'Unknown git error.';
   }
 
 }

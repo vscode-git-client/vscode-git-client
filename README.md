@@ -107,6 +107,7 @@ Commit list with graph-like glyph, refs, author/date metadata, subject-first tit
 - Create branch at commit
 - Create tag at commit
 - Cherry-pick commit
+- Cherry-pick feedback states: success, conflict (with continue/abort guidance), failure, and nothing-to-cherry-pick
 - Revert commit
 - Cherry-pick range
 - Compare commit with current branch
