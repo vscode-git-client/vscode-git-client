@@ -81,6 +81,10 @@ export class BranchSearchView {
     return view;
   }
 
+  setLoading(isLoading: boolean): void {
+    void this.panel.webview.postMessage({ type: 'loading', isLoading });
+  }
+
   private postData(): void {
     const branchPayload = this.getBranches().map((branch) => ({
       name: branch.name,

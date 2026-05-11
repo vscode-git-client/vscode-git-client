@@ -371,7 +371,7 @@ function describeTagRemotes(tag: TagRef): string {
   if (remotes.length === 0) {
     return '';
   }
-  return remotes.map(() => '🌐').join(' ');
+  return `🌐 ${remotes.join(', ')}`;
 }
 
 function formatComparison(comparison: BranchRef['comparison'] | TagRef['comparison']): string {

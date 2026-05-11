@@ -264,8 +264,7 @@ export class CommandController {
     });
 
     register('intelliGit.branch.search', async () => {
-      await this.state.refreshBranches();
-      BranchSearchView.open(
+      const searchView = BranchSearchView.open(
         {
           checkout: async (name: string) => {
             await this.git.checkoutBranch(name);
@@ -286,6 +285,17 @@ export class CommandController {
         () => this.state.tags,
         (listener) => this.state.onDidChange(listener)
       );
+      searchView.setLoading(true);
+      void this.state
+        .refreshBranches()
+        .catch((error) => {
+          void vscode.window.showErrorMessage(
+            `IntelliGit: ${error instanceof Error ? error.message : String(error)}`
+          );
+        })
+        .finally(() => {
+          searchView.setLoading(false);
+        });
     });
 
     register('intelliGit.branch.checkout', async (arg?: unknown) => {
@@ -2482,25 +2492,54 @@ export class CommandController {
   }
 
   private async pickBranchName(title = 'Pick branch', remoteOnly = false): Promise<string | undefined> {
-    await this.state.refreshBranches();
-    const branches = this.state.branches.filter((branch) => {
-      if (remoteOnly) {
-        return branch.type === 'remote';
-      }
-      return true;
+    type BranchPickItem = vscode.QuickPickItem & { value: string };
+    const qp = vscode.window.createQuickPick<BranchPickItem>();
+    qp.title = title;
+    qp.placeholder = 'Loading branches...';
+    qp.busy = true;
+    qp.items = [];
+
+    const toItems = (): BranchPickItem[] =>
+      this.state.branches
+        .filter((branch) => (remoteOnly ? branch.type === 'remote' : true))
+        .map((branch) => ({
+          label: branch.name,
+          description: branch.current ? 'current' : branch.type,
+          detail: `${branch.upstream ? `upstream ${branch.upstream}` : 'no upstream'} · ▲${branch.ahead} ▼${branch.behind}`,
+          value: branch.name
+        }));
+
+    const selectionPromise = new Promise<string | undefined>((resolve) => {
+      const disposables: vscode.Disposable[] = [];
+      const finish = (value: string | undefined) => {
+        while (disposables.length > 0) {
+          disposables.pop()?.dispose();
+        }
+        qp.dispose();
+        resolve(value);
+      };
+
+      disposables.push(
+        qp.onDidAccept(() => finish(qp.selectedItems[0]?.value)),
+        qp.onDidHide(() => finish(undefined))
+      );
     });
 
-    const picked = await vscode.window.showQuickPick(
-      branches.map((branch) => ({
-        label: branch.name,
-        description: branch.current ? 'current' : branch.type,
-        detail: `${branch.upstream ? `upstream ${branch.upstream}` : 'no upstream'} · ▲${branch.ahead} ▼${branch.behind}`,
-        value: branch.name
-      })),
-      { title }
-    );
+    qp.show();
 
-    return picked?.value;
+    try {
+      await this.state.refreshBranches();
+      const items = toItems();
+      qp.items = items;
+      qp.busy = false;
+      qp.placeholder = items.length > 0 ? 'Pick branch' : 'No branches found';
+    } catch (error) {
+      qp.busy = false;
+      qp.placeholder = 'Failed to load branches';
+      throw error;
+    }
+
+    return selectionPromise;
   }
 
   private async pickStashRef(title: string): Promise<string | undefined> {

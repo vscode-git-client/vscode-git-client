@@ -121,6 +121,12 @@
       color: var(--muted);
       font-size: 12px;
     }
+    .loading {
+      padding: 24px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -150,6 +156,7 @@
     let focusedIndex = 0;
     let selectedName = null;
     let selectedKind = null;
+    let isLoading = true;
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -157,6 +164,11 @@
         branches = msg.branches || [];
         tags = msg.tags || [];
         applyFilter();
+        return;
+      }
+      if (msg && msg.type === 'loading') {
+        isLoading = Boolean(msg.isLoading);
+        render(searchInput.value.trim().toLowerCase());
       }
     });
 
@@ -231,7 +243,16 @@
       const branchCount = filtered.branches.length;
       const tagCount = filtered.tags.length;
       const total = branchCount + tagCount;
-      countEl.textContent = total + (total === 1 ? ' result' : ' results');
+      if (isLoading) {
+        countEl.textContent = 'Loading...';
+      } else {
+        countEl.textContent = total + (total === 1 ? ' result' : ' results');
+      }
+
+      if (isLoading && total === 0) {
+        listEl.innerHTML = '<div class="loading">Loading branches and tags…</div>';
+        return;
+      }
 
       if (total === 0) {
         listEl.innerHTML = '<div class="empty">No branches or tags match your search.</div>';
