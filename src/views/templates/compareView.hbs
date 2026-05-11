@@ -216,11 +216,19 @@
       <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
     </div>
     <div class="filter-options">
-      <label class="filter-checkbox-label" for="filter-ignore-merges">
+      <label
+        class="filter-checkbox-label"
+        for="filter-ignore-merges"
+        title='Ignore commits that have message "Merge branch ..."'
+      >
         <input id="filter-ignore-merges" type="checkbox" />
         <span>Ignore merge commits</span>
       </label>
-      <label class="filter-checkbox-label" for="filter-matching-messages">
+      <label
+        class="filter-checkbox-label"
+        for="filter-matching-messages"
+        title="Match commits by Author + DateTime + Message, ignore commit ID"
+      >
         <input id="filter-matching-messages" type="checkbox" />
         <span>Matching messages</span>
       </label>
@@ -320,8 +328,8 @@
         };
       });
 
-    const selectRange = (targetRow, additive) => {
-      const visibleRows = getVisibleCommitRows();
+    const selectRange = (targetRow, additive, side) => {
+      const visibleRows = getVisibleCommitRowsBySide(side);
       const targetSha = getCommitSha(targetRow);
       const anchorIndex = visibleRows.findIndex((row) => getCommitSha(row) === selectionAnchorSha);
       const targetIndex = visibleRows.findIndex((row) => getCommitSha(row) === targetSha);
@@ -358,9 +366,17 @@
       if (side === 'left' || side === 'right') {
         activePane = side;
       }
+      const selectedRows = getSelectedCommitRows();
+      if (selectedRows.length > 0) {
+        const selectedSide = getCommitSide(selectedRows[0]);
+        if ((selectedSide === 'left' || selectedSide === 'right') && selectedSide !== side) {
+          clearCommitSelection();
+          selectionAnchorSha = null;
+        }
+      }
 
       if (range) {
-        selectRange(row, toggle);
+        selectRange(row, toggle, side);
         if (sha) {
           selectionAnchorSha = sha;
         }
