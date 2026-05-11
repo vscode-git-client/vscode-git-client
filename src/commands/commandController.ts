@@ -166,6 +166,18 @@ export class CommandController {
 
       return undefined;
     };
+    const toExplorerResourceUris = (arg: unknown, selectedArg: unknown): vscode.Uri[] => {
+      const selectedUris = Array.isArray(selectedArg)
+        ? selectedArg.map((item) => asFileResourceUri(item)).filter((uri): uri is vscode.Uri => Boolean(uri))
+        : [];
+      const primary = asFileResourceUri(arg);
+      const combined = primary ? [primary, ...selectedUris] : selectedUris;
+      const uniqueByPath = new Map<string, vscode.Uri>();
+      for (const uri of combined) {
+        uniqueByPath.set(uri.fsPath, uri);
+      }
+      return [...uniqueByPath.values()];
+    };
     const toBranchName = (value: unknown): string | undefined => {
       const item = asBranchItem(value);
       if (item) {
@@ -1721,9 +1733,9 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('intelliGit.compareWithRevision', async (arg?: unknown) => {
-      const uri = asFileResourceUri(arg);
-      if (!uri) {
+    register('intelliGit.compareWithRevision', async (arg?: unknown, selected?: unknown) => {
+      const targetUris = toExplorerResourceUris(arg, selected);
+      if (targetUris.length === 0) {
         void vscode.window.showWarningMessage('Right-click a file or folder in the Explorer to compare.');
         return;
       }
@@ -1734,34 +1746,42 @@ export class CommandController {
       }
 
       const gitRoot = await this.git.getGitRoot();
-      const normalizedTarget = uri.fsPath.replace(/[\\/]+$/, '');
       const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
-      const repoRelative = normalizedTarget === normalizedRoot
-        ? ''
-        : this.git.toRepoRelative(uri.fsPath);
-      if (repoRelative === undefined) {
-        void vscode.window.showErrorMessage('Not inside a Git repository');
-        return;
-      }
+      const targets: Array<{ repoRelative: string; isDirectory: boolean }> = [];
+      for (const uri of targetUris) {
+        const normalizedTarget = uri.fsPath.replace(/[\\/]+$/, '');
+        const repoRelative = normalizedTarget === normalizedRoot
+          ? ''
+          : this.git.toRepoRelative(uri.fsPath);
+        if (repoRelative === undefined) {
+          void vscode.window.showErrorMessage('Not inside a Git repository');
+          return;
+        }
 
-      let stat: vscode.FileStat;
-      try {
-        stat = await vscode.workspace.fs.stat(uri);
-      } catch {
-        void vscode.window.showErrorMessage('Selected path is no longer available.');
-        return;
+        let stat: vscode.FileStat;
+        try {
+          stat = await vscode.workspace.fs.stat(uri);
+        } catch {
+          void vscode.window.showErrorMessage('Selected path is no longer available.');
+          return;
+        }
+        targets.push({
+          repoRelative,
+          isDirectory: (stat.type & vscode.FileType.Directory) !== 0
+        });
       }
-      const isDirectory = (stat.type & vscode.FileType.Directory) !== 0;
 
       const selection = await pickRevisionToCompare(this.git, this.state.branches, this.state.tags);
       if (!selection) {
         return;
       }
 
-      if (isDirectory) {
-        await this.editor.openCompareWithRevisionForFolder(repoRelative, selection.ref, selection.label);
-      } else {
-        await this.editor.openCompareWithRevisionForFile(repoRelative, selection.ref, selection.label);
+      for (const target of targets) {
+        if (target.isDirectory) {
+          await this.editor.openCompareWithRevisionForFolder(target.repoRelative, selection.ref, selection.label);
+        } else {
+          await this.editor.openCompareWithRevisionForFile(target.repoRelative, selection.ref, selection.label);
+        }
       }
     });
 

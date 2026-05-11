@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## [0.15.5] - 2026-05-11
 
 ### Changed
+- **Compare with Revision multi-file selection** — when multiple files are selected in Explorer, `Compare with Revision…` now applies to all selected files (not only the first one) and opens a diff for each selected file using the same picked revision.
 - **Cherry-pick commit notifications** — `intelliGit.graph.cherryPick` now reports explicit outcomes similar to IntelliJ-style feedback: success, conflict (with resolve + Continue/Abort guidance), failure, and nothing-to-cherry-pick (already applied/empty), including multi-commit summary handling.
 - **Cherry-pick conflict workflow** — when cherry-pick hits conflicts (including `unmerged files` states), IntelliGit now shows a dedicated conflict warning, auto-opens conflict files in merge editors when possible, falls back to opening SCM for unresolved listing, and surfaces bottom status-bar actions for `Continue` / `Abort` while a cherry-pick is active.
 - **Rebase conflict/iteration workflow** — starting or continuing rebase now handles conflict errors explicitly, opens conflict files in merge editors (with SCM fallback), supports step-by-step continuation through multi-commit rebases, and keeps `Abort` available throughout the operation.

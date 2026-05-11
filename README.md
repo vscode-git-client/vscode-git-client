@@ -145,6 +145,7 @@ Right-click any file or folder in the Explorer and choose **Compare with Revisio
 - Picker groups refs as **Local branches**, **Remote branches**, and **Tags**
 - Type a commit SHA prefix (4–40 lowercase hex chars) to resolve and select a specific commit
 - File target: opens diff with **left = selected revision**, **right = working tree**
+- Multi-select file targets: applies the same revision to every selected file and opens each file diff
 - Folder target: populates **Commit Details** with changed files and opens the first file in preview diff mode
 
 ### Worktrees (Tree View — Repo Structure panel)
