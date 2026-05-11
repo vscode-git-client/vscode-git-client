@@ -136,6 +136,7 @@ A dedicated sidebar view that appears when a commit is selected from Git Graph. 
 - Open file diff (commit vs parent) inline in the editor
 - Revert selected file changes back to the commit's parent
 - Cherry-pick selected file changes onto the current working tree
+- Create patch from selected file changes (IntelliJ-style patch preview in a diff document)
 
 ### Compare with Revision (Explorer context menu)
 

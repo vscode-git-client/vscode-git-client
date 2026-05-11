@@ -439,6 +439,10 @@
         "title": "Cherry-pick Selected Changes"
       },
       {
+        "command": "intelliGit.commit.createPatchSelectedChanges",
+        "title": "Create Patch from Selected Changes"
+      },
+      {
         "command": "intelliGit.worktree.refresh",
         "title": "Refresh Worktrees"
       },
@@ -866,6 +870,11 @@
           "command": "intelliGit.commit.cherryPickSelectedChanges",
           "when": "view == intelliGit.commitView && viewItem == commitViewFile && intelliGit.commitViewCanCherryPickSelected",
           "group": "navigation@2"
+        },
+        {
+          "command": "intelliGit.commit.createPatchSelectedChanges",
+          "when": "view == intelliGit.commitView && viewItem == commitViewFile",
+          "group": "navigation@3"
         },
         {
           "command": "intelliGit.graph.openRepositoryFileAtRevision",

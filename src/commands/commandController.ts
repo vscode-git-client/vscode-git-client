@@ -1076,6 +1076,26 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Cherry-picked selected changes from ${target.sha.slice(0, 8)}.`);
     });
 
+    register('intelliGit.commit.createPatchSelectedChanges', async (arg?: unknown, selected?: unknown) => {
+      const target = await this.resolveSelectedCommitFiles(arg, selected);
+      if (!target) {
+        void vscode.window.showInformationMessage('Select one or more files from a commit first.');
+        return;
+      }
+
+      const patch = await this.git.getPatchForCommitFiles(target.sha, target.filePaths);
+      if (!patch.trim()) {
+        void vscode.window.showInformationMessage('No patch content generated for the selected files.');
+        return;
+      }
+
+      const doc = await vscode.workspace.openTextDocument({
+        language: 'diff',
+        content: patch
+      });
+      await vscode.window.showTextDocument(doc, { preview: false });
+    });
+
     register('intelliGit.graph.compareWithCurrent', async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
       if (!sha) {

@@ -20,6 +20,7 @@ All notable changes to this project are documented in this file.
 - **Compare/Filter commit-list parity** — Compare Branches panes and Filter Graph preview now share the same commit-table markup and base row/column styling (graph glyph, sticky author/date columns, hover/selection states) via common Handlebars partials.
 - **View refresh action placement** — removed refresh icon buttons from IntelliGit view toolbars (Branches/Stashes/Graph/Worktrees/Submodules), added per-view `Refresh` entries to each view title context menu (`...` / right-click), removed the first refresh button from Submodules, and changed `Update All Submodules` toolbar action to an `arrow-down` icon.
 - **Edit commit message across commit surfaces** — enabled `Edit Commit Message...` in shared commit context menu used by Git Graph, Compare Branches, and Filter Graph. The action now opens a rewrite flow that updates the selected commit message (via automated interactive rebase) instead of staying disabled.
+- **Commit Details selected-files context menu** — added `Create Patch from Selected Changes` to the Commit Details tree so multi-file selections now expose IntelliJ-style patch preview alongside branch-aware `Revert selected changes` / `Cherry-pick selected changes`.
 
 ## [0.15.4] - 2026-05-10
 
