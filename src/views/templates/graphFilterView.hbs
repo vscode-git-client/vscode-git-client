@@ -2,16 +2,7 @@
     {{> partials/styles/theme}}
     {{> partials/styles/contextMenu minWidth="260px"}}
     {{> partials/styles/bodyBase background="var(--bg)" padding="14px 16px" gap="10px"}}
-    h1 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    p.hint {
-      margin: 0;
-      font-size: 11px;
-      color: var(--muted);
-    }
+    {{> partials/styles/viewHeading titleSize="14px"}}
     form {
       display: flex;
       flex-direction: column;
@@ -57,14 +48,15 @@
     .actions button.primary:hover {
       background: var(--vscode-button-hoverBackground);
     }
-    .actions button.secondary {
-      background: var(--vscode-button-secondaryBackground, transparent);
-      color: var(--vscode-button-secondaryForeground, var(--fg));
-      border: 1px solid var(--border);
-    }
-    .actions button.secondary:hover {
-      border-color: var(--accent);
-    }
+    {{> partials/styles/outlineButton
+      selector=".actions button.secondary"
+      padding="6px 12px"
+      radius="4px"
+      fontSize="12px"
+      color="var(--vscode-button-secondaryForeground, var(--fg))"
+      background="var(--vscode-button-secondaryBackground, transparent)"
+      hoverBorderColor="var(--accent)"
+    }}
     .commit-preview {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -80,18 +72,13 @@
       padding: 6px 8px;
       border-bottom: 1px solid var(--border);
     }
-    .preview-table-wrap {
-      overflow: auto;
-      min-height: 0;
-      flex: 1;
-    }
+    {{> partials/styles/flexScrollArea className="preview-table-wrap" overflow="auto"}}
     {{> partials/styles/tableBase cellPadding="6px 4px"}}
     {{> partials/styles/commitListBase}}
   </style>
 </head>
 <body>
-  <h1>{{title}}</h1>
-  <p class="hint">{{hint}}</p>
+  {{> partials/molecules/viewHeading title=title hint=hint}}
 
   <form id="form">
     <section class="filters-inline">

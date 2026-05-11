@@ -1,0 +1,16 @@
+    {{{selector}}} {
+      border: 1px solid var(--border);
+      border-radius: {{#if radius}}{{radius}}{{else}}6px{{/if}};
+      background: {{#if background}}{{{background}}}{{else}}transparent{{/if}};
+      color: {{#if color}}{{{color}}}{{else}}var(--fg){{/if}};
+      font: {{#if font}}{{{font}}}{{else}}inherit{{/if}};
+      {{#if fontSize}}font-size: {{fontSize}};{{/if}}
+      {{#if fontFamily}}font-family: {{fontFamily}};{{/if}}
+      padding: {{padding}};
+      cursor: pointer;
+    }
+    {{{selector}}}:hover {
+      {{#if hoverBackground}}background: {{{hoverBackground}}};{{/if}}
+      {{#if hoverBorderColor}}border-color: {{{hoverBorderColor}}};{{/if}}
+      {{#if hoverColor}}color: {{{hoverColor}}};{{/if}}
+    }

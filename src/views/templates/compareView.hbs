@@ -34,18 +34,11 @@
       align-items: flex-end;
       height: 100%;
     }
-    .filter-clear {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .filter-clear:hover {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
+    {{> partials/styles/outlineButton
+      selector=".filter-clear"
+      padding="6px 10px"
+      hoverBackground="color-mix(in srgb, var(--accent), transparent 90%)"
+    }}
     .filter-options {
       grid-column: 1 / -1;
       display: flex;
@@ -59,18 +52,11 @@
       display: flex;
       align-items: center;
     }
-    .filter-export {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      padding: 6px 10px;
-      cursor: pointer;
-    }
-    .filter-export:hover {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
+    {{> partials/styles/outlineButton
+      selector=".filter-export"
+      padding="6px 10px"
+      hoverBackground="color-mix(in srgb, var(--accent), transparent 90%)"
+    }}
     .filter-checkbox-label {
       display: inline-flex;
       align-items: center;
@@ -108,11 +94,7 @@
       border-radius: 6px;
       padding: 4px 8px;
     }
-    .table-wrap {
-      flex: 1;
-      overflow-y: auto;
-      min-height: 0;
-    }
+    {{> partials/styles/flexScrollArea className="table-wrap" overflow="auto"}}
     {{> partials/styles/tableBase cellPadding="6px 4px"}}
     {{> partials/styles/commitListBase}}
   </style>
