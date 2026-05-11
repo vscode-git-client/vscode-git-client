@@ -8,7 +8,8 @@ export class GraphCommitTreeItem extends vscode.TreeItem {
     super(commit.subject, vscode.TreeItemCollapsibleState.Collapsed);
     this.contextValue = 'graphCommit';
     this.id = `commit:${commit.sha}`;
-    this.description = ` ${commit.sha.slice(0, 7)}`;
+    // Keep hash in the native trailing description slot so subject keeps max width.
+    this.description = commit.sha.slice(0, 7);
     this.tooltip = [
       commit.sha,
       commit.subject,
