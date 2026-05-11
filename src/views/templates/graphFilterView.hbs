@@ -65,27 +65,27 @@
       border-top: 1px solid var(--border);
       padding-top: 8px;
     }
-    button {
+    .actions button {
       padding: 6px 12px;
       font-size: 12px;
       border-radius: 4px;
       cursor: pointer;
       font-family: inherit;
     }
-    button.primary {
+    .actions button.primary {
       background: var(--vscode-button-background);
       color: var(--vscode-button-foreground);
       border: 1px solid var(--vscode-button-background);
     }
-    button.primary:hover {
+    .actions button.primary:hover {
       background: var(--vscode-button-hoverBackground);
     }
-    button.secondary {
+    .actions button.secondary {
       background: var(--vscode-button-secondaryBackground, transparent);
       color: var(--vscode-button-secondaryForeground, var(--fg));
       border: 1px solid var(--border);
     }
-    button.secondary:hover {
+    .actions button.secondary:hover {
       border-color: var(--accent);
     }
     .commit-preview {
@@ -338,13 +338,12 @@
       </div>
     </section>
 
-    <div class="actions">
-      <button type="button" class="secondary" id="cancel">{{#if showApply}}Cancel{{else}}Close{{/if}}</button>
-      <button type="button" class="secondary" id="clear">Clear Filters</button>
-      {{#if showApply}}
-      <button type="submit" class="primary" id="apply">Apply</button>
-      {{/if}}
-    </div>
+    {{#unless showApply}}
+      <div class="actions">
+        <button type="button" class="secondary" id="cancel">Close</button>
+        <button type="button" class="secondary" id="clear">Clear Filters</button>
+      </div>
+    {{/unless}}
   </form>
 
   {{> partials/compareContextMenu}}
@@ -369,7 +368,10 @@
     const untilInput = document.getElementById('until');
     const previewHeader = document.getElementById('preview-header');
     const previewBody = document.getElementById('preview-body');
+    const cancelButton = document.getElementById('cancel');
+    const clearButton = document.getElementById('clear');
     const fieldClearButtons = Array.from(document.querySelectorAll('.field-clear'));
+    let applyDebounceTimer = null;
 
     {{> partials/scripts/commitContextMenu}}
 
@@ -579,6 +581,19 @@
       };
     }
 
+    function scheduleApplyFilters() {
+      if (!SHOW_APPLY) {
+        return;
+      }
+      if (applyDebounceTimer !== null) {
+        clearTimeout(applyDebounceTimer);
+      }
+      applyDebounceTimer = setTimeout(() => {
+        applyDebounceTimer = null;
+        vscode.postMessage({ type: 'apply', filters: collect() });
+      }, 160);
+    }
+
     function getFilteredCommits() {
       const f = collect();
       const message = (f.message || '').trim().toLowerCase();
@@ -729,10 +744,12 @@
         input.value = selected;
         close();
         renderPreview();
+        scheduleApplyFilters();
       };
       input.addEventListener('input', () => {
         renderPreview();
         open();
+        scheduleApplyFilters();
       });
       input.addEventListener('focus', open);
       input.addEventListener('keydown', (event) => {
@@ -791,28 +808,32 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (SHOW_APPLY) {
-        vscode.postMessage({ type: 'apply', filters: collect() });
+        scheduleApplyFilters();
       }
     });
 
-    document.getElementById('cancel').addEventListener('click', () => {
-      vscode.postMessage({ type: 'close' });
-    });
+    if (cancelButton) {
+      cancelButton.addEventListener('click', () => {
+        vscode.postMessage({ type: 'close' });
+      });
+    }
 
-    document.getElementById('clear').addEventListener('click', () => {
-      if (SHOW_APPLY) {
-        vscode.postMessage({ type: 'clear' });
-        return;
-      }
-      messageInput.value = '';
-      branchInput.value = '';
-      authorInput.value = '';
-      sinceInput.value = '';
-      untilInput.value = '';
-      branchAutocomplete.close();
-      authorAutocomplete.close();
-      renderPreview();
-    });
+    if (clearButton) {
+      clearButton.addEventListener('click', () => {
+        if (SHOW_APPLY) {
+          vscode.postMessage({ type: 'clear' });
+          return;
+        }
+        messageInput.value = '';
+        branchInput.value = '';
+        authorInput.value = '';
+        sinceInput.value = '';
+        untilInput.value = '';
+        branchAutocomplete.close();
+        authorAutocomplete.close();
+        renderPreview();
+      });
+    }
 
     fieldClearButtons.forEach((button) => {
       button.addEventListener('mousedown', (event) => event.preventDefault());
@@ -824,11 +845,18 @@
         if (targetId === 'branch') { branchAutocomplete.close(); }
         if (targetId === 'author') { authorAutocomplete.close(); }
         renderPreview();
+        scheduleApplyFilters();
       });
     });
     [messageInput, sinceInput, untilInput].forEach((input) => {
-      input.addEventListener('input', renderPreview);
-      input.addEventListener('change', renderPreview);
+      input.addEventListener('input', () => {
+        renderPreview();
+        scheduleApplyFilters();
+      });
+      input.addEventListener('change', () => {
+        renderPreview();
+        scheduleApplyFilters();
+      });
     });
 
     document.addEventListener('keydown', (e) => {

@@ -107,11 +107,11 @@ export class GraphFilterView {
     switch (message.type) {
       case 'apply':
         await this.handlers.apply(sanitizeCommitFilters(message.filters));
-        this.panel.dispose();
+        this.postInitial();
         return;
       case 'clear':
         await this.handlers.clear();
-        this.panel.dispose();
+        this.postInitial();
         return;
       case 'close':
         this.panel.dispose();

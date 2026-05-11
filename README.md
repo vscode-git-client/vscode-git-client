@@ -123,6 +123,7 @@ Commit list with graph-like glyph, refs, author, date, and message. Each commit 
 - message text
 - since / until dates
 - In **Filter Graph** preview, selecting multiple commits now opens a merged Commit Details range (net file changes across the selected commits)
+- Filter fields apply immediately as you type/change values; footer `Cancel / Clear Filters / Apply` buttons are removed in Filter Graph (field-level clear buttons remain)
 
 ### Commit Details (Tree View — sidebar)
 

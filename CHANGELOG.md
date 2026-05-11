@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - **Compare Branches continuous multi-select details** — selecting a continuous commit range in the same compare pane now opens one merged Commit Details view showing net file changes across the selected span, and file clicks open range diffs (`oldest^ ↔ newest`) instead of per-commit-only details.
 - **Filter Graph multi-select details** — selecting multiple commits in Filter Graph now opens merged Commit Details range output (net file changes across the selected commit span) instead of only single-commit details.
+- **Filter Graph filter UX polish** — fixed per-field clear-button alignment to match Compare Branches styling, removed footer `Cancel / Clear Filters / Apply` buttons in Filter Graph, and made field changes apply filters immediately with lightweight debounce.
 
 ## [0.15.4] - 2026-05-10
 
