@@ -85,176 +85,8 @@
       min-height: 0;
       flex: 1;
     }
-    {{> partials/styles/tableBase cellPadding="5px 6px"}}
-    col.col-graph  { width: 42px; }
-    col.col-author { width: 130px; }
-    col.col-date   { width: 112px; }
-    .col-graph {
-      font-family: var(--vscode-editor-font-family);
-      text-align: left;
-      color: var(--muted);
-      user-select: none;
-      cursor: pointer;
-      width: 42px;
-      white-space: nowrap;
-    }
-    .col-graph:hover { color: var(--fg); }
-    .commit-leading-icons {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding-left: 2px;
-    }
-    .commit-node-icon {
-      color: var(--vscode-charts-blue, var(--muted));
-      font-size: 11px;
-      line-height: 1;
-    }
-    .disclosure-icon {
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1;
-      width: 10px;
-      text-align: center;
-    }
-    .commit-row.expanded .disclosure-icon {
-      color: var(--fg);
-    }
-    .col-subject {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .col-author, .col-date {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .commit-row {
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .commit-row:hover {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
-    .commit-row.selected {
-      background: color-mix(in srgb, var(--accent), transparent 82%);
-    }
-    .commit-row.expanded {
-      background: color-mix(in srgb, var(--accent), transparent 94%);
-    }
-    .commit-row.selected.expanded {
-      background: color-mix(in srgb, var(--accent), transparent 86%);
-    }
-    .commit-files-row td {
-      padding: 0;
-      background: color-mix(in srgb, var(--bg), white 2%);
-      border-top: 0;
-    }
-    .commit-files-tree {
-      padding: 2px 0 4px;
-      font-size: 12px;
-    }
-    .commit-file-entry {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      width: 100%;
-      min-height: 22px;
-      border: 0;
-      background: transparent;
-      color: var(--fg);
-      font: inherit;
-      text-align: left;
-      padding: 1px 8px;
-      cursor: pointer;
-    }
-    .commit-file-entry:hover {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
-    .commit-file-entry.folder {
-      color: var(--fg);
-      cursor: default;
-    }
-    .commit-file-entry.folder:hover {
-      background: transparent;
-    }
-    .commit-file-twistie {
-      flex: 0 0 auto;
-      width: 16px;
-      height: 16px;
-      position: relative;
-    }
-    .commit-file-twistie.expanded::before {
-      content: "";
-      position: absolute;
-      left: 5px;
-      top: 4px;
-      width: 6px;
-      height: 6px;
-      border-right: 1.5px solid var(--muted);
-      border-bottom: 1.5px solid var(--muted);
-      transform: rotate(45deg);
-    }
-    .commit-file-icon {
-      flex: 0 0 auto;
-      width: 16px;
-      height: 16px;
-      position: relative;
-      color: var(--muted);
-    }
-    .commit-file-icon.folder-icon::before {
-      content: "";
-      position: absolute;
-      left: 2px;
-      top: 6px;
-      width: 12px;
-      height: 8px;
-      border: 1px solid currentColor;
-      border-radius: 2px;
-      background: color-mix(in srgb, currentColor, transparent 88%);
-    }
-    .commit-file-icon.folder-icon::after {
-      content: "";
-      position: absolute;
-      left: 3px;
-      top: 4px;
-      width: 6px;
-      height: 3px;
-      border: 1px solid currentColor;
-      border-bottom: 0;
-      border-radius: 2px 2px 0 0;
-    }
-    .commit-file-icon.file-icon::before {
-      content: "";
-      position: absolute;
-      left: 4px;
-      top: 2px;
-      width: 9px;
-      height: 12px;
-      border: 1px solid currentColor;
-      border-radius: 2px;
-      background: color-mix(in srgb, currentColor, transparent 92%);
-    }
-    .commit-file-icon.file-icon::after {
-      content: "";
-      position: absolute;
-      left: 10px;
-      top: 3px;
-      width: 4px;
-      height: 4px;
-      border-left: 1px solid currentColor;
-      border-bottom: 1px solid currentColor;
-      background: var(--bg);
-      transform: skew(-12deg);
-    }
-    .commit-file-name {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    {{> partials/styles/tableBase cellPadding="6px 4px"}}
+    {{> partials/styles/commitListBase}}
   </style>
 </head>
 <body>
@@ -314,13 +146,7 @@
     <section class="commit-preview">
       <div class="preview-header" id="preview-header">Matching commits: 0</div>
       <div class="preview-table-wrap">
-        <table>
-          <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
-          <thead>
-            <tr><th class="col-graph"></th><th class="col-subject">Subject</th><th class="col-author">Author</th><th class="col-date">Date</th></tr>
-          </thead>
-          <tbody id="preview-body"></tbody>
-        </table>
+        {{> partials/commitTable tbodyId="preview-body"}}
       </div>
     </section>
 
@@ -344,9 +170,6 @@
       authors: [],
       commits: []
     };
-    const commitFilesBySha = new Map();
-    const loadingCommitFiles = new Set();
-    let expandedSha = null;
     const messageInput = document.getElementById('message');
     const branchInput = document.getElementById('branch');
     const authorInput = document.getElementById('author');
@@ -462,11 +285,6 @@
         branchAutocomplete.setSource(state.branches);
         authorAutocomplete.setSource(state.authors);
         renderPreview();
-      } else if (msg && msg.type === 'commitFiles') {
-        const sha = String(msg.sha || '');
-        loadingCommitFiles.delete(sha);
-        commitFilesBySha.set(sha, Array.isArray(msg.files) ? msg.files : []);
-        renderPreview();
       }
     });
 
@@ -491,61 +309,11 @@
       return Number.isFinite(timestamp) ? timestamp : undefined;
     }
 
-    function renderLeadingIcons(expanded) {
-      const disclosure = expanded ? '▾' : '▸';
-      return '<span class="commit-leading-icons" aria-hidden="true"><span class="commit-node-icon">●</span><span class="disclosure-icon">' + disclosure + '</span></span>';
-    }
-
-    function buildFileTree(files) {
-      const root = { name: '', path: '', folders: new Map(), files: [] };
-      files.forEach((filePath) => {
-        const parts = String(filePath || '').split('/').filter(Boolean);
-        if (parts.length === 0) { return; }
-        let node = root;
-        parts.slice(0, -1).forEach((part) => {
-          if (!node.folders.has(part)) {
-            node.folders.set(part, { name: part, path: node.path ? node.path + '/' + part : part, folders: new Map(), files: [] });
-          }
-          node = node.folders.get(part);
-        });
-        node.files.push({ name: parts[parts.length - 1], path: filePath });
-      });
-      return root;
-    }
-
-    function renderFileTreeNode(node, depth) {
-      const folders = Array.from(node.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
-      const files = node.files.sort((a, b) => a.path.localeCompare(b.path));
-      return folders.map((folder) => {
-        const row = '<div class="commit-file-entry folder" style="padding-left: ' + (8 + depth * 18) + 'px"><span class="commit-file-twistie expanded" aria-hidden="true"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">' + escapeHtml(folder.name) + '</span></div>';
-        return row + renderFileTreeNode(folder, depth + 1);
-      }).join('') + files.map((file) => {
-        const safePath = escapeHtml(file.path);
-        return '<button type="button" class="commit-file-entry file" data-file-path="' + safePath + '" title="' + safePath + '" style="padding-left: ' + (8 + depth * 18) + 'px"><span class="commit-file-twistie" aria-hidden="true"></span><span class="commit-file-icon file-icon" aria-hidden="true"></span><span class="commit-file-name">' + escapeHtml(file.name) + '</span></button>';
-      }).join('');
-    }
-
-    function renderCommitFiles(sha) {
-      if (loadingCommitFiles.has(sha)) {
-        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-twistie"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">Loading changed files...</span></div></div>';
-      }
-      const files = commitFilesBySha.get(sha);
-      if (!files) {
-        return '';
-      }
-      if (files.length === 0) {
-        return '<div class="commit-files-tree"><div class="commit-file-entry folder"><span class="commit-file-twistie"></span><span class="commit-file-icon folder-icon" aria-hidden="true"></span><span class="commit-file-name">No changed files</span></div></div>';
-      }
-      return '<div class="commit-files-tree">' + renderFileTreeNode(buildFileTree(files), 0) + '</div>';
-    }
-
-    function toggleCommitFiles(sha) {
-      expandedSha = expandedSha === sha ? null : sha;
-      if (expandedSha && !commitFilesBySha.has(expandedSha) && !loadingCommitFiles.has(expandedSha)) {
-        loadingCommitFiles.add(expandedSha);
-        vscode.postMessage({ type: 'loadCommitFiles', sha: expandedSha });
-      }
-      renderPreview();
+    function renderGraphGlyph(graph) {
+      if (graph === '<') { return '◀'; }
+      if (graph === '>') { return '▶'; }
+      if (graph === '-') { return '●'; }
+      return '○';
     }
 
     function scoreMatch(candidate, keyword) {
@@ -613,19 +381,13 @@
       }
       previewBody.innerHTML = shown.map((commit) => {
         const sha = escapeHtml(commit.sha || '');
-        const rawSha = String(commit.sha || '');
         const subject = escapeHtml(commit.subject || '');
         const author = escapeHtml(commit.author || '');
         const timestamp = Number(commit.dateTimestamp || 0);
         const full = escapeHtml(commit.dateTitle || '');
         const dateText = escapeHtml(commit.dateLabel || '');
-        const expanded = expandedSha === rawSha;
-        const leadingIcons = renderLeadingIcons(expanded);
-        const row = '<tr class="commit-row' + (expanded ? ' expanded' : '') + '" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit id: ' + sha + '">' + leadingIcons + '</td><td class="col-subject" title="' + subject + '">' + subject + '</td><td class="col-author" title="' + author + '">' + author + '</td><td class="col-date muted"><span title="' + full + '">' + dateText + '</span></td></tr>';
-        if (!expanded) {
-          return row;
-        }
-        return row + '<tr class="commit-files-row" data-parent-sha="' + sha + '"><td colspan="4">' + renderCommitFiles(rawSha) + '</td></tr>';
+        const graph = escapeHtml(renderGraphGlyph(commit.graph));
+        return '<tr class="commit-row" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit id: ' + sha + '">' + graph + '</td><td class="col-subject" title="' + subject + '">' + subject + '</td><td class="col-author" title="' + author + '">' + author + '</td><td class="col-date muted"><span title="' + full + '">' + dateText + '</span></td></tr>';
       }).join('');
     }
 
@@ -635,16 +397,6 @@
         return;
       }
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
-      const file = event.target && event.target.closest ? event.target.closest('.commit-file-entry.file[data-file-path]') : null;
-      if (file) {
-        const filesRow = file.closest('.commit-files-row');
-        const sha = filesRow ? filesRow.getAttribute('data-parent-sha') || '' : '';
-        const filePath = file.getAttribute('data-file-path') || '';
-        if (sha && filePath) {
-          vscode.postMessage({ type: 'openCommitFile', sha, filePath });
-        }
-        return;
-      }
       if (!row) { return; }
       const sha = row.getAttribute('data-sha') || '';
       if (!sha) { return; }

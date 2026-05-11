@@ -114,54 +114,7 @@
       min-height: 0;
     }
     {{> partials/styles/tableBase cellPadding="6px 4px"}}
-    col.col-graph  { width: 24px; }
-    col.col-author { width: 110px; }
-    col.col-date   { width: 96px; }
-    .col-graph {
-      font-family: var(--vscode-editor-font-family);
-      text-align: center;
-      color: var(--muted);
-      user-select: none;
-      cursor: pointer;
-      width: 24px;
-    }
-    .col-graph:hover { color: var(--fg); }
-    .col-subject {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .col-author, .col-date {
-      position: sticky;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .col-date  { right: 0; }
-    .col-author { right: 96px; }
-    td.col-author, td.col-date {
-      background: color-mix(in srgb, var(--bg), white 3%);
-    }
-    th.col-author, th.col-date { z-index: 2; }
-    .commit-row {
-      cursor: pointer;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .commit-row:hover {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
-    .commit-row.selected {
-      background: color-mix(in srgb, var(--accent), transparent 82%);
-    }
-    .commit-row:hover td.col-author,
-    .commit-row:hover td.col-date {
-      background: color-mix(in srgb, var(--accent), transparent 90%);
-    }
-    .commit-row.selected td.col-author,
-    .commit-row.selected td.col-date {
-      background: color-mix(in srgb, var(--accent), transparent 82%);
-    }
+    {{> partials/styles/commitListBase}}
   </style>
 </head>
 <body>

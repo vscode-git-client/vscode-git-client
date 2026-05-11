@@ -1,0 +1,11 @@
+<table>
+  <colgroup><col class="col-graph"><col class="col-subject"><col class="col-author"><col class="col-date"></colgroup>
+  <thead>
+    <tr><th class="col-graph"></th><th class="col-subject">Subject</th><th class="col-author">Author</th><th class="col-date">Date</th></tr>
+  </thead>
+  {{#if tbodyId}}
+    <tbody id="{{tbodyId}}">{{{rows}}}</tbody>
+  {{else}}
+    <tbody>{{{rows}}}</tbody>
+  {{/if}}
+</table>
