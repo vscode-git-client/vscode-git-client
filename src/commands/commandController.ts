@@ -1002,6 +1002,7 @@ export class CommandController {
             await vscode.commands.executeCommand('setContext', 'intelliGit.graphFilterActive', false);
           },
           openCommitDetails: async (sha, subject) => this.commitFilesView.showCommit(sha, subject),
+          openCommitRangeDetails: async (shas) => this.editor.openCommitRangeDetails(shas),
           getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
           openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
         },

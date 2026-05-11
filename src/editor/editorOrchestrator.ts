@@ -213,12 +213,23 @@ export class EditorOrchestrator {
   }
 
   async openCompareCommitRangeDetails(selection: CompareCommitRangeSelection): Promise<void> {
-    if (selection.shas.length < 2) {
+    await this.openCommitRangeDetails(selection.shas);
+  }
+
+  async openCommitRangeDetails(rawShas: readonly string[]): Promise<void> {
+    const orderedShas = Array.from(
+      new Set(
+        rawShas
+          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+          .filter(Boolean)
+      )
+    );
+    if (orderedShas.length < 2) {
       return;
     }
 
-    const newestSha = selection.shas[0]!;
-    const oldestSha = selection.shas[selection.shas.length - 1]!;
+    const newestSha = orderedShas[0]!;
+    const oldestSha = orderedShas[orderedShas.length - 1]!;
     const oldestParent = await this.git.getParentCommit(oldestSha);
     const fromRef = oldestParent ? `${oldestSha}^` : EMPTY_TREE_SHA;
     const toRef = newestSha;

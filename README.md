@@ -122,6 +122,7 @@ Commit list with graph-like glyph, refs, author, date, and message. Each commit 
 - author
 - message text
 - since / until dates
+- In **Filter Graph** preview, selecting multiple commits now opens a merged Commit Details range (net file changes across the selected commits)
 
 ### Commit Details (Tree View — sidebar)
 

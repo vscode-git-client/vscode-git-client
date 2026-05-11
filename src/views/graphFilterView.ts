@@ -8,6 +8,7 @@ export interface GraphFilterHandlers {
   apply(filters: CommitFilters): Promise<void>;
   clear(): Promise<void>;
   openCommitDetails(sha: string, subject: string): Promise<void>;
+  openCommitRangeDetails(shas: readonly string[]): Promise<void>;
   getCommitFiles(sha: string): Promise<string[]>;
   openFileDiff(sha: string, filePath: string): Promise<void>;
 }
@@ -17,6 +18,7 @@ type IncomingMessage =
   | { type: 'clear' }
   | { type: 'close' }
   | { type: 'openCommitDetails'; sha: string; subject: string }
+  | { type: 'openCommitRangeDetails'; shas: string[] }
   | { type: 'loadCommitFiles'; sha: string }
   | { type: 'openCommitFile'; sha: string; filePath: string }
   | CommitActionMessage;
@@ -92,6 +94,13 @@ export class GraphFilterView {
       return;
     }
     if (isCommitActionMessage(message)) {
+      if (message.action === 'openDetails') {
+        const orderedShas = normalizeShas(message.shas ?? [message.sha]);
+        if (orderedShas.length > 1) {
+          await this.handlers.openCommitRangeDetails(orderedShas);
+          return;
+        }
+      }
       await handleCommitAction(message);
       return;
     }
@@ -114,6 +123,14 @@ export class GraphFilterView {
           return;
         }
         await this.handlers.openCommitDetails(sha, subject);
+        return;
+      }
+      case 'openCommitRangeDetails': {
+        const orderedShas = normalizeShas(message.shas);
+        if (orderedShas.length < 2) {
+          return;
+        }
+        await this.handlers.openCommitRangeDetails(orderedShas);
         return;
       }
       case 'loadCommitFiles': {
@@ -144,4 +161,14 @@ export class GraphFilterView {
       GraphFilterView.current = undefined;
     }
   }
+}
+
+function normalizeShas(values: readonly string[]): string[] {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+    )
+  );
 }
