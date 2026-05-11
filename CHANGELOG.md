@@ -60,6 +60,7 @@ All notable changes to this project are documented in this file.
   - apply, pop, drop, rename, patch preview
 - Added Git graph workflows:
   - commit list with metadata and ref display
+  - commit context menu actions for copying commit ID and commit message
   - commit details view
   - checkout commit, create branch at commit
   - cherry-pick commit, cherry-pick range, revert commit

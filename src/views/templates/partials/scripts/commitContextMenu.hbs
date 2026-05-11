@@ -15,8 +15,13 @@
         'revertCommit'
       ]);
       let selectedShas = [];
+      let selectedSubjects = [];
 
       const normalizeShas = (rawValues) =>
+        Array.from(new Set((Array.isArray(rawValues) ? rawValues : [])
+          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+          .filter(Boolean)));
+      const normalizeSubjects = (rawValues) =>
         Array.from(new Set((Array.isArray(rawValues) ? rawValues : [])
           .map((value) => (typeof value === 'string' ? value.trim() : ''))
           .filter(Boolean)));
@@ -39,11 +44,13 @@
       const close = () => {
         menu.classList.remove('visible');
         selectedShas = [];
+        selectedSubjects = [];
         applyActionAvailability();
       };
 
       const open = (x, y, payload) => {
         selectedShas = normalizeShas(payload && payload.shas);
+        selectedSubjects = normalizeSubjects(payload && payload.subjects);
         if (selectedShas.length === 0) {
           return;
         }
@@ -73,13 +80,15 @@
       const openForRow = (event, row) => {
         event.preventDefault();
         const payloadShas = normalizeShas(row && row._intelliGitSelectedShas);
+        const payloadSubjects = normalizeSubjects(row && row._intelliGitSelectedSubjects);
         if (payloadShas.length > 0) {
-          open(event.clientX, event.clientY, { shas: payloadShas });
+          open(event.clientX, event.clientY, { shas: payloadShas, subjects: payloadSubjects });
           return;
         }
         const rowSha = row.getAttribute('data-sha') || '';
+        const rowSubject = row.getAttribute('data-subject') || '';
         if (rowSha) {
-          open(event.clientX, event.clientY, { shas: [rowSha] });
+          open(event.clientX, event.clientY, { shas: [rowSha], subjects: rowSubject ? [rowSubject] : [] });
         }
       };
 
@@ -101,7 +110,9 @@
           type: 'commitAction',
           action,
           sha: selectedShas[0],
-          shas: selectedShas
+          shas: selectedShas,
+          subject: selectedSubjects[0] || '',
+          subjects: selectedSubjects
         });
         close();
       });

@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 
 export type CommitAction =
   | 'openDetails'
+  | 'copyCommitId'
+  | 'copyCommitMessage'
   | 'copyRevisionNumber'
   | 'createPatch'
   | 'cherryPick'
@@ -20,6 +22,8 @@ export interface CommitActionMessage {
   readonly action: CommitAction;
   readonly sha: string;
   readonly shas?: readonly string[];
+  readonly subject?: string;
+  readonly subjects?: readonly string[];
 }
 
 export async function handleCommitAction(message: CommitActionMessage): Promise<void> {
@@ -31,6 +35,13 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
     )
   );
   const [sha] = normalizedShas;
+  const normalizedSubjects = Array.from(
+    new Set(
+      (Array.isArray(message.subjects) ? message.subjects : [message.subject ?? ''])
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+    )
+  );
   if (!sha) {
     return;
   }
@@ -44,6 +55,23 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
   switch (message.action) {
     case 'openDetails':
       await runForEachSha('intelliGit.graph.openDetails');
+      return;
+    case 'copyCommitId':
+      await vscode.env.clipboard.writeText(normalizedShas.join('\n'));
+      void vscode.window.setStatusBarMessage(
+        normalizedShas.length > 1 ? `Copied ${normalizedShas.length} commit IDs` : `Copied commit ID ${sha}`,
+        1500
+      );
+      return;
+    case 'copyCommitMessage':
+      if (normalizedSubjects.length === 0) {
+        return;
+      }
+      await vscode.env.clipboard.writeText(normalizedSubjects.join('\n'));
+      void vscode.window.setStatusBarMessage(
+        normalizedSubjects.length > 1 ? `Copied ${normalizedSubjects.length} commit messages` : 'Copied commit message',
+        1500
+      );
       return;
     case 'copyRevisionNumber':
       await vscode.env.clipboard.writeText(normalizedShas.join('\n'));
@@ -99,8 +127,13 @@ export function isCommitActionMessage(value: unknown): value is CommitActionMess
   const hasValidShas =
     candidate.shas === undefined ||
     (Array.isArray(candidate.shas) && candidate.shas.every((item) => typeof item === 'string'));
+  const hasValidSubjects =
+    candidate.subjects === undefined ||
+    (Array.isArray(candidate.subjects) && candidate.subjects.every((item) => typeof item === 'string'));
   return candidate.type === 'commitAction'
     && typeof candidate.action === 'string'
     && typeof candidate.sha === 'string'
-    && hasValidShas;
+    && (candidate.subject === undefined || typeof candidate.subject === 'string')
+    && hasValidShas
+    && hasValidSubjects;
 }
