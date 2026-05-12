@@ -2172,16 +2172,14 @@ export class CommandController {
   }
 
   private async openRefCommits(id: string, title: string, ref: string): Promise<void> {
-    await this.state.refreshBranches();
     const maxCommits = Math.max(1, vscode.workspace.getConfiguration('intelliGit').get<number>('maxGraphCommits', 200));
-    const commits = await this.git.getGraph(maxCommits, { branch: ref });
-    CommitListView.open(
+    const view = CommitListView.open(
       {
         id,
         title,
         hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
         branches: this.state.branches,
-        commits
+        commits: this.state.graph
       },
       {
         openCommitDetails: async (sha, subject) => this.commitFilesView.showCommit(sha, subject),
@@ -2189,6 +2187,21 @@ export class CommandController {
         openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
       }
     );
+
+    view.setLoading(true);
+    try {
+      await this.state.refreshBranches();
+      const commits = await this.git.getGraph(maxCommits, { branch: ref });
+      view.update({
+        id,
+        title,
+        hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
+        branches: this.state.branches,
+        commits
+      });
+    } finally {
+      view.setLoading(false);
+    }
   }
 
   private async openQuickActions(): Promise<void> {

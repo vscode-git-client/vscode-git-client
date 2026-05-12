@@ -81,6 +81,15 @@ export class CommitListView {
     return view;
   }
 
+  setLoading(loading: boolean): void {
+    void this.panel.webview.postMessage({ type: 'loading', loading });
+  }
+
+  update(options: CommitListOptions): void {
+    this.options = options;
+    this.postInitial();
+  }
+
   private postInitial(): void {
     void this.panel.webview.postMessage({
       type: 'init',

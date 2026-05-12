@@ -155,7 +155,8 @@
     const state = {
       branches: [],
       authors: [],
-      commits: []
+      commits: [],
+      loading: false
     };
     const messageInput = document.getElementById('message');
     const branchInput = document.getElementById('branch');
@@ -257,7 +258,13 @@
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
+      if (msg && msg.type === 'loading') {
+        state.loading = Boolean(msg.loading);
+        renderPreview();
+        return;
+      }
       if (msg && msg.type === 'init') {
+        state.loading = false;
         const f = msg.filters || {};
         messageInput.value = f.message || '';
         branchInput.value = f.branch || '';
@@ -359,6 +366,11 @@
     }
 
     function renderPreview() {
+      if (state.loading) {
+        previewHeader.textContent = 'Loading commits...';
+        previewBody.innerHTML = '<tr><td colspan="4">Loading commits...</td></tr>';
+        return;
+      }
       const filtered = getFilteredCommits();
       const shown = filtered.slice(0, MAX_PREVIEW);
       previewHeader.textContent = 'Matching commits: ' + filtered.length + (filtered.length > MAX_PREVIEW ? ' (showing first ' + MAX_PREVIEW + ')' : '');
