@@ -38,7 +38,11 @@
     "vscode:prepublish": "npm run check-types && npm run bundle",
     "watch": "tsc -watch -p .",
     "lint": "eslint src --ext .ts",
-    "test": "npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/*.test.js"
+    "test": "npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/*.test.js",
+    "docs:dev": "npm --prefix website run dev",
+    "docs:build": "npm --prefix website run build",
+    "docs:preview": "npm --prefix website run preview",
+    "postdocs:build": "cp website/logo.* website/.vitepress/dist/"
   },
   "contributes": {
     "viewsContainers": {
