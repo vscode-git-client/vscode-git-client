@@ -1,4 +1,5 @@
 ---
+title: "Git Client for VS Code"
 layout: home
 
 hero:
