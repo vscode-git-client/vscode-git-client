@@ -29,7 +29,7 @@ export class WorktreeTreeItem extends vscode.TreeItem {
 
     this.resourceUri = vscode.Uri.file(worktree.worktreePath);
     this.command = {
-      command: 'intelliGit.worktree.open',
+      command: 'vscodeGitClient.worktree.open',
       title: 'Open Worktree',
       arguments: [this]
     };

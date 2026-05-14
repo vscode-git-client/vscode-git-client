@@ -25,7 +25,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
 ## User Flow
 
 1. User right-clicks a file or folder in the Explorer.
-2. The menu shows **"Compare with Revision…"** in `navigation@10`, just below the existing `intelliGit.fileHistory.open`.
+2. The menu shows **"Compare with Revision…"** in `navigation@10`, just below the existing `vscodeGitClient.fileHistory.open`.
 3. A `QuickPick` opens, modeled on VS Code's checkout picker:
    - Section separators for **Local branches**, **Remote branches**, **Tags**.
    - Each item is prefixed with a type icon (`$(git-branch)`, `$(cloud)`, `$(tag)`) and a short description (upstream hint, short SHA, etc.).
@@ -33,7 +33,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
    - **Commit-SHA dynamic lookup:** when the typed input matches `^[0-9a-f]{4,40}$`, the picker resolves it via `git rev-parse --verify <input>^{commit}`. On success, a synthetic `$(git-commit)` item is prepended to the list (label = short SHA, description = subject + author + date) and is selectable.
    - No exclusions: even if the chosen ref resolves to the same SHA as `HEAD`, the diff still runs (the working tree may differ from `HEAD`, so an empty diff is acceptable feedback).
 4. On selection, the resolved ref becomes `revisionX`. The diff convention is fixed: **left = revisionX, right = working tree**.
-5. **File target:** open a diff editor (`vscode.diff`) with the virtual `intelligit:` URI for `revisionX` on the left and the working-tree `file://` URI on the right. `preview: false` so the file diff stays open as a normal tab.
+5. **File target:** open a diff editor (`vscode.diff`) with the virtual `vscodegitclient:` URI for `revisionX` on the left and the working-tree `file://` URI on the right. `preview: false` so the file diff stays open as a normal tab.
 6. **Folder target:** activate the Commit Details view in a new "working-tree-compare" mode, populate it with the files inside the folder that differ between the working tree and `revisionX`, and auto-open the first file's diff with `preview: true`. Subsequent clicks on tree items reuse the same preview tab.
 
 ## Architecture
@@ -59,7 +59,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
 
 - `src/editor/editorOrchestrator.ts`
   - `openCompareWithRevisionForFile(relativePath: string, ref: string, refLabel: string): Promise<void>`
-    - Builds the virtual `intelligit:` URI for `(ref, relativePath)` via `createVirtualUri`.
+    - Builds the virtual `vscodegitclient:` URI for `(ref, relativePath)` via `createVirtualUri`.
     - Right side: working-tree `file://` URI.
     - `vscode.diff(left, right, "<refLabel> ↔ working tree · <relativePath>", { preview: false, preserveFocus: false })`.
   - `openCompareWithRevisionForFolder(folderRelPath: string, ref: string, refLabel: string): Promise<void>`
@@ -76,7 +76,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
   - Untracked items render with an "untracked" description so the user understands why a file with no commit history appears in the list.
 
 - `src/commands/commandController.ts`
-  - Register `intelliGit.compareWithRevision`. The handler:
+  - Register `vscodeGitClient.compareWithRevision`. The handler:
     1. Coerces the argument to a `vscode.Uri` (Explorer context provides one).
     2. Resolves the repo via the existing `repositoryContext` helper; surfaces `"Not inside a Git repository"` if it fails.
     3. Computes the repo-relative path and uses `vscode.workspace.fs.stat` to determine file vs directory.
@@ -84,7 +84,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
     5. Dispatches to `editorOrchestrator.openCompareWithRevisionForFile` or `…ForFolder`.
 
 - `package.json`
-  - New command contribution `intelliGit.compareWithRevision` titled **"Compare with Revision…"**.
+  - New command contribution `vscodeGitClient.compareWithRevision` titled **"Compare with Revision…"**.
   - New `explorer/context` entry: `when: "resourceScheme == file"`, `group: "navigation@10"` (covers files and folders).
   - `commandPalette` entry with `when: false` to hide it from the palette, matching the `fileHistory.open` precedent.
 
@@ -94,7 +94,7 @@ Add an Explorer context-menu action that lets the user compare any file or folde
 
 ```
 Explorer right-click (Uri)
-  → commandController: intelliGit.compareWithRevision
+  → commandController: vscodeGitClient.compareWithRevision
   → repositoryContext.resolveRepoForUri → repoRoot, relativePath
   → workspace.fs.stat → isFile
   → revisionPicker.pickRevisionToCompare(git) → { ref, label }

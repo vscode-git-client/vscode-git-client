@@ -34,8 +34,8 @@ export class GraphFilterView {
     private readonly getInitial: () => { filters: CommitFilters; branches: BranchRef[]; commits: GraphCommit[] }
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'intelliGit.graphFilter',
-      'IntelliGit: Filter Graph',
+      'vscodeGitClient.graphFilter',
+      'VS Code Git Client: Filter Graph',
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -55,7 +55,7 @@ export class GraphFilterView {
           await this.handleMessage(message as IncomingMessage);
         } catch (error) {
           void vscode.window.showErrorMessage(
-            `IntelliGit: ${error instanceof Error ? error.message : String(error)}`
+            `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }),

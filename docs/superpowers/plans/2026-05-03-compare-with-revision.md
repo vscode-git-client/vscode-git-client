@@ -4,7 +4,7 @@
 
 **Goal:** Add an Explorer context-menu action that lets the user compare any file or folder in the workspace against the same path at a chosen Git revision (branch, tag, or commit), with live working-tree diffs for files and a preview-mode browsing experience for folders.
 
-**Architecture:** A new `intelliGit.compareWithRevision` command, registered on `explorer/context`, opens a VS Code-native QuickPick (sectioned: Local branches → Remote branches → Tags) augmented with a dynamic commit-SHA lookup. After the user picks a ref, files are diffed in `vscode.diff` with the on-disk working-tree URI on the right; folders are surfaced in the existing `CommitFilesTreeProvider` (new `'workingTreeCompare'` mode), where clicking files opens diffs in **preview** mode so the same tab is reused as the user browses.
+**Architecture:** A new `vscodeGitClient.compareWithRevision` command, registered on `explorer/context`, opens a VS Code-native QuickPick (sectioned: Local branches → Remote branches → Tags) augmented with a dynamic commit-SHA lookup. After the user picks a ref, files are diffed in `vscode.diff` with the on-disk working-tree URI on the right; folders are surfaced in the existing `CommitFilesTreeProvider` (new `'workingTreeCompare'` mode), where clicking files opens diffs in **preview** mode so the same tab is reused as the user browses.
 
 **Tech Stack:** TypeScript, VS Code Extension API (`vscode.window.createQuickPick`, `vscode.diff`, `vscode.workspace.fs`), Node `child_process` (existing `GitService.runGit`), Node `node:test` runner.
 
@@ -25,7 +25,7 @@ Spec: `docs/superpowers/specs/2026-05-03-compare-with-revision-design.md`
 - `src/types.ts` — add `WorkingTreeFileChange` interface (extends `CommitFileChange` with `untracked: boolean`).
 - `src/providers/commitFilesTreeProvider.ts` — add new tree-item class `WorkingTreeCompareFileTreeItem`, extend `ActiveTreeState` with `'workingTreeCompare'` variant, add `showWorkingTreeComparison` method, route folder-children build through a new `buildWorkingTreeCompareTree` helper.
 - `src/editor/editorOrchestrator.ts` — add `openCompareWithRevisionForFile`, `openCompareWithRevisionForFolder`, `openWorkingTreeFileDiff` methods.
-- `src/commands/commandController.ts` — register `intelliGit.compareWithRevision` and `intelliGit.workingTreeCompare.openFileDiff`. Pass `commitFilesProvider` (already injected) into the new orchestrator methods.
+- `src/commands/commandController.ts` — register `vscodeGitClient.compareWithRevision` and `vscodeGitClient.workingTreeCompare.openFileDiff`. Pass `commitFilesProvider` (already injected) into the new orchestrator methods.
 - `src/extension.ts` — wire new orchestrator dependency only if the `commandController` constructor signature changes; otherwise no change.
 - `package.json` — new command contribution, new `explorer/context` entry, `commandPalette` hide entry.
 - `README.md` — feature list + Explorer context menu section.
@@ -750,9 +750,9 @@ EOF
 - Modify: `src/providers/commitFilesTreeProvider.ts`
 
 **Acceptance Criteria:**
-- [ ] New exported class `WorkingTreeCompareFileTreeItem` carries `(ref, refLabel, filePath, status, untracked, workspaceRoot)`, sets `command` to `intelliGit.workingTreeCompare.openFileDiff` with the item as its argument, and shows an "Untracked" description when `untracked` is true (status badge otherwise).
+- [ ] New exported class `WorkingTreeCompareFileTreeItem` carries `(ref, refLabel, filePath, status, untracked, workspaceRoot)`, sets `command` to `vscodeGitClient.workingTreeCompare.openFileDiff` with the item as its argument, and shows an "Untracked" description when `untracked` is true (status badge otherwise).
 - [ ] `ActiveTreeState` gains a `'workingTreeCompare'` variant: `{ mode: 'workingTreeCompare'; ref: string; refLabel: string; scopePath: string; files: WorkingTreeFileChange[] }`.
-- [ ] New method `showWorkingTreeComparison({ ref, refLabel, scopePath, files })` sets the active state, fires the change emitter, sets `intelliGit.commitViewVisible = true`, sets `intelliGit.commitViewCanRevertSelected = false` and `intelliGit.commitViewCanCherryPickSelected = false`, then focuses the view.
+- [ ] New method `showWorkingTreeComparison({ ref, refLabel, scopePath, files })` sets the active state, fires the change emitter, sets `vscodeGitClient.commitViewVisible = true`, sets `vscodeGitClient.commitViewCanRevertSelected = false` and `vscodeGitClient.commitViewCanCherryPickSelected = false`, then focuses the view.
 - [ ] `getChildren` returns `WorkingTreeCompareFileTreeItem` leaves and `CommitFolderTreeItem` folders for the new mode (reuses `buildTree` via a new `buildWorkingTreeCompareTree` helper).
 - [ ] `clear()` and the existing modes still work unchanged.
 
@@ -783,7 +783,7 @@ export class WorkingTreeCompareFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\nWorking tree ↔ ${refLabel}\n${untracked ? 'Untracked' : statusTitle(status)}`;
     this.command = {
       title: 'Open Working-Tree Compare File Diff',
-      command: 'intelliGit.workingTreeCompare.openFileDiff',
+      command: 'vscodeGitClient.workingTreeCompare.openFileDiff',
       arguments: [this]
     };
   }
@@ -951,9 +951,9 @@ async showWorkingTreeComparison(args: {
     files: args.files
   };
   this.emitter.fire();
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
   await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
 }
 ```
@@ -996,7 +996,7 @@ EOF
 - Modify: `src/editor/editorOrchestrator.ts`
 
 **Acceptance Criteria:**
-- [ ] `openWorkingTreeFileDiff(relativePath, ref, refLabel, opts)` opens `vscode.diff` with **left** = virtual `intelligit:` URI for `(ref, relativePath)` and **right** = `file://` URI of the on-disk file when it exists, falling back to a virtual URI with empty content when the file is deleted in the working tree. `opts` accepts `{ preview: boolean; status?: string }`.
+- [ ] `openWorkingTreeFileDiff(relativePath, ref, refLabel, opts)` opens `vscode.diff` with **left** = virtual `vscodegitclient:` URI for `(ref, relativePath)` and **right** = `file://` URI of the on-disk file when it exists, falling back to a virtual URI with empty content when the file is deleted in the working tree. `opts` accepts `{ preview: boolean; status?: string }`.
 - [ ] `openCompareWithRevisionForFile(relativePath, ref, refLabel)` calls the above with `preview: false`.
 - [ ] `openCompareWithRevisionForFolder(folderRel, ref, refLabel)` fetches `getFilesChangedBetweenWorkingTreeAndRef`, returns silently after `showInformationMessage` when empty, otherwise calls `commitFilesView.showWorkingTreeComparison(...)` and opens the first file diff with `preview: true`.
 
@@ -1027,7 +1027,7 @@ async openWorkingTreeFileDiff(
   const fileMissing = opts.status === 'D' || !(await this.fileExists(onDiskUri));
   if (fileMissing) {
     const normalized = relativePath.replaceAll(path.sep, '/');
-    right = vscode.Uri.parse(`intelligit:${encodeURIComponent('WORKTREE')}/${normalized}`);
+    right = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent('WORKTREE')}/${normalized}`);
     this.contentProvider.setContent(right, '');
   } else {
     right = onDiskUri;
@@ -1125,7 +1125,7 @@ EOF
 
 ---
 
-## Task 5: Register `intelliGit.compareWithRevision` & file-click command
+## Task 5: Register `vscodeGitClient.compareWithRevision` & file-click command
 
 **Goal:** Wire the Explorer-context-menu command and the per-tree-item file-click command in the controller.
 
@@ -1133,14 +1133,14 @@ EOF
 - Modify: `src/commands/commandController.ts`
 
 **Acceptance Criteria:**
-- [ ] `intelliGit.compareWithRevision` registered. Handler:
+- [ ] `vscodeGitClient.compareWithRevision` registered. Handler:
   - Coerces the argument via `asFileResourceUri` to a `file://` URI.
   - Surfaces "Right-click a file or folder in the workspace to compare." (warning) if no URI.
   - Computes repo-relative path via `git.toRepoRelative(uri.fsPath)`. Errors with "Not inside a Git repository." (error toast) if undefined.
   - Calls `vscode.workspace.fs.stat(uri)` to determine `FileType.Directory`.
   - Calls `pickRevisionToCompare(this.git, this.state.branches, this.state.tags)`. Returns silently on cancel.
   - Dispatches to `editor.openCompareWithRevisionForFile(...)` or `editor.openCompareWithRevisionForFolder(...)`.
-- [ ] `intelliGit.workingTreeCompare.openFileDiff` registered. Handler:
+- [ ] `vscodeGitClient.workingTreeCompare.openFileDiff` registered. Handler:
   - Casts the arg to `WorkingTreeCompareFileTreeItem`.
   - Calls `editor.openWorkingTreeFileDiff(item.filePath, item.ref, item.refLabel, { preview: true, status: item.status })`.
 
@@ -1166,12 +1166,12 @@ const asWorkingTreeCompareFileItem = (value: unknown): WorkingTreeCompareFileTre
   value instanceof WorkingTreeCompareFileTreeItem ? value : undefined;
 ```
 
-- [ ] **Step 3: Register `intelliGit.compareWithRevision`**
+- [ ] **Step 3: Register `vscodeGitClient.compareWithRevision`**
 
-Add the registration block immediately after the existing `intelliGit.fileHistory.open` registration. Use `mcp__serena__search_for_pattern` to locate `register('intelliGit.fileHistory.open'`, then append after that block:
+Add the registration block immediately after the existing `vscodeGitClient.fileHistory.open` registration. Use `mcp__serena__search_for_pattern` to locate `register('vscodeGitClient.fileHistory.open'`, then append after that block:
 
 ```typescript
-register('intelliGit.compareWithRevision', async (arg?: unknown) => {
+register('vscodeGitClient.compareWithRevision', async (arg?: unknown) => {
   const uri = asFileResourceUri(arg);
   if (!uri) {
     void vscode.window.showWarningMessage('Right-click a file or folder in the workspace to compare.');
@@ -1207,7 +1207,7 @@ register('intelliGit.compareWithRevision', async (arg?: unknown) => {
   }
 });
 
-register('intelliGit.workingTreeCompare.openFileDiff', async (arg?: unknown) => {
+register('vscodeGitClient.workingTreeCompare.openFileDiff', async (arg?: unknown) => {
   const item = asWorkingTreeCompareFileItem(arg);
   if (!item) {
     return;
@@ -1259,17 +1259,17 @@ EOF
 **Acceptance Criteria:**
 - [ ] New entry under `contributes.commands`:
   ```json
-  { "command": "intelliGit.compareWithRevision", "title": "Compare with Revision…" }
+  { "command": "vscodeGitClient.compareWithRevision", "title": "Compare with Revision…" }
   ```
 - [ ] New entry under `contributes.menus["explorer/context"]`:
   ```json
-  { "command": "intelliGit.compareWithRevision", "when": "resourceScheme == file", "group": "navigation@10" }
+  { "command": "vscodeGitClient.compareWithRevision", "when": "resourceScheme == file", "group": "navigation@10" }
   ```
 - [ ] New entry under `contributes.menus.commandPalette`:
   ```json
-  { "command": "intelliGit.compareWithRevision", "when": "false" }
+  { "command": "vscodeGitClient.compareWithRevision", "when": "false" }
   ```
-- [ ] No declaration is needed for `intelliGit.workingTreeCompare.openFileDiff` (it's invoked only programmatically via tree-item `command`, like the existing `intelliGit.graph.openFileDiff` which is also undeclared in `commandPalette`-only entries; declare with `commandPalette: when: false` if linter / `vsce` complains).
+- [ ] No declaration is needed for `vscodeGitClient.workingTreeCompare.openFileDiff` (it's invoked only programmatically via tree-item `command`, like the existing `vscodeGitClient.graph.openFileDiff` which is also undeclared in `commandPalette`-only entries; declare with `commandPalette: when: false` if linter / `vsce` complains).
 
 **Verify:** `npm run vscode:prepublish` succeeds (this runs `check-types` + `bundle` together). No new Code lints around manifest.
 
@@ -1281,7 +1281,7 @@ Edit `package.json`. Inside `contributes.commands`, add (alphabetical neighbours
 
 ```json
 {
-  "command": "intelliGit.compareWithRevision",
+  "command": "vscodeGitClient.compareWithRevision",
   "title": "Compare with Revision…"
 }
 ```
@@ -1290,7 +1290,7 @@ Also add the helper command (so `vsce` accepts it cleanly):
 
 ```json
 {
-  "command": "intelliGit.workingTreeCompare.openFileDiff",
+  "command": "vscodeGitClient.workingTreeCompare.openFileDiff",
   "title": "Open Working-Tree Compare File Diff"
 }
 ```
@@ -1301,7 +1301,7 @@ Inside `contributes.menus["explorer/context"]`, append:
 
 ```json
 {
-  "command": "intelliGit.compareWithRevision",
+  "command": "vscodeGitClient.compareWithRevision",
   "when": "resourceScheme == file",
   "group": "navigation@10"
 }
@@ -1312,8 +1312,8 @@ Inside `contributes.menus["explorer/context"]`, append:
 Inside `contributes.menus.commandPalette`, append:
 
 ```json
-{ "command": "intelliGit.compareWithRevision", "when": "true" },
-{ "command": "intelliGit.workingTreeCompare.openFileDiff", "when": "false" }
+{ "command": "vscodeGitClient.compareWithRevision", "when": "true" },
+{ "command": "vscodeGitClient.workingTreeCompare.openFileDiff", "when": "false" }
 ```
 
 > The first entry is visible (palette `true`) because users can invoke it via the palette when they have a file open — VS Code passes the active editor's URI as the arg. The second is internal-only.

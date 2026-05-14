@@ -1,6 +1,7 @@
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 import {
   SubmoduleConfigEntry,
   SubmoduleEntry,
@@ -126,8 +127,8 @@ export class SubmoduleService {
   }
 
   private async runGitAt(cwd: string, args: string[]): Promise<GitCommandResult> {
-    const gitPath = this.config.get<string>('gitPath', 'git');
-    const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
+    const gitPath = getConfigValue<string>('gitPath', 'git');
+    const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
     const fullCwd = resolveSubmoduleCwd(this.gitRoot, cwd);
 
     return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {

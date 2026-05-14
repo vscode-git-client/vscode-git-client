@@ -39,20 +39,20 @@ type GitBaseExtensionExports = {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const logger = new Logger();
   context.subscriptions.push({ dispose: () => logger.dispose() });
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', false);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.graphMultiCommitSelection', false);
-  await vscode.commands.executeCommand('setContext', 'intelliGit.remoteHasUrl', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphMultiCommitSelection', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', false);
 
-  const configuration = vscode.workspace.getConfiguration('intelliGit');
+  const configuration = vscode.workspace.getConfiguration('vscodeGitClient');
 
   let repositoryContext;
   try {
     repositoryContext = getRepositoryContext();
   } catch (error) {
     logger.warn(String(error));
-    void vscode.window.showWarningMessage('IntelliGit: Open a workspace folder to enable the extension.');
+    void vscode.window.showWarningMessage('VS Code Git Client: Open a workspace folder to enable the extension.');
   }
 
   if (!repositoryContext) {
@@ -65,12 +65,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     };
     context.subscriptions.push(
       ...compactTreeViews([
-        createTreeViewSafely('intelliGit.branches', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('intelliGit.stashes', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('intelliGit.graph', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('intelliGit.commitView', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('intelliGit.worktrees', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('intelliGit.submodules', { treeDataProvider: emptyProvider }, logger)
+        createTreeViewSafely('vscodeGitClient.branches', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('vscodeGitClient.stashes', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('vscodeGitClient.graph', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('vscodeGitClient.commitView', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('vscodeGitClient.worktrees', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely('vscodeGitClient.submodules', { treeDataProvider: emptyProvider }, logger)
       ])
     );
     return;
@@ -85,30 +85,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const worktreeProvider = new WorktreeTreeProvider(stateStore);
   const submoduleProvider = new SubmoduleTreeProvider(stateStore);
 
-  const branchView = createTreeViewSafely('intelliGit.branches', {
+  const branchView = createTreeViewSafely('vscodeGitClient.branches', {
     treeDataProvider: branchProvider,
     showCollapseAll: true
   }, logger);
-  const stashView = createTreeViewSafely('intelliGit.stashes', {
+  const stashView = createTreeViewSafely('vscodeGitClient.stashes', {
     treeDataProvider: stashProvider,
     showCollapseAll: true
   }, logger);
-  const graphView = createTreeViewSafely('intelliGit.graph', {
+  const graphView = createTreeViewSafely('vscodeGitClient.graph', {
     treeDataProvider: graphProvider,
     showCollapseAll: true,
     canSelectMany: true
   }, logger);
-  const worktreeView = createTreeViewSafely('intelliGit.worktrees', {
+  const worktreeView = createTreeViewSafely('vscodeGitClient.worktrees', {
     treeDataProvider: worktreeProvider,
     showCollapseAll: true
   }, logger);
-  const submoduleView = createTreeViewSafely('intelliGit.submodules', {
+  const submoduleView = createTreeViewSafely('vscodeGitClient.submodules', {
     treeDataProvider: submoduleProvider,
     showCollapseAll: true
   }, logger);
   const commitFilesProvider = new CommitFilesTreeProvider(gitService);
   const commitDecorationProvider = new CommitFileDecorationProvider(commitFilesProvider);
-  const commitView = createTreeViewSafely('intelliGit.commitView', {
+  const commitView = createTreeViewSafely('vscodeGitClient.commitView', {
     treeDataProvider: commitFilesProvider,
     showCollapseAll: true,
     canSelectMany: true
@@ -116,7 +116,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   commitFilesProvider.attachView(commitView);
 
   const virtualProvider = new VirtualGitContentProvider();
-  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('intelligit', virtualProvider));
+  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('vscodegitclient', virtualProvider));
 
   const editor = new EditorOrchestrator(gitService, stateStore, virtualProvider, commitFilesProvider);
 
@@ -130,7 +130,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ).length;
         void vscode.commands.executeCommand(
           'setContext',
-          'intelliGit.graphMultiCommitSelection',
+          'vscodeGitClient.graphMultiCommitSelection',
           selectedCommitCount > 1
         );
       })
@@ -142,7 +142,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       branchView.onDidChangeSelection((event) => {
         const selectedRemote = event.selection.find((item): item is BranchRemoteNode => item instanceof BranchRemoteNode);
         const hasUrl = Boolean(selectedRemote?.branches.some((branch) => Boolean(branch.remoteUrl)));
-        void vscode.commands.executeCommand('setContext', 'intelliGit.remoteHasUrl', hasUrl);
+        void vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', hasUrl);
       })
     );
   }
@@ -193,7 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  logger.info('IntelliGit activated.');
+  logger.info('VS Code Git Client activated.');
 }
 
 export function deactivate(): void {
@@ -258,14 +258,14 @@ async function registerBranchActionHubInGitCheckout(
     }
 
     const disposable = gitBaseApi.registerRemoteSourceProvider({
-      name: 'IntelliGit Branch Actions',
+      name: 'VS Code Git Client Branch Actions',
       getRemoteSources: () => [],
       getRemoteSourceActions: () => ([
         {
-          label: 'IntelliGit Branch Action Hub',
+          label: 'VS Code Git Client Branch Action Hub',
           icon: 'tools',
           run(branch: string): void {
-            void vscode.commands.executeCommand('intelliGit.branch.actionHub', branch);
+            void vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', branch);
           }
         }
       ])
@@ -273,7 +273,7 @@ async function registerBranchActionHubInGitCheckout(
 
     context.subscriptions.push(disposable);
   } catch (error) {
-    logger.warn(`Failed to register IntelliGit branch action hub: ${String(error)}`);
+    logger.warn(`Failed to register VS Code Git Client branch action hub: ${String(error)}`);
   }
 }
 
@@ -282,20 +282,20 @@ function attachOperationStatusBarActions(
   stateStore: StateStore
 ): void {
   const continueItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 30);
-  continueItem.name = 'IntelliGit Operation Continue';
-  continueItem.command = 'intelliGit.operation.continue';
+  continueItem.name = 'VS Code Git Client Operation Continue';
+  continueItem.command = 'vscodeGitClient.operation.continue';
   continueItem.text = '$(check) Continue';
   continueItem.tooltip = 'Continue current operation';
 
   const abortItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 29);
-  abortItem.name = 'IntelliGit Operation Abort';
-  abortItem.command = 'intelliGit.operation.abort';
+  abortItem.name = 'VS Code Git Client Operation Abort';
+  abortItem.command = 'vscodeGitClient.operation.abort';
   abortItem.text = '$(close) Abort';
   abortItem.tooltip = 'Abort current operation';
 
   const skipItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 28);
-  skipItem.name = 'IntelliGit Rebase Skip';
-  skipItem.command = 'intelliGit.operation.skip';
+  skipItem.name = 'VS Code Git Client Rebase Skip';
+  skipItem.command = 'vscodeGitClient.operation.skip';
   skipItem.text = '$(debug-step-over) Skip';
   skipItem.tooltip = 'Skip current commit during rebase/cherry-pick';
 

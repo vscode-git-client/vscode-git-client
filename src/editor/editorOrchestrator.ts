@@ -121,8 +121,8 @@ export class EditorOrchestrator {
     }
 
     const normalized = filePath.replaceAll(path.sep, '/');
-    const leftUri = vscode.Uri.parse(`intelligit:${encodeURIComponent(`${sha}^`)}/${normalized}`);
-    const rightUri = vscode.Uri.parse(`intelligit:${encodeURIComponent(sha)}/${normalized}`);
+    const leftUri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(`${sha}^`)}/${normalized}`);
+    const rightUri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(sha)}/${normalized}`);
     this.contentProvider.setContent(leftUri, leftContent);
     this.contentProvider.setContent(rightUri, rightContent);
 
@@ -162,7 +162,7 @@ export class EditorOrchestrator {
     const fileMissing = opts.status === 'D' || !(await this.fileExists(onDiskUri));
     if (fileMissing) {
       const normalized = relativePath.replaceAll(path.sep, '/');
-      right = vscode.Uri.parse(`intelligit:${encodeURIComponent('WORKTREE')}/${normalized}`);
+      right = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent('WORKTREE')}/${normalized}`);
       this.contentProvider.setContent(right, '');
     } else {
       right = onDiskUri;
@@ -291,7 +291,7 @@ export class EditorOrchestrator {
 
   private async createVirtualUri(ref: string, relativePath: string): Promise<vscode.Uri> {
     const normalized = relativePath.replaceAll(path.sep, '/');
-    const uri = vscode.Uri.parse(`intelligit:${encodeURIComponent(ref)}/${normalized}`);
+    const uri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(ref)}/${normalized}`);
     const content = await this.git.getFileContentFromRef(ref, relativePath);
     this.contentProvider.setContent(uri, content);
     return uri;

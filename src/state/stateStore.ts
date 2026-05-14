@@ -1,10 +1,14 @@
 import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
 import { BranchRef, CommitFilters, ComparePair, CompareResult, GitOperationState, GraphCommit, MergeConflictFile, StashEntry, SubmoduleEntry, TagRef, WorkingTreeChange, WorktreeEntry } from '../types';
 import { RefreshScheduler, RefreshScope } from './refreshScheduler';
 
 export type { RefreshScope } from './refreshScheduler';
+
+const RECENT_COMPARE_PAIRS_KEY = 'vscodeGitClient.recentComparePairs';
+const LEGACY_RECENT_COMPARE_PAIRS_KEY = 'intelliGit.recentComparePairs';
 
 export class StateStore {
   private static readonly DEFAULT_REFRESH_DEBOUNCE_MS = 250;
@@ -32,8 +36,14 @@ export class StateStore {
     private readonly configuration: vscode.WorkspaceConfiguration,
     private readonly workspaceState: vscode.Memento
   ) {
-    const persisted = this.workspaceState.get<ComparePair[]>('intelliGit.recentComparePairs', []);
+    const persisted = this.workspaceState.get<ComparePair[]>(
+      RECENT_COMPARE_PAIRS_KEY,
+      this.workspaceState.get<ComparePair[]>(LEGACY_RECENT_COMPARE_PAIRS_KEY, [])
+    );
     this._recentComparePairs = Array.isArray(persisted) ? persisted : [];
+    if (this._recentComparePairs.length > 0 && !this.workspaceState.get<ComparePair[]>(RECENT_COMPARE_PAIRS_KEY)) {
+      void this.workspaceState.update(RECENT_COMPARE_PAIRS_KEY, this._recentComparePairs);
+    }
   }
 
   get branches(): BranchRef[] {
@@ -101,11 +111,11 @@ export class StateStore {
   }
 
   getSaveRefreshDebounceMs(): number {
-    return this.configuration.get<number>('performance.saveRefreshDebounceMs', 150);
+    return getConfigValue<number>('performance.saveRefreshDebounceMs', 150);
   }
 
   private getRefreshDebounceMs(): number {
-    return this.configuration.get<number>('performance.refreshDebounceMs', StateStore.DEFAULT_REFRESH_DEBOUNCE_MS);
+    return getConfigValue<number>('performance.refreshDebounceMs', StateStore.DEFAULT_REFRESH_DEBOUNCE_MS);
   }
 
   setRefreshScopeVisible(scope: RefreshScope, visible: boolean): void {
@@ -219,7 +229,7 @@ export class StateStore {
 
   private async loadSubmodules(): Promise<void> {
     this._submodules = await this.git.getSubmodules().catch(() => []);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.hasSubmodules', this._submodules.length > 0);
+    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.hasSubmodules', this._submodules.length > 0);
   }
 
   private async loadChanges(): Promise<void> {
@@ -231,8 +241,8 @@ export class StateStore {
     this._changes = changes;
     this._operationState = operationState;
     this._conflicts = conflicts;
-    void vscode.commands.executeCommand('setContext', 'intelliGit.operation', operationState.kind);
-    void vscode.commands.executeCommand('setContext', 'intelliGit.hasConflicts', conflicts.length > 0);
+    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.operation', operationState.kind);
+    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.hasConflicts', conflicts.length > 0);
   }
 
   async refreshGraph(filters?: CommitFilters): Promise<void> {
@@ -241,7 +251,7 @@ export class StateStore {
   }
 
   private async loadGraph(): Promise<void> {
-    const maxGraphCommits = this.configuration.get<number>('maxGraphCommits', 200);
+    const maxGraphCommits = getConfigValue<number>('maxGraphCommits', 200);
     this._graph = await this.git.getGraph(maxGraphCommits, this._graphFilters);
   }
 
@@ -331,6 +341,6 @@ export class StateStore {
   private pushComparePair(pair: ComparePair): void {
     const key = `${pair.left}:::${pair.right}`;
     this._recentComparePairs = [pair, ...this._recentComparePairs.filter((item) => `${item.left}:::${item.right}` !== key)].slice(0, 10);
-    void this.workspaceState.update('intelliGit.recentComparePairs', this._recentComparePairs);
+    void this.workspaceState.update(RECENT_COMPARE_PAIRS_KEY, this._recentComparePairs);
   }
 }

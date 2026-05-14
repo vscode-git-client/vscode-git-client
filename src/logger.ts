@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 export class Logger {
-  private readonly channel = vscode.window.createOutputChannel('IntelliGit');
+  private readonly channel = vscode.window.createOutputChannel('VS Code Git Client');
 
   info(message: string): void {
     this.channel.appendLine(`[info] ${message}`);

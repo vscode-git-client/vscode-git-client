@@ -53,7 +53,7 @@ export class GraphCommitFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${commit.shortSha} ${commit.subject}\nOpen Commit File Diff`;
     this.command = {
       title: 'Open Diff',
-      command: 'intelliGit.graph.openFileDiff',
+      command: 'vscodeGitClient.graph.openFileDiff',
       arguments: [this]
     };
   }

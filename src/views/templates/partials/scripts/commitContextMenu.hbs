@@ -79,8 +79,8 @@
 
       const openForRow = (event, row) => {
         event.preventDefault();
-        const payloadShas = normalizeShas(row && row._intelliGitSelectedShas);
-        const payloadSubjects = normalizeSubjects(row && row._intelliGitSelectedSubjects);
+        const payloadShas = normalizeShas(row && row._vscodeGitClientSelectedShas);
+        const payloadSubjects = normalizeSubjects(row && row._vscodeGitClientSelectedSubjects);
         if (payloadShas.length > 0) {
           open(event.clientX, event.clientY, { shas: payloadShas, subjects: payloadSubjects });
           return;

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 import { Logger } from '../logger';
 import { GitCommandQueue } from './gitCommandQueue';
 import {
@@ -1397,7 +1398,7 @@ export class GitService {
       const tmpDir = os.tmpdir();
       const safe = path.basename(filePath).replace(/[^a-zA-Z0-9._-]/g, '_');
       const writeTemp = (suffix: string, content: string): vscode.Uri => {
-        const tmpPath = path.join(tmpDir, `intelligit_${safe}_${suffix}`);
+        const tmpPath = path.join(tmpDir, `vscodegitclient_${safe}_${suffix}`);
         fs.writeFileSync(tmpPath, content, 'utf8');
         return vscode.Uri.file(tmpPath);
       };
@@ -1555,7 +1556,7 @@ export class GitService {
   }
 
   private logGitDuration(command: string, startedAt: number): void {
-    const shouldLog = this.config.get<boolean>('performance.logGitCommands', false);
+    const shouldLog = getConfigValue<boolean>('performance.logGitCommands', false);
     const durationMs = Date.now() - startedAt;
     if (shouldLog && durationMs >= 500) {
       this.logger.info(`[perf] git command took ${durationMs}ms: ${command}`);
@@ -1563,8 +1564,8 @@ export class GitService {
   }
 
   private async runGitAt(cwd: string, args: string[]): Promise<GitCommandResult> {
-    const gitPath = this.config.get<string>('gitPath', 'git');
-    const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
+    const gitPath = getConfigValue<string>('gitPath', 'git');
+    const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
 
     return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
       const command = `${gitPath} ${args.join(' ')}`;
@@ -1594,8 +1595,8 @@ export class GitService {
   }
 
   async runGit(args: string[]): Promise<GitCommandResult> {
-    const gitPath = this.config.get<string>('gitPath', 'git');
-    const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
+    const gitPath = getConfigValue<string>('gitPath', 'git');
+    const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
@@ -1661,8 +1662,8 @@ export class GitService {
   }
 
   private async runGitWithStdin(args: string[], stdin: string): Promise<GitCommandResult> {
-    const gitPath = this.config.get<string>('gitPath', 'git');
-    const timeoutMs = this.config.get<number>('commandTimeoutMs', 15000);
+    const gitPath = getConfigValue<string>('gitPath', 'git');
+    const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 

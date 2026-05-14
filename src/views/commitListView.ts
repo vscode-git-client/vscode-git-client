@@ -36,8 +36,8 @@ export class CommitListView {
     private readonly handlers: CommitListHandlers
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'intelliGit.commitList',
-      `IntelliGit: ${options.title}`,
+      'vscodeGitClient.commitList',
+      `VS Code Git Client: ${options.title}`,
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -57,7 +57,7 @@ export class CommitListView {
           await this.handleMessage(message as IncomingMessage);
         } catch (error) {
           void vscode.window.showErrorMessage(
-            `IntelliGit: ${error instanceof Error ? error.message : String(error)}`
+            `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }),

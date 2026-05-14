@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import XLSX from 'xlsx';
+import { getConfigValue } from '../configuration';
 import { renderTemplate } from './templateRenderer';
 import { handleCommitAction, isCommitActionMessage } from './commitActions';
 import { formatCommitDate } from './commitDate';
@@ -49,8 +50,8 @@ export class CompareView {
     private readonly onCommitRangeClick: (selection: CompareCommitRangeSelection) => Promise<void>
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'intelliGit.branchCompare',
-      'IntelliGit: Branch Comparison',
+      'vscodeGitClient.branchCompare',
+      'VS Code Git Client: Branch Comparison',
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -62,7 +63,7 @@ export class CompareView {
       try {
         await this.handleMessage(message);
       } catch (error) {
-        void vscode.window.showErrorMessage(`IntelliGit: ${error instanceof Error ? error.message : String(error)}`);
+        void vscode.window.showErrorMessage(`VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
 
@@ -167,7 +168,7 @@ export class CompareView {
   }
 
   private getCompareExportFormat(): CompareExportFormat {
-    const configured = vscode.workspace.getConfiguration('intelliGit').get<string>('compare.exportFormat', 'csv');
+    const configured = getConfigValue<string>('compare.exportFormat', 'csv');
     return configured === 'excel' ? 'excel' : 'csv';
   }
 
@@ -225,7 +226,7 @@ export class CompareView {
     const workbookBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
     const bytes = workbookBuffer instanceof Uint8Array ? workbookBuffer : Buffer.from(workbookBuffer);
     await vscode.workspace.fs.writeFile(targetUri, bytes);
-    void vscode.window.showInformationMessage(`IntelliGit: Exported compare commits to ${targetUri.fsPath}`);
+    void vscode.window.showInformationMessage(`VS Code Git Client: Exported compare commits to ${targetUri.fsPath}`);
   }
 
   private async exportAsCsv(message: ExportCompareMessage): Promise<void> {
@@ -253,7 +254,7 @@ export class CompareView {
     const rightRows = message.rightCommits.map((commit) => [commit.sha, commit.subject, commit.author, commit.date]);
     await vscode.workspace.fs.writeFile(leftUri, Buffer.from(toCsv(headers, leftRows), 'utf8'));
     await vscode.workspace.fs.writeFile(rightUri, Buffer.from(toCsv(headers, rightRows), 'utf8'));
-    void vscode.window.showInformationMessage(`IntelliGit: Exported compare commits to ${leftUri.fsPath} and ${rightUri.fsPath}`);
+    void vscode.window.showInformationMessage(`VS Code Git Client: Exported compare commits to ${leftUri.fsPath} and ${rightUri.fsPath}`);
   }
 
 }

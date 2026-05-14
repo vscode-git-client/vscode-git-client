@@ -425,8 +425,8 @@
         return;
       }
       updateSelection(row, event, { forContextMenu: true });
-      row._intelliGitSelectedShas = getSelectedCommitShas();
-      row._intelliGitSelectedSubjects = getSelectedCommitRows()
+      row._vscodeGitClientSelectedShas = getSelectedCommitShas();
+      row._vscodeGitClientSelectedSubjects = getSelectedCommitRows()
         .map((item) => (item.getAttribute('data-subject') || '').trim())
         .filter(Boolean);
       commitContextMenu.openForRow(event, row);

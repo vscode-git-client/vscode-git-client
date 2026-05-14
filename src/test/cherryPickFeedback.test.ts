@@ -124,7 +124,7 @@ describe('cherry-pick and operation feedback', () => {
       return undefined;
     };
 
-    const cherryPick = commands.get('intelliGit.graph.cherryPick');
+    const cherryPick = commands.get('vscodeGitClient.graph.cherryPick');
     assert.ok(cherryPick, 'expected cherry-pick command to be registered');
 
     const run = cherryPick('abcdef123456');
@@ -156,7 +156,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
       }
     }, true);
-    const cherryPick = commands.get('intelliGit.graph.cherryPick');
+    const cherryPick = commands.get('vscodeGitClient.graph.cherryPick');
     assert.ok(cherryPick, 'expected cherry-pick command to be registered');
 
     const run = cherryPick('abcdef123456');
@@ -189,7 +189,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('Automatic merge failed; fix conflicts and then commit the result.');
       }
     }, true);
-    const merge = commands.get('intelliGit.branch.mergeIntoCurrent');
+    const merge = commands.get('vscodeGitClient.branch.mergeIntoCurrent');
     assert.ok(merge, 'expected merge command to be registered');
 
     const run = merge('feature/conflict');
@@ -215,7 +215,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
       }
     }, true);
-    const rebase = commands.get('intelliGit.branch.rebaseOnto');
+    const rebase = commands.get('vscodeGitClient.branch.rebaseOnto');
     assert.ok(rebase, 'expected rebase command to be registered');
 
     const run = rebase('main');
@@ -248,7 +248,7 @@ describe('cherry-pick and operation feedback', () => {
       return undefined;
     };
 
-    const changeUrl = commands.get('intelliGit.remote.changeUrl');
+    const changeUrl = commands.get('vscodeGitClient.remote.changeUrl');
     assert.ok(changeUrl, 'expected remote URL command to be registered');
 
     const remote = new BranchRemoteNode('origin', [{

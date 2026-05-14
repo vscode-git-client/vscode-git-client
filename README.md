@@ -175,7 +175,7 @@ The extension adds daily commit helpers to VS Code's native Source Control panel
 
 ### Gutter Change Markers
 
-Inline gutter decorations show added, modified, and deleted lines relative to `HEAD`. They update as you type with debounce and can be disabled with `intelliGit.gutterMarkers.enabled`.
+Inline gutter decorations show added, modified, and deleted lines relative to `HEAD`. They update as you type with debounce and can be disabled with `vscodeGitClient.gutterMarkers.enabled`.
 
 To keep editing responsive on Windows and large repositories, generated folders and files above the configured size or line-count limits are skipped.
 
@@ -205,20 +205,22 @@ Supported editor workflows include:
 
 | Setting                                        | Default         | Description                                                                                           |
 | ---------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
-| `intelliGit.gitPath`                           | `"git"`         | Git executable path                                                                                   |
-| `intelliGit.commandTimeoutMs`                  | `15000`         | Timeout for Git commands in milliseconds                                                              |
-| `intelliGit.maxGraphCommits`                   | `200`           | Maximum commits shown in Git Graph                                                                    |
-| `intelliGit.recentBranchesCount`               | `3`             | Number of branches shown in the Recent group                                                          |
-| `intelliGit.gutterMarkers.enabled`             | `true`          | Show inline gutter markers for lines added, modified, or deleted vs `HEAD`                            |
-| `intelliGit.gutterMarkers.maxFileSizeKb`       | `512`           | Skip gutter marker computation for files larger than this size in KB                                  |
-| `intelliGit.gutterMarkers.maxLineCount`        | `10000`         | Skip gutter marker computation for files with more lines than this value                              |
-| `intelliGit.performance.logGitCommands`        | `false`         | Log Git commands that take 500ms or longer to the extension output channel                            |
-| `intelliGit.performance.refreshDebounceMs`     | `250`           | Debounce delay for VS Code Git repository-state auto-refresh events                                   |
-| `intelliGit.performance.saveRefreshDebounceMs` | `150`           | Debounce delay for save-triggered working-tree refresh events                                         |
-| `intelliGit.compare.exportFormat`              | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets       |
-| `intelliGit.commitMessageTemplates`            | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders |
-| `intelliGit.commitMessageTicketPattern`        | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                        |
-| `intelliGit.aiGenerateTimeoutMs`               | `5000`          | Timeout for AI commit message generation in milliseconds                                              |
+| `vscodeGitClient.gitPath`                           | `"git"`         | Git executable path                                                                                   |
+| `vscodeGitClient.commandTimeoutMs`                  | `15000`         | Timeout for Git commands in milliseconds                                                              |
+| `vscodeGitClient.maxGraphCommits`                   | `200`           | Maximum commits shown in Git Graph                                                                    |
+| `vscodeGitClient.recentBranchesCount`               | `3`             | Number of branches shown in the Recent group                                                          |
+| `vscodeGitClient.gutterMarkers.enabled`             | `true`          | Show inline gutter markers for lines added, modified, or deleted vs `HEAD`                            |
+| `vscodeGitClient.gutterMarkers.maxFileSizeKb`       | `512`           | Skip gutter marker computation for files larger than this size in KB                                  |
+| `vscodeGitClient.gutterMarkers.maxLineCount`        | `10000`         | Skip gutter marker computation for files with more lines than this value                              |
+| `vscodeGitClient.performance.logGitCommands`        | `false`         | Log Git commands that take 500ms or longer to the extension output channel                            |
+| `vscodeGitClient.performance.refreshDebounceMs`     | `250`           | Debounce delay for VS Code Git repository-state auto-refresh events                                   |
+| `vscodeGitClient.performance.saveRefreshDebounceMs` | `150`           | Debounce delay for save-triggered working-tree refresh events                                         |
+| `vscodeGitClient.compare.exportFormat`              | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets       |
+| `vscodeGitClient.commitMessageTemplates`            | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders |
+| `vscodeGitClient.commitMessageTicketPattern`        | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                        |
+| `vscodeGitClient.aiGenerateTimeoutMs`               | `5000`          | Timeout for AI commit message generation in milliseconds                                              |
+
+Existing `intelliGit.*` settings are still read as a legacy fallback when the matching `vscodeGitClient.*` setting has not been configured.
 
 Default commit message templates:
 
@@ -237,7 +239,7 @@ The extension activates lazily when one of its views or commands is used. Refres
 
 On Windows, Git command execution uses lower concurrency than macOS/Linux to reduce `CreateProcess` pressure on the Extension Host. Additional mitigations include configurable refresh debounce settings, parallel operation-state detection, cached gutter configuration, and save debounce.
 
-If a workspace still feels slow, enable `intelliGit.performance.logGitCommands` and inspect the extension output channel for slow Git operations. Adding the repository folder and `.git` directory to Windows Defender exclusions usually has the largest practical impact.
+If a workspace still feels slow, enable `vscodeGitClient.performance.logGitCommands` and inspect the extension output channel for slow Git operations. Adding the repository folder and `.git` directory to Windows Defender exclusions usually has the largest practical impact.
 
 ## Development
 
@@ -287,28 +289,30 @@ Open this folder in VS Code and press `F5` to launch the extension host.
 
 Key command IDs, not exhaustive:
 
-- `intelliGit.quickActions` - Quick Git Actions palette
-- `intelliGit.refresh` - Refresh all views
-- `intelliGit.branch.*` - Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
-- `intelliGit.tag.*` - Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
-- `intelliGit.stash.*` - Create, apply, pop, drop, rename, previewPatch, unshelve
-- `intelliGit.graph.*` - openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
-- `intelliGit.commit.*` - revertSelectedChanges, cherryPickSelectedChanges, amend
-- `intelliGit.compare.open` - Open branch comparison
-- `intelliGit.compareWithRevision` - Compare Explorer files or folders with a revision
-- `intelliGit.merge.*` - openConflict, next, previous, finalize
-- `intelliGit.operation.*` - abort, continue, skip
-- `intelliGit.git.*` - pushWithPreview, pullWithPreview, fetchPrune
-- `intelliGit.stage.*` / `intelliGit.unstage.file` - stage and unstage actions
-- `intelliGit.scm.*` - shelveResource, commitTemplate, generateCommitMessage, amendFromInput
-- `intelliGit.worktree.*` - worktree actions
-- `intelliGit.submodule.*` - submodule actions
-- `intelliGit.fileBlame.open` - File blame
+- `vscodeGitClient.quickActions` - Quick Git Actions palette
+- `vscodeGitClient.refresh` - Refresh all views
+- `vscodeGitClient.branch.*` - Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
+- `vscodeGitClient.tag.*` - Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
+- `vscodeGitClient.stash.*` - Create, apply, pop, drop, rename, previewPatch, unshelve
+- `vscodeGitClient.graph.*` - openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
+- `vscodeGitClient.commit.*` - revertSelectedChanges, cherryPickSelectedChanges, amend
+- `vscodeGitClient.compare.open` - Open branch comparison
+- `vscodeGitClient.compareWithRevision` - Compare Explorer files or folders with a revision
+- `vscodeGitClient.merge.*` - openConflict, next, previous, finalize
+- `vscodeGitClient.operation.*` - abort, continue, skip
+- `vscodeGitClient.git.*` - pushWithPreview, pullWithPreview, fetchPrune
+- `vscodeGitClient.stage.*` / `vscodeGitClient.unstage.file` - stage and unstage actions
+- `vscodeGitClient.scm.*` - shelveResource, commitTemplate, generateCommitMessage, amendFromInput
+- `vscodeGitClient.worktree.*` - worktree actions
+- `vscodeGitClient.submodule.*` - submodule actions
+- `vscodeGitClient.fileBlame.open` - File blame
+
+Legacy `intelliGit.*` command aliases are registered after activation so existing keybindings and integrations keep working during migration.
 
 ## Current Boundaries
 
 - Single repository per window, using the first workspace folder.
-- Native Git CLI required on the system path, or configure `intelliGit.gitPath`.
+- Native Git CLI required on the system path, or configure `vscodeGitClient.gitPath`.
 - Built-in VS Code merge and diff editors are used for reliability.
 - Git Graph is tree-based rendering with glyph hints, not a custom canvas DAG.
 - AI commit message generation requires a compatible language model provider and times out gracefully if unavailable.

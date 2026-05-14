@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 
 export type CommitTemplate = {
   label: string;
@@ -12,7 +12,7 @@ export type TemplateContext = {
 const CURSOR_PLACEHOLDER = '{cursor}';
 
 export function loadTemplates(): CommitTemplate[] {
-  const raw = vscode.workspace.getConfiguration('intelliGit').get<unknown>('commitMessageTemplates', []);
+  const raw = getConfigValue<unknown>('commitMessageTemplates', []);
   if (!Array.isArray(raw)) {
     return [];
   }
@@ -32,7 +32,7 @@ export function loadTemplates(): CommitTemplate[] {
 }
 
 export function getTicketPattern(): RegExp | undefined {
-  const pattern = vscode.workspace.getConfiguration('intelliGit').get<string>('commitMessageTicketPattern', '');
+  const pattern = getConfigValue<string>('commitMessageTicketPattern', '');
   if (!pattern) {
     return undefined;
   }

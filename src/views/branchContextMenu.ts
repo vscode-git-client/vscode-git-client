@@ -1,13 +1,13 @@
 const branchContextMenuItems = [
-  { command: 'intelliGit.branch.checkout', label: 'Checkout Branch' },
-  { command: 'intelliGit.branch.compareWithCurrent', label: 'Compare With Current Branch' },
-  { command: 'intelliGit.branch.rename', label: 'Rename Branch' },
-  { command: 'intelliGit.branch.delete', label: 'Delete Branch' },
+  { command: 'vscodeGitClient.branch.checkout', label: 'Checkout Branch' },
+  { command: 'vscodeGitClient.branch.compareWithCurrent', label: 'Compare With Current Branch' },
+  { command: 'vscodeGitClient.branch.rename', label: 'Rename Branch' },
+  { command: 'vscodeGitClient.branch.delete', label: 'Delete Branch' },
   { separator: true },
-  { command: 'intelliGit.branch.track', label: 'Track Remote Branch' },
-  { command: 'intelliGit.branch.untrack', label: 'Untrack Branch' },
-  { command: 'intelliGit.branch.mergeIntoCurrent', label: 'Merge Into Current' },
-  { command: 'intelliGit.branch.rebaseOnto', label: 'Rebase Current Onto Branch' }
+  { command: 'vscodeGitClient.branch.track', label: 'Track Remote Branch' },
+  { command: 'vscodeGitClient.branch.untrack', label: 'Untrack Branch' },
+  { command: 'vscodeGitClient.branch.mergeIntoCurrent', label: 'Merge Into Current' },
+  { command: 'vscodeGitClient.branch.rebaseOnto', label: 'Rebase Current Onto Branch' }
 ] as const;
 
 export type BranchContextMenuCommand = Extract<

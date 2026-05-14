@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 import { StateStore } from '../state/stateStore';
 import { BranchRef, TagRef } from '../types';
 import { formatComparisonSummary } from '../services/gitParsing';
@@ -85,7 +86,7 @@ export class BranchTreeItem extends vscode.TreeItem {
 
     this.command = {
       title: 'Open Branch Commits',
-      command: 'intelliGit.branch.openCommits',
+      command: 'vscodeGitClient.branch.openCommits',
       arguments: [this]
     };
   }
@@ -105,7 +106,7 @@ export class TagTreeItem extends vscode.TreeItem {
     this.iconPath = new vscode.ThemeIcon('tag');
     this.command = {
       title: 'Open Tag Commits',
-      command: 'intelliGit.tag.openCommits',
+      command: 'vscodeGitClient.tag.openCommits',
       arguments: [this]
     };
   }
@@ -251,7 +252,7 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
   }
 
   private getRecentBranches(branches: BranchRef[]): BranchRef[] {
-    const maxRecent = Math.min(10, Math.max(1, vscode.workspace.getConfiguration('intelliGit').get<number>('recentBranchesCount', 3)));
+    const maxRecent = Math.min(10, Math.max(1, getConfigValue<number>('recentBranchesCount', 3)));
     return [...branches]
       .sort((a, b) => {
         if (a.current) {

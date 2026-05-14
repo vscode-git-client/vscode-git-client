@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { affectsConfig, getConfigValue } from '../configuration';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
 import { StateStore } from '../state/stateStore';
@@ -40,10 +41,9 @@ export class GutterDecorationController implements vscode.Disposable {
     private readonly stateStore: StateStore,
     private readonly logger: Logger
   ) {
-    const cfg = vscode.workspace.getConfiguration('intelliGit');
-    this.enabled = cfg.get<boolean>('gutterMarkers.enabled', true);
-    this.maxLineCount = cfg.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
-    this.maxFileSizeKb = cfg.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
+    this.enabled = getConfigValue<boolean>('gutterMarkers.enabled', true);
+    this.maxLineCount = getConfigValue<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
+    this.maxFileSizeKb = getConfigValue<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
     this.decorations = createDecorations();
 
     this.disposables.push(
@@ -76,11 +76,10 @@ export class GutterDecorationController implements vscode.Disposable {
         });
       }),
       vscode.workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('intelliGit.gutterMarkers')) {
-          const cfg = vscode.workspace.getConfiguration('intelliGit');
-          this.enabled = cfg.get<boolean>('gutterMarkers.enabled', true);
-          this.maxLineCount = cfg.get<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
-          this.maxFileSizeKb = cfg.get<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
+        if (affectsConfig(event, 'gutterMarkers')) {
+          this.enabled = getConfigValue<boolean>('gutterMarkers.enabled', true);
+          this.maxLineCount = getConfigValue<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
+          this.maxFileSizeKb = getConfigValue<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
           if (!this.enabled) {
             this.clearAllVisible();
           } else {

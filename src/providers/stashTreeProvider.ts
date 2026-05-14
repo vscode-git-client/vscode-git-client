@@ -15,7 +15,7 @@ export class StashTreeItem extends vscode.TreeItem {
 
     this.command = {
       title: 'Preview Stash Patch',
-      command: 'intelliGit.stash.previewPatch',
+      command: 'vscodeGitClient.stash.previewPatch',
       arguments: [this]
     };
   }

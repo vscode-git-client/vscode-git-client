@@ -36,8 +36,8 @@ export class BranchSearchView {
     onStateChange: (listener: () => void) => vscode.Disposable
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'intelliGit.branchSearch',
-      'IntelliGit: Search Branches & Tags',
+      'vscodeGitClient.branchSearch',
+      'VS Code Git Client: Search Branches & Tags',
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -55,7 +55,7 @@ export class BranchSearchView {
           await this.handleMessage(message as IncomingMessage);
         } catch (error) {
           void vscode.window.showErrorMessage(
-            `IntelliGit: ${error instanceof Error ? error.message : String(error)}`
+            `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
           );
         }
       }),

@@ -118,7 +118,7 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
 
   before(() => {
     // Create a temp git repo with a known state
-    repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'intelligit-test-'));
+    repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscodegitclient-test-'));
 
     // Initialise repo with deterministic identity
     runGit(['init', '-b', 'main'], repoDir);

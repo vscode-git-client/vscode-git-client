@@ -20,7 +20,7 @@ export class CommitFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${statusTitle(status)}`;
     this.command = {
       title: 'Open Commit File Diff',
-      command: 'intelliGit.graph.openFileDiff',
+      command: 'vscodeGitClient.graph.openFileDiff',
       arguments: [this]
     };
   }
@@ -45,7 +45,7 @@ export class CommitRangeFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${statusTitle(status)}\n${fromLabel} ↔ ${toLabel}`;
     this.command = {
       title: 'Open Commit Range File Diff',
-      command: 'intelliGit.graph.openFileDiff',
+      command: 'vscodeGitClient.graph.openFileDiff',
       arguments: [this]
     };
   }
@@ -65,7 +65,7 @@ export class RevisionFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\nRevision ${sha.slice(0, 8)}`;
     this.command = {
       title: 'Open File At Revision',
-      command: 'intelliGit.graph.openRepositoryFileAtRevision',
+      command: 'vscodeGitClient.graph.openRepositoryFileAtRevision',
       arguments: [this]
     };
   }
@@ -89,7 +89,7 @@ export class WorkingTreeCompareFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${untracked ? 'Untracked' : statusTitle(status)}`;
     this.command = {
       title: 'Open Working Tree File Diff',
-      command: 'intelliGit.workingTreeCompare.openFileDiff',
+      command: 'vscodeGitClient.workingTreeCompare.openFileDiff',
       arguments: [this]
     };
   }
@@ -217,9 +217,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'commit', sha, subject, files, canRevertSelected: canRevert };
     this.updateViewTitle(`Commit Details ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', canRevert);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', !canRevert);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', canRevert);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', !canRevert);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -229,9 +229,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'revision', sha, files };
     this.updateViewTitle(`Repository ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -251,9 +251,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'range', fromRef, toRef, fromLabel, toLabel, files };
     this.updateViewTitle(`Commit Details ${fromLabel}..${toLabel}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -271,9 +271,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'workingTreeCompare', ref, refLabel, scopePath, files };
     this.updateViewTitle('Commit Details');
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -281,9 +281,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = undefined;
     this.updateViewTitle('Commit Details');
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewVisible', false);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'intelliGit.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
   }
 
   getAllFileItems(): CommitFileTreeItem[] {
@@ -325,7 +325,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   }
 }
 
-const CommitFilesTreeProviderViewId = 'intelliGit.commitView';
+const CommitFilesTreeProviderViewId = 'vscodeGitClient.commitView';
 
 function buildCommitTree(
   sha: string,

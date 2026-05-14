@@ -37,7 +37,7 @@
     },
     {
       "id": 5,
-      "subject": "Task 5: Register intelliGit.compareWithRevision and per-item file-diff command",
+      "subject": "Task 5: Register vscodeGitClient.compareWithRevision and per-item file-diff command",
       "status": "completed",
       "blockedBy": [2, 3, 4],
       "description": "**Goal:** Wire the Explorer command and the working-tree-compare file-click command.\n\n**Files:** `src/commands/commandController.ts`\n\n**Verify:** `npm run check-types && npm run compile && npm run lint`\n\n```json:metadata\n{\"files\":[\"src/commands/commandController.ts\"],\"verifyCommand\":\"npm run check-types && npm run compile && npm run lint\",\"acceptanceCriteria\":[\"new explorer command registered\",\"preview-diff click command registered\",\"error toast for non-repo target\"]}\n```"

@@ -57,7 +57,7 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
 
   switch (message.action) {
     case 'openDetails':
-      await runForEachSha('intelliGit.graph.openDetails');
+      await runForEachSha('vscodeGitClient.graph.openDetails');
       return;
     case 'copyCommitId':
       await vscode.env.clipboard.writeText(normalizedShas.join('\n'));
@@ -84,46 +84,46 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       );
       return;
     case 'createPatch':
-      await runForEachSha('intelliGit.graph.createPatch');
+      await runForEachSha('vscodeGitClient.graph.createPatch');
       return;
     case 'cherryPick':
-      await runForEachSha('intelliGit.graph.cherryPick');
+      await runForEachSha('vscodeGitClient.graph.cherryPick');
       return;
     case 'checkoutRevision':
-      await vscode.commands.executeCommand('intelliGit.graph.checkoutCommit', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.checkoutCommit', sha);
       return;
     case 'showRepositoryAtRevision':
-      await vscode.commands.executeCommand('intelliGit.graph.showRepositoryAtRevision', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.showRepositoryAtRevision', sha);
       return;
     case 'compareWithLocal':
-      await vscode.commands.executeCommand('intelliGit.graph.compareWithCurrent', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.compareWithCurrent', sha);
       return;
     case 'resetCurrentBranchToHere':
-      await vscode.commands.executeCommand('intelliGit.branch.resetCurrentToCommit', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.branch.resetCurrentToCommit', sha);
       return;
     case 'revertCommit':
-      await runForEachSha('intelliGit.graph.revert');
+      await runForEachSha('vscodeGitClient.graph.revert');
       return;
     case 'interactiveRebaseFromHere':
-      await vscode.commands.executeCommand('intelliGit.graph.rebaseInteractiveFromHere', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.rebaseInteractiveFromHere', sha);
       return;
     case 'editCommitMessage':
-      await vscode.commands.executeCommand('intelliGit.graph.editCommitMessage', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.editCommitMessage', sha);
       return;
     case 'pushAllUpToHere':
-      await vscode.commands.executeCommand('intelliGit.graph.pushAllUpToHere', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.pushAllUpToHere', sha);
       return;
     case 'newBranch':
-      await vscode.commands.executeCommand('intelliGit.graph.createBranchHere', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.createBranchHere', sha);
       return;
     case 'newTag':
-      await vscode.commands.executeCommand('intelliGit.graph.createTagHere', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.createTagHere', sha);
       return;
     case 'goToParentCommit':
-      await vscode.commands.executeCommand('intelliGit.graph.goToParentCommit', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.goToParentCommit', sha);
       return;
     case 'goToChildCommit':
-      await vscode.commands.executeCommand('intelliGit.graph.goToChildCommit', sha);
+      await vscode.commands.executeCommand('vscodeGitClient.graph.goToChildCommit', sha);
       return;
     default:
       return;

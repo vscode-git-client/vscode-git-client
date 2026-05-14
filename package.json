@@ -1,10 +1,10 @@
 {
   "name": "vscode-git-client",
-  "displayName": "IntelliGit Client",
-  "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows, inspired by IntelliJ Git integration.",
-  "version": "0.21.1",
+  "displayName": "VS Code Git Client",
+  "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
+  "version": "1.0.0",
   "publisher": "thanhtunguet",
-  "icon": "media/intelligit.png",
+  "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
   "engines": {
     "vscode": "^1.90.0"
@@ -15,19 +15,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/thanhtunguet/IntelliGit"
+    "url": "https://github.com/thanhtunguet/vscode-git-client"
   },
   "activationEvents": [
-    "onView:intelliGit.stashes",
-    "onView:intelliGit.branches",
-    "onCommand:intelliGit.quickActions",
-    "onCommand:intelliGit.branch.actionHub",
-    "onCommand:intelliGit.compareWithRevision",
-    "onCommand:intelliGit.fileBlame.open",
-    "onCommand:intelliGit.scm.shelveResource",
-    "onCommand:intelliGit.scm.commitTemplate",
-    "onCommand:intelliGit.scm.generateCommitMessage",
-    "onCommand:intelliGit.scm.amendFromInput"
+    "onView:vscodeGitClient.stashes",
+    "onView:vscodeGitClient.branches",
+    "onCommand:vscodeGitClient.quickActions",
+    "onCommand:vscodeGitClient.branch.actionHub",
+    "onCommand:vscodeGitClient.compareWithRevision",
+    "onCommand:vscodeGitClient.fileBlame.open",
+    "onCommand:vscodeGitClient.scm.shelveResource",
+    "onCommand:vscodeGitClient.scm.commitTemplate",
+    "onCommand:vscodeGitClient.scm.generateCommitMessage",
+    "onCommand:vscodeGitClient.scm.amendFromInput"
   ],
   "scripts": {
     "clean": "node scripts/clean-dist.js",
@@ -44,45 +44,45 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "intelliGit",
-          "title": "IntelliGit",
-          "icon": "media/intelligit.svg",
+          "id": "vscodeGitClient",
+          "title": "VS Code Git Client",
+          "icon": "media/vscodegitclient.svg",
           "order": 999
         }
       ]
     },
     "views": {
-      "intelliGit": [
+      "vscodeGitClient": [
         {
-          "id": "intelliGit.branches",
+          "id": "vscodeGitClient.branches",
           "name": "Branches",
           "contextualTitle": "Browse and manage local and remote branches",
           "visibility": "visible",
           "icon": "media/icon-branches.svg"
         },
         {
-          "id": "intelliGit.commitView",
+          "id": "vscodeGitClient.commitView",
           "name": "Commit Details",
           "contextualTitle": "Inspect changed files and diffs in a selected commit",
-          "when": "intelliGit.commitViewVisible",
+          "when": "vscodeGitClient.commitViewVisible",
           "icon": "media/icon-commit-view.svg"
         },
         {
-          "id": "intelliGit.graph",
+          "id": "vscodeGitClient.graph",
           "name": "Git Graph",
           "contextualTitle": "Visual commit history and branch graph",
           "visibility": "visible",
           "icon": "media/icon-graph.svg"
         },
         {
-          "id": "intelliGit.worktrees",
+          "id": "vscodeGitClient.worktrees",
           "name": "Worktrees",
           "contextualTitle": "Manage git worktrees for parallel development",
           "visibility": "visible",
           "icon": "media/icon-worktrees.svg"
         },
         {
-          "id": "intelliGit.submodules",
+          "id": "vscodeGitClient.submodules",
           "name": "Submodules",
           "contextualTitle": "Manage nested git submodule repositories",
           "visibility": "visible",
@@ -91,481 +91,481 @@
       ],
       "scm": [
         {
-          "id": "intelliGit.stashes",
+          "id": "vscodeGitClient.stashes",
           "name": "Stashes",
           "contextualTitle": "Stashed changes",
           "visibility": "collapsed",
           "icon": "media/icon-stashes.svg",
           "initialSize": 0,
           "type": "tree",
-          "accessibilityHelpContent": "IntelliGit: View stashed changes"
+          "accessibilityHelpContent": "VS Code Git Client: View stashed changes"
         }
       ]
     },
     "commands": [
       {
-        "command": "intelliGit.refresh",
+        "command": "vscodeGitClient.refresh",
         "title": "Refresh"
       },
       {
-        "command": "intelliGit.quickActions",
+        "command": "vscodeGitClient.quickActions",
         "title": "Quick Git Actions",
         "icon": "$(ellipsis)"
       },
       {
-        "command": "intelliGit.branch.checkout",
+        "command": "vscodeGitClient.branch.checkout",
         "title": "Checkout Branch"
       },
       {
-        "command": "intelliGit.branch.actionHub",
+        "command": "vscodeGitClient.branch.actionHub",
         "title": "Branch Action Hub"
       },
       {
-        "command": "intelliGit.branch.openCommits",
+        "command": "vscodeGitClient.branch.openCommits",
         "title": "Open Branch Commits"
       },
       {
-        "command": "intelliGit.branch.create",
+        "command": "vscodeGitClient.branch.create",
         "title": "Create Branch",
         "icon": "$(add)"
       },
       {
-        "command": "intelliGit.branch.rename",
+        "command": "vscodeGitClient.branch.rename",
         "title": "Rename Branch"
       },
       {
-        "command": "intelliGit.branch.delete",
+        "command": "vscodeGitClient.branch.delete",
         "title": "Delete Branch"
       },
       {
-        "command": "intelliGit.branch.track",
+        "command": "vscodeGitClient.branch.track",
         "title": "Track Remote Branch"
       },
       {
-        "command": "intelliGit.branch.untrack",
+        "command": "vscodeGitClient.branch.untrack",
         "title": "Untrack Branch"
       },
       {
-        "command": "intelliGit.branch.mergeIntoCurrent",
+        "command": "vscodeGitClient.branch.mergeIntoCurrent",
         "title": "Merge Into Current"
       },
       {
-        "command": "intelliGit.branch.rebaseOnto",
+        "command": "vscodeGitClient.branch.rebaseOnto",
         "title": "Rebase Current Onto Branch"
       },
       {
-        "command": "intelliGit.branch.resetCurrentToCommit",
+        "command": "vscodeGitClient.branch.resetCurrentToCommit",
         "title": "Reset Current Branch To Commit"
       },
       {
-        "command": "intelliGit.branch.compareWithCurrent",
+        "command": "vscodeGitClient.branch.compareWithCurrent",
         "title": "Compare With Current Branch"
       },
       {
-        "command": "intelliGit.branch.search",
+        "command": "vscodeGitClient.branch.search",
         "title": "Search Branches",
         "icon": "$(search)"
       },
       {
-        "command": "intelliGit.remote.setUrl",
+        "command": "vscodeGitClient.remote.setUrl",
         "title": "Change remote URL"
       },
       {
-        "command": "intelliGit.remote.changeUrl",
+        "command": "vscodeGitClient.remote.changeUrl",
         "title": "Change remote URL"
       },
       {
-        "command": "intelliGit.remote.setUrlMissing",
+        "command": "vscodeGitClient.remote.setUrlMissing",
         "title": "Set remote url"
       },
       {
-        "command": "intelliGit.remote.add",
+        "command": "vscodeGitClient.remote.add",
         "title": "Add Git remote"
       },
       {
-        "command": "intelliGit.tag.checkoutNewBranch",
+        "command": "vscodeGitClient.tag.checkoutNewBranch",
         "title": "Checkout New Branch"
       },
       {
-        "command": "intelliGit.tag.openCommits",
+        "command": "vscodeGitClient.tag.openCommits",
         "title": "Open Tag Commits"
       },
       {
-        "command": "intelliGit.tag.checkout",
+        "command": "vscodeGitClient.tag.checkout",
         "title": "Checkout"
       },
       {
-        "command": "intelliGit.tag.copyRevisionNumber",
+        "command": "vscodeGitClient.tag.copyRevisionNumber",
         "title": "Copy Revision Number"
       },
       {
-        "command": "intelliGit.tag.showRepositoryAtRevision",
+        "command": "vscodeGitClient.tag.showRepositoryAtRevision",
         "title": "View Repository At Revision"
       },
       {
-        "command": "intelliGit.tag.compareWithCurrent",
+        "command": "vscodeGitClient.tag.compareWithCurrent",
         "title": "Compare With Current"
       },
       {
-        "command": "intelliGit.tag.createPatch",
+        "command": "vscodeGitClient.tag.createPatch",
         "title": "Create Patch"
       },
       {
-        "command": "intelliGit.tag.createCurrent",
+        "command": "vscodeGitClient.tag.createCurrent",
         "title": "Create new tag for current",
         "icon": "$(add)"
       },
       {
-        "command": "intelliGit.stash.create",
+        "command": "vscodeGitClient.stash.create",
         "title": "Create Stash"
       },
       {
-        "command": "intelliGit.stash.apply",
+        "command": "vscodeGitClient.stash.apply",
         "title": "Apply Stash"
       },
       {
-        "command": "intelliGit.stash.pop",
+        "command": "vscodeGitClient.stash.pop",
         "title": "Pop Stash"
       },
       {
-        "command": "intelliGit.stash.drop",
+        "command": "vscodeGitClient.stash.drop",
         "title": "Drop Stash"
       },
       {
-        "command": "intelliGit.stash.rename",
+        "command": "vscodeGitClient.stash.rename",
         "title": "Rename Stash"
       },
       {
-        "command": "intelliGit.stash.previewPatch",
+        "command": "vscodeGitClient.stash.previewPatch",
         "title": "Preview Stash Patch"
       },
       {
-        "command": "intelliGit.graph.openDetails",
+        "command": "vscodeGitClient.graph.openDetails",
         "title": "Open Commit Details"
       },
       {
-        "command": "intelliGit.graph.copyCommitId",
+        "command": "vscodeGitClient.graph.copyCommitId",
         "title": "Copy Commit ID"
       },
       {
-        "command": "intelliGit.graph.copyCommitMessage",
+        "command": "vscodeGitClient.graph.copyCommitMessage",
         "title": "Copy Commit Message"
       },
       {
-        "command": "intelliGit.graph.openFileDiff",
+        "command": "vscodeGitClient.graph.openFileDiff",
         "title": "Open Commit File Diff"
       },
       {
-        "command": "intelliGit.graph.checkoutCommit",
+        "command": "vscodeGitClient.graph.checkoutCommit",
         "title": "Checkout Commit",
-        "enablement": "!intelliGit.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
       },
       {
-        "command": "intelliGit.graph.createBranchHere",
+        "command": "vscodeGitClient.graph.createBranchHere",
         "title": "Create Branch At Commit",
-        "enablement": "!intelliGit.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
       },
       {
-        "command": "intelliGit.graph.createTagHere",
+        "command": "vscodeGitClient.graph.createTagHere",
         "title": "Create Tag At Commit"
       },
       {
-        "command": "intelliGit.graph.cherryPick",
+        "command": "vscodeGitClient.graph.cherryPick",
         "title": "Cherry-pick Commit"
       },
       {
-        "command": "intelliGit.graph.cherryPickRange",
+        "command": "vscodeGitClient.graph.cherryPickRange",
         "title": "Cherry-pick Commit Range"
       },
       {
-        "command": "intelliGit.graph.revert",
+        "command": "vscodeGitClient.graph.revert",
         "title": "Revert Commit"
       },
       {
-        "command": "intelliGit.graph.rebaseInteractiveFromHere",
+        "command": "vscodeGitClient.graph.rebaseInteractiveFromHere",
         "title": "Interactive Rebase From Commit"
       },
       {
-        "command": "intelliGit.graph.compareWithCurrent",
+        "command": "vscodeGitClient.graph.compareWithCurrent",
         "title": "Compare Commit With Current",
-        "enablement": "!intelliGit.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
       },
       {
-        "command": "intelliGit.graph.createPatch",
+        "command": "vscodeGitClient.graph.createPatch",
         "title": "Create Patch From Commit"
       },
       {
-        "command": "intelliGit.graph.showRepositoryAtRevision",
+        "command": "vscodeGitClient.graph.showRepositoryAtRevision",
         "title": "Show Repository At Revision"
       },
       {
-        "command": "intelliGit.graph.openRepositoryFileAtRevision",
+        "command": "vscodeGitClient.graph.openRepositoryFileAtRevision",
         "title": "Open File At Revision"
       },
       {
-        "command": "intelliGit.graph.goToParentCommit",
+        "command": "vscodeGitClient.graph.goToParentCommit",
         "title": "Go To Parent Commit"
       },
       {
-        "command": "intelliGit.graph.filter",
+        "command": "vscodeGitClient.graph.filter",
         "title": "Filter Graph",
         "icon": "$(filter)"
       },
       {
-        "command": "intelliGit.graph.clearFilter",
+        "command": "vscodeGitClient.graph.clearFilter",
         "title": "Clear Graph Filters",
         "icon": "$(filter-filled)"
       },
       {
-        "command": "intelliGit.diff.open",
+        "command": "vscodeGitClient.diff.open",
         "title": "Open Diff"
       },
       {
-        "command": "intelliGit.compare.open",
+        "command": "vscodeGitClient.compare.open",
         "title": "Compare Branches"
       },
       {
-        "command": "intelliGit.merge.openConflict",
+        "command": "vscodeGitClient.merge.openConflict",
         "title": "Open Conflict In Merge Editor"
       },
       {
-        "command": "intelliGit.merge.next",
+        "command": "vscodeGitClient.merge.next",
         "title": "Next Conflict"
       },
       {
-        "command": "intelliGit.merge.previous",
+        "command": "vscodeGitClient.merge.previous",
         "title": "Previous Conflict"
       },
       {
-        "command": "intelliGit.merge.finalize",
+        "command": "vscodeGitClient.merge.finalize",
         "title": "Finalize Merge Resolution"
       },
       {
-        "command": "intelliGit.conflict.acceptOurs",
+        "command": "vscodeGitClient.conflict.acceptOurs",
         "title": "Accept Yours (Ours)",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.conflict.acceptTheirs",
+        "command": "vscodeGitClient.conflict.acceptTheirs",
         "title": "Accept Theirs",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.conflict.acceptBoth",
+        "command": "vscodeGitClient.conflict.acceptBoth",
         "title": "Accept Both (Open Merge Editor)",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.operation.abort",
+        "command": "vscodeGitClient.operation.abort",
         "title": "Abort Merge/Rebase/Cherry-Pick",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.operation.continue",
+        "command": "vscodeGitClient.operation.continue",
         "title": "Continue Merge/Rebase/Cherry-Pick",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.operation.skip",
+        "command": "vscodeGitClient.operation.skip",
         "title": "Skip Commit (Rebase/Cherry-Pick)",
-        "category": "IntelliGit"
+        "category": "VS Code Git Client"
       },
       {
-        "command": "intelliGit.git.pushWithPreview",
+        "command": "vscodeGitClient.git.pushWithPreview",
         "title": "Push (Preview)"
       },
       {
-        "command": "intelliGit.git.pullWithPreview",
+        "command": "vscodeGitClient.git.pullWithPreview",
         "title": "Pull (Preview)"
       },
       {
-        "command": "intelliGit.git.fetchPrune",
+        "command": "vscodeGitClient.git.fetchPrune",
         "title": "Fetch --prune"
       },
       {
-        "command": "intelliGit.stage.patch",
+        "command": "vscodeGitClient.stage.patch",
         "title": "Stage Selected Hunks"
       },
       {
-        "command": "intelliGit.stage.file",
+        "command": "vscodeGitClient.stage.file",
         "title": "Stage File"
       },
       {
-        "command": "intelliGit.scm.shelveResource",
-        "title": "Shelve Changes (IntelliGit)"
+        "command": "vscodeGitClient.scm.shelveResource",
+        "title": "Shelve Changes (VS Code Git Client)"
       },
       {
-        "command": "intelliGit.unstage.file",
+        "command": "vscodeGitClient.unstage.file",
         "title": "Unstage File"
       },
       {
-        "command": "intelliGit.commit.amend",
+        "command": "vscodeGitClient.commit.amend",
         "title": "Amend Last Commit"
       },
       {
-        "command": "intelliGit.scm.commitTemplate",
+        "command": "vscodeGitClient.scm.commitTemplate",
         "title": "Insert Commit Template (SCM)"
       },
       {
-        "command": "intelliGit.scm.generateCommitMessage",
+        "command": "vscodeGitClient.scm.generateCommitMessage",
         "title": "Generate Commit Message (SCM)"
       },
       {
-        "command": "intelliGit.scm.amendFromInput",
+        "command": "vscodeGitClient.scm.amendFromInput",
         "title": "Amend Last Commit (SCM Input)"
       },
       {
-        "command": "intelliGit.compareWithRevision",
+        "command": "vscodeGitClient.compareWithRevision",
         "title": "Compare with Revision"
       },
       {
-        "command": "intelliGit.workingTreeCompare.openFileDiff",
+        "command": "vscodeGitClient.workingTreeCompare.openFileDiff",
         "title": "Open Working-Tree Compare File Diff"
       },
       {
-        "command": "intelliGit.fileBlame.open",
+        "command": "vscodeGitClient.fileBlame.open",
         "title": "Open File Blame"
       },
       {
-        "command": "intelliGit.stash.unshelve",
+        "command": "vscodeGitClient.stash.unshelve",
         "title": "Unshelve Stash"
       },
       {
-        "command": "intelliGit.commit.revertSelectedChanges",
+        "command": "vscodeGitClient.commit.revertSelectedChanges",
         "title": "Revert Selected Changes"
       },
       {
-        "command": "intelliGit.commit.cherryPickSelectedChanges",
+        "command": "vscodeGitClient.commit.cherryPickSelectedChanges",
         "title": "Cherry-pick Selected Changes"
       },
       {
-        "command": "intelliGit.commit.createPatchSelectedChanges",
+        "command": "vscodeGitClient.commit.createPatchSelectedChanges",
         "title": "Create Patch from Selected Changes"
       },
       {
-        "command": "intelliGit.worktree.refresh",
+        "command": "vscodeGitClient.worktree.refresh",
         "title": "Refresh Worktrees"
       },
       {
-        "command": "intelliGit.worktree.open",
+        "command": "vscodeGitClient.worktree.open",
         "title": "Open Worktree in This Window"
       },
       {
-        "command": "intelliGit.worktree.openInNewWindow",
+        "command": "vscodeGitClient.worktree.openInNewWindow",
         "title": "Open Worktree in New Window",
         "icon": "$(empty-window)"
       },
       {
-        "command": "intelliGit.worktree.addFromBranch",
+        "command": "vscodeGitClient.worktree.addFromBranch",
         "title": "Add Worktree from Existing Branch",
         "icon": "$(add)"
       },
       {
-        "command": "intelliGit.worktree.addNewBranch",
+        "command": "vscodeGitClient.worktree.addNewBranch",
         "title": "Add Worktree with New Branch"
       },
       {
-        "command": "intelliGit.worktree.addDetached",
+        "command": "vscodeGitClient.worktree.addDetached",
         "title": "Add Detached Worktree"
       },
       {
-        "command": "intelliGit.worktree.remove",
+        "command": "vscodeGitClient.worktree.remove",
         "title": "Remove Worktree"
       },
       {
-        "command": "intelliGit.worktree.removeForce",
+        "command": "vscodeGitClient.worktree.removeForce",
         "title": "Force Remove Worktree"
       },
       {
-        "command": "intelliGit.worktree.lock",
+        "command": "vscodeGitClient.worktree.lock",
         "title": "Lock Worktree"
       },
       {
-        "command": "intelliGit.worktree.unlock",
+        "command": "vscodeGitClient.worktree.unlock",
         "title": "Unlock Worktree"
       },
       {
-        "command": "intelliGit.worktree.prunePreview",
+        "command": "vscodeGitClient.worktree.prunePreview",
         "title": "Preview Prunable Worktrees"
       },
       {
-        "command": "intelliGit.worktree.prune",
+        "command": "vscodeGitClient.worktree.prune",
         "title": "Prune Stale Worktrees",
         "icon": "$(trash)"
       },
       {
-        "command": "intelliGit.worktree.revealInFinder",
+        "command": "vscodeGitClient.worktree.revealInFinder",
         "title": "Reveal in Finder / Explorer"
       },
       {
-        "command": "intelliGit.worktree.openTerminal",
+        "command": "vscodeGitClient.worktree.openTerminal",
         "title": "Open Terminal Here"
       },
       {
-        "command": "intelliGit.submodule.refresh",
+        "command": "vscodeGitClient.submodule.refresh",
         "title": "Refresh Submodules"
       },
       {
-        "command": "intelliGit.submodule.init",
+        "command": "vscodeGitClient.submodule.init",
         "title": "Init Submodule"
       },
       {
-        "command": "intelliGit.submodule.initAll",
+        "command": "vscodeGitClient.submodule.initAll",
         "title": "Init All Submodules",
         "icon": "$(refresh)"
       },
       {
-        "command": "intelliGit.submodule.update",
+        "command": "vscodeGitClient.submodule.update",
         "title": "Update Submodule"
       },
       {
-        "command": "intelliGit.submodule.updateAll",
+        "command": "vscodeGitClient.submodule.updateAll",
         "title": "Update All Submodules",
         "icon": "$(arrow-down)"
       },
       {
-        "command": "intelliGit.submodule.updateRecursive",
+        "command": "vscodeGitClient.submodule.updateRecursive",
         "title": "Update All Submodules (Recursive)"
       },
       {
-        "command": "intelliGit.submodule.sync",
+        "command": "vscodeGitClient.submodule.sync",
         "title": "Sync Submodule URL"
       },
       {
-        "command": "intelliGit.submodule.syncAll",
+        "command": "vscodeGitClient.submodule.syncAll",
         "title": "Sync All Submodule URLs"
       },
       {
-        "command": "intelliGit.submodule.open",
+        "command": "vscodeGitClient.submodule.open",
         "title": "Open Submodule in This Window"
       },
       {
-        "command": "intelliGit.submodule.openInNewWindow",
+        "command": "vscodeGitClient.submodule.openInNewWindow",
         "title": "Open in a New Window",
         "icon": "$(empty-window)"
       },
       {
-        "command": "intelliGit.submodule.openTerminal",
+        "command": "vscodeGitClient.submodule.openTerminal",
         "title": "Open in a New Terminal"
       },
       {
-        "command": "intelliGit.submodule.checkoutRecorded",
+        "command": "vscodeGitClient.submodule.checkoutRecorded",
         "title": "Checkout Recorded Commit"
       },
       {
-        "command": "intelliGit.submodule.pullTrackedBranch",
+        "command": "vscodeGitClient.submodule.pullTrackedBranch",
         "title": "Pull Tracked Branch"
       },
       {
-        "command": "intelliGit.submodule.diffPointer",
+        "command": "vscodeGitClient.submodule.diffPointer",
         "title": "Show Pointer Diff"
       },
       {
-        "command": "intelliGit.submodule.stagePointerChange",
+        "command": "vscodeGitClient.submodule.stagePointerChange",
         "title": "Stage Pointer Change"
       },
       {
-        "command": "intelliGit.submodule.deinit",
+        "command": "vscodeGitClient.submodule.deinit",
         "title": "Deinit Submodule"
       }
     ],
@@ -579,504 +579,504 @@
     "menus": {
       "scm/title": [
         {
-          "command": "intelliGit.branch.actionHub",
+          "command": "vscodeGitClient.branch.actionHub",
           "when": "scmProvider == git",
           "group": "2_main@4.9"
         },
         {
-          "command": "intelliGit.scm.commitTemplate",
+          "command": "vscodeGitClient.scm.commitTemplate",
           "when": "scmProvider == git",
-          "group": "3_intelliGitCommit@1"
+          "group": "3_vscodeGitClientCommit@1"
         },
         {
-          "command": "intelliGit.scm.generateCommitMessage",
+          "command": "vscodeGitClient.scm.generateCommitMessage",
           "when": "scmProvider == git",
-          "group": "3_intelliGitCommit@2"
+          "group": "3_vscodeGitClientCommit@2"
         },
         {
-          "command": "intelliGit.scm.amendFromInput",
+          "command": "vscodeGitClient.scm.amendFromInput",
           "when": "scmProvider == git",
-          "group": "3_intelliGitCommit@3"
+          "group": "3_vscodeGitClientCommit@3"
         }
       ],
       "git.branch": [
         {
-          "command": "intelliGit.branch.actionHub",
+          "command": "vscodeGitClient.branch.actionHub",
           "when": "config.git.enabled && !git.missing && gitOpenRepositoryCount != 0",
           "group": "3_modify@0"
         }
       ],
       "scm/resourceState/context": [
         {
-          "command": "intelliGit.scm.shelveResource",
+          "command": "vscodeGitClient.scm.shelveResource",
           "when": "scmProvider == git && resourceScheme == file && scmResourceGroup != index",
-          "group": "2_intelliGit@1"
+          "group": "2_vscodeGitClient@1"
         }
       ],
       "view/title": [
         {
-          "command": "intelliGit.worktree.addFromBranch",
-          "when": "view == intelliGit.worktrees",
+          "command": "vscodeGitClient.worktree.addFromBranch",
+          "when": "view == vscodeGitClient.worktrees",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.worktree.prune",
-          "when": "view == intelliGit.worktrees",
+          "command": "vscodeGitClient.worktree.prune",
+          "when": "view == vscodeGitClient.worktrees",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.submodule.initAll",
-          "when": "view == intelliGit.submodules",
+          "command": "vscodeGitClient.submodule.initAll",
+          "when": "view == vscodeGitClient.submodules",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.submodule.updateAll",
-          "when": "view == intelliGit.submodules && intelliGit.hasSubmodules",
+          "command": "vscodeGitClient.submodule.updateAll",
+          "when": "view == vscodeGitClient.submodules && vscodeGitClient.hasSubmodules",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.branch.search",
-          "when": "view == intelliGit.branches",
+          "command": "vscodeGitClient.branch.search",
+          "when": "view == vscodeGitClient.branches",
           "group": "navigation@8"
         },
         {
-          "command": "intelliGit.branch.create",
-          "when": "view == intelliGit.branches",
+          "command": "vscodeGitClient.branch.create",
+          "when": "view == vscodeGitClient.branches",
           "group": "navigation@8.1"
         },
         {
-          "command": "intelliGit.graph.filter",
-          "when": "view == intelliGit.graph",
+          "command": "vscodeGitClient.graph.filter",
+          "when": "view == vscodeGitClient.graph",
           "group": "navigation@8"
         },
         {
-          "command": "intelliGit.graph.clearFilter",
-          "when": "view == intelliGit.graph && intelliGit.graphFilterActive",
+          "command": "vscodeGitClient.graph.clearFilter",
+          "when": "view == vscodeGitClient.graph && vscodeGitClient.graphFilterActive",
           "group": "navigation@8.1"
         },
         {
-          "command": "intelliGit.refresh",
-          "when": "view == intelliGit.branches || view == intelliGit.stashes || view == intelliGit.graph",
+          "command": "vscodeGitClient.refresh",
+          "when": "view == vscodeGitClient.branches || view == vscodeGitClient.stashes || view == vscodeGitClient.graph",
           "group": "refresh@1"
         },
         {
-          "command": "intelliGit.worktree.refresh",
-          "when": "view == intelliGit.worktrees",
+          "command": "vscodeGitClient.worktree.refresh",
+          "when": "view == vscodeGitClient.worktrees",
           "group": "refresh@1"
         },
         {
-          "command": "intelliGit.submodule.refresh",
-          "when": "view == intelliGit.submodules",
+          "command": "vscodeGitClient.submodule.refresh",
+          "when": "view == vscodeGitClient.submodules",
           "group": "refresh@1"
         }
       ],
       "view/item/context": [
         {
-          "command": "intelliGit.branch.checkout",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.checkout",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.branch.compareWithCurrent",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.compareWithCurrent",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.branch.rename",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.rename",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.branch.delete",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.delete",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.branch.track",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.track",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.branch.untrack",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.untrack",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@4"
         },
         {
-          "command": "intelliGit.branch.mergeIntoCurrent",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.mergeIntoCurrent",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@5"
         },
         {
-          "command": "intelliGit.branch.rebaseOnto",
-          "when": "view == intelliGit.branches && viewItem == branchRef",
+          "command": "vscodeGitClient.branch.rebaseOnto",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
           "group": "navigation@6"
         },
         {
-          "command": "intelliGit.tag.checkout",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.checkout",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.tag.checkoutNewBranch",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.checkoutNewBranch",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.tag.copyRevisionNumber",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.copyRevisionNumber",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.tag.showRepositoryAtRevision",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.showRepositoryAtRevision",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.tag.compareWithCurrent",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.compareWithCurrent",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.tag.createPatch",
-          "when": "view == intelliGit.branches && viewItem == tagRef",
+          "command": "vscodeGitClient.tag.createPatch",
+          "when": "view == vscodeGitClient.branches && viewItem == tagRef",
           "group": "navigation@4"
         },
         {
-          "command": "intelliGit.tag.createCurrent",
-          "when": "view == intelliGit.branches && viewItem == tagSection",
+          "command": "vscodeGitClient.tag.createCurrent",
+          "when": "view == vscodeGitClient.branches && viewItem == tagSection",
           "group": "inline@1"
         },
         {
-          "command": "intelliGit.remote.changeUrl",
-          "when": "view == intelliGit.branches && viewItem == branchRemoteGroup && intelliGit.remoteHasUrl",
+          "command": "vscodeGitClient.remote.changeUrl",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRemoteGroup && vscodeGitClient.remoteHasUrl",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.remote.setUrlMissing",
-          "when": "view == intelliGit.branches && viewItem == branchRemoteGroup && !intelliGit.remoteHasUrl",
+          "command": "vscodeGitClient.remote.setUrlMissing",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRemoteGroup && !vscodeGitClient.remoteHasUrl",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.remote.add",
-          "when": "view == intelliGit.branches && viewItem == branchSectionRemote",
+          "command": "vscodeGitClient.remote.add",
+          "when": "view == vscodeGitClient.branches && viewItem == branchSectionRemote",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.refresh",
-          "when": "view == intelliGit.branches && !viewItem",
+          "command": "vscodeGitClient.refresh",
+          "when": "view == vscodeGitClient.branches && !viewItem",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.refresh",
-          "when": "view == intelliGit.stashes && !viewItem",
+          "command": "vscodeGitClient.refresh",
+          "when": "view == vscodeGitClient.stashes && !viewItem",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.refresh",
-          "when": "view == intelliGit.graph && !viewItem",
+          "command": "vscodeGitClient.refresh",
+          "when": "view == vscodeGitClient.graph && !viewItem",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.worktree.refresh",
-          "when": "view == intelliGit.worktrees && !viewItem",
+          "command": "vscodeGitClient.worktree.refresh",
+          "when": "view == vscodeGitClient.worktrees && !viewItem",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.submodule.refresh",
-          "when": "view == intelliGit.submodules && !viewItem",
+          "command": "vscodeGitClient.submodule.refresh",
+          "when": "view == vscodeGitClient.submodules && !viewItem",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.stash.apply",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.apply",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "inline"
         },
         {
-          "command": "intelliGit.stash.pop",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.pop",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.stash.rename",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.rename",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.stash.drop",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.drop",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.stash.previewPatch",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.previewPatch",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.stash.unshelve",
-          "when": "view == intelliGit.stashes && viewItem == stashEntry",
+          "command": "vscodeGitClient.stash.unshelve",
+          "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.graph.openDetails",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.openDetails",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.graph.copyCommitId",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.copyCommitId",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@0.1"
         },
         {
-          "command": "intelliGit.graph.copyCommitMessage",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.copyCommitMessage",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@0.2"
         },
         {
-          "command": "intelliGit.graph.openFileDiff",
-          "when": "view == intelliGit.graph && viewItem == graphCommitFile",
+          "command": "vscodeGitClient.graph.openFileDiff",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommitFile",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.graph.checkoutCommit",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.checkoutCommit",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation"
         },
         {
-          "command": "intelliGit.graph.createBranchHere",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.createBranchHere",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.graph.cherryPick",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.cherryPick",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.graph.revert",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.revert",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.graph.compareWithCurrent",
-          "when": "view == intelliGit.graph && viewItem == graphCommit",
+          "command": "vscodeGitClient.graph.compareWithCurrent",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@4"
         },
         {
-          "command": "intelliGit.commit.revertSelectedChanges",
-          "when": "view == intelliGit.commitView && viewItem == commitViewFile && intelliGit.commitViewCanRevertSelected",
+          "command": "vscodeGitClient.commit.revertSelectedChanges",
+          "when": "view == vscodeGitClient.commitView && viewItem == commitViewFile && vscodeGitClient.commitViewCanRevertSelected",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.commit.cherryPickSelectedChanges",
-          "when": "view == intelliGit.commitView && viewItem == commitViewFile && intelliGit.commitViewCanCherryPickSelected",
+          "command": "vscodeGitClient.commit.cherryPickSelectedChanges",
+          "when": "view == vscodeGitClient.commitView && viewItem == commitViewFile && vscodeGitClient.commitViewCanCherryPickSelected",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.commit.createPatchSelectedChanges",
-          "when": "view == intelliGit.commitView && viewItem == commitViewFile",
+          "command": "vscodeGitClient.commit.createPatchSelectedChanges",
+          "when": "view == vscodeGitClient.commitView && viewItem == commitViewFile",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.graph.openRepositoryFileAtRevision",
-          "when": "view == intelliGit.commitView && viewItem == revisionViewFile",
+          "command": "vscodeGitClient.graph.openRepositoryFileAtRevision",
+          "when": "view == vscodeGitClient.commitView && viewItem == revisionViewFile",
           "group": "inline"
         },
         {
-          "command": "intelliGit.commit.revertSelectedChanges",
-          "when": "view == intelliGit.graph && viewItem == graphCommitFile",
+          "command": "vscodeGitClient.commit.revertSelectedChanges",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommitFile",
           "group": "navigation@5"
         },
         {
-          "command": "intelliGit.commit.cherryPickSelectedChanges",
-          "when": "view == intelliGit.graph && viewItem == graphCommitFile",
+          "command": "vscodeGitClient.commit.cherryPickSelectedChanges",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommitFile",
           "group": "navigation@6"
         },
         {
-          "command": "intelliGit.worktree.openInNewWindow",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/",
+          "command": "vscodeGitClient.worktree.openInNewWindow",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "inline"
         },
         {
-          "command": "intelliGit.worktree.open",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/",
+          "command": "vscodeGitClient.worktree.open",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.worktree.openInNewWindow",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/",
+          "command": "vscodeGitClient.worktree.openInNewWindow",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.worktree.revealInFinder",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/",
+          "command": "vscodeGitClient.worktree.revealInFinder",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.worktree.openTerminal",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/",
+          "command": "vscodeGitClient.worktree.openTerminal",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "navigation@4"
         },
         {
-          "command": "intelliGit.worktree.lock",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeLocked/) && !(viewItem =~ /worktreeCurrent/)",
+          "command": "vscodeGitClient.worktree.lock",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeLocked/) && !(viewItem =~ /worktreeCurrent/)",
           "group": "manage@1"
         },
         {
-          "command": "intelliGit.worktree.unlock",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeLocked/",
+          "command": "vscodeGitClient.worktree.unlock",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeLocked/",
           "group": "manage@2"
         },
         {
-          "command": "intelliGit.worktree.remove",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/) && !(viewItem =~ /worktreeLocked/)",
+          "command": "vscodeGitClient.worktree.remove",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/) && !(viewItem =~ /worktreeLocked/)",
           "group": "danger@1"
         },
         {
-          "command": "intelliGit.worktree.removeForce",
-          "when": "view == intelliGit.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/)",
+          "command": "vscodeGitClient.worktree.removeForce",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/)",
           "group": "danger@2"
         },
         {
-          "command": "intelliGit.submodule.openInNewWindow",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.openInNewWindow",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "inline"
         },
         {
-          "command": "intelliGit.submodule.open",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.open",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "navigation@1"
         },
         {
-          "command": "intelliGit.submodule.openInNewWindow",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.openInNewWindow",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "navigation@2"
         },
         {
-          "command": "intelliGit.submodule.openTerminal",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.openTerminal",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "navigation@3"
         },
         {
-          "command": "intelliGit.submodule.init",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleUninitialized/",
+          "command": "vscodeGitClient.submodule.init",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleUninitialized/",
           "group": "manage@1"
         },
         {
-          "command": "intelliGit.submodule.update",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.update",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "manage@2"
         },
         {
-          "command": "intelliGit.submodule.sync",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.sync",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "manage@3"
         },
         {
-          "command": "intelliGit.submodule.checkoutRecorded",
-          "when": "view == intelliGit.submodules && viewItem =~ /submodulePointerChanged/",
+          "command": "vscodeGitClient.submodule.checkoutRecorded",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submodulePointerChanged/",
           "group": "pointer@1"
         },
         {
-          "command": "intelliGit.submodule.pullTrackedBranch",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.pullTrackedBranch",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "pointer@2"
         },
         {
-          "command": "intelliGit.submodule.diffPointer",
-          "when": "view == intelliGit.submodules && viewItem =~ /submodulePointerChanged/",
+          "command": "vscodeGitClient.submodule.diffPointer",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submodulePointerChanged/",
           "group": "pointer@3"
         },
         {
-          "command": "intelliGit.submodule.stagePointerChange",
-          "when": "view == intelliGit.submodules && viewItem =~ /submodulePointerChanged/",
+          "command": "vscodeGitClient.submodule.stagePointerChange",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submodulePointerChanged/",
           "group": "pointer@4"
         },
         {
-          "command": "intelliGit.submodule.deinit",
-          "when": "view == intelliGit.submodules && viewItem =~ /submoduleEntry/",
+          "command": "vscodeGitClient.submodule.deinit",
+          "when": "view == vscodeGitClient.submodules && viewItem =~ /submoduleEntry/",
           "group": "danger@1"
         }
       ],
       "explorer/context": [
         {
-          "command": "intelliGit.compareWithRevision",
+          "command": "vscodeGitClient.compareWithRevision",
           "when": "resourceScheme == file",
-          "group": "z_intelliGit@1"
+          "group": "z_vscodeGitClient@1"
         }
       ],
       "commandPalette": [
         {
-          "command": "intelliGit.compareWithRevision",
+          "command": "vscodeGitClient.compareWithRevision",
           "when": "false"
         },
         {
-          "command": "intelliGit.workingTreeCompare.openFileDiff",
+          "command": "vscodeGitClient.workingTreeCompare.openFileDiff",
           "when": "false"
         }
       ]
     },
     "configuration": {
-      "title": "IntelliGit",
+      "title": "VS Code Git Client",
       "properties": {
-        "intelliGit.gitPath": {
+        "vscodeGitClient.gitPath": {
           "type": "string",
           "default": "git",
           "description": "Git executable path."
         },
-        "intelliGit.commandTimeoutMs": {
+        "vscodeGitClient.commandTimeoutMs": {
           "type": "number",
           "default": 15000,
           "minimum": 2000,
           "description": "Timeout for Git commands in milliseconds."
         },
-        "intelliGit.maxGraphCommits": {
+        "vscodeGitClient.maxGraphCommits": {
           "type": "number",
           "default": 200,
           "minimum": 20,
           "description": "Maximum commits shown in Git Graph view."
         },
-        "intelliGit.recentBranchesCount": {
+        "vscodeGitClient.recentBranchesCount": {
           "type": "number",
           "default": 3,
           "minimum": 1,
           "maximum": 10,
           "description": "Number of branches shown in the Recent group."
         },
-        "intelliGit.gutterMarkers.enabled": {
+        "vscodeGitClient.gutterMarkers.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Show inline gutter markers for lines added, modified, or deleted relative to HEAD."
         },
-        "intelliGit.gutterMarkers.maxFileSizeKb": {
+        "vscodeGitClient.gutterMarkers.maxFileSizeKb": {
           "type": "number",
           "default": 512,
           "minimum": 1,
           "description": "Skip inline gutter marker computation for files larger than this size in KB."
         },
-        "intelliGit.gutterMarkers.maxLineCount": {
+        "vscodeGitClient.gutterMarkers.maxLineCount": {
           "type": "number",
           "default": 10000,
           "minimum": 1,
           "description": "Skip inline gutter marker computation for files with more lines than this value."
         },
-        "intelliGit.performance.logGitCommands": {
+        "vscodeGitClient.performance.logGitCommands": {
           "type": "boolean",
           "default": false,
-          "description": "Log Git commands that take 500ms or longer to the IntelliGit output channel."
+          "description": "Log Git commands that take 500ms or longer to the VS Code Git Client output channel."
         },
-        "intelliGit.performance.refreshDebounceMs": {
+        "vscodeGitClient.performance.refreshDebounceMs": {
           "type": "number",
           "default": 250,
           "minimum": 0,
           "description": "Debounce delay in milliseconds for VS Code Git repository-state auto-refresh events."
         },
-        "intelliGit.performance.saveRefreshDebounceMs": {
+        "vscodeGitClient.performance.saveRefreshDebounceMs": {
           "type": "number",
           "default": 150,
           "minimum": 0,
           "description": "Debounce delay in milliseconds for save-triggered working-tree refresh events."
         },
-        "intelliGit.compare.exportFormat": {
+        "vscodeGitClient.compare.exportFormat": {
           "type": "string",
           "enum": [
             "csv",
@@ -1085,7 +1085,7 @@
           "default": "csv",
           "description": "Default export format for Compare Branches webview. CSV exports two branch-specific files; Excel exports one .xlsx with two sheets."
         },
-        "intelliGit.commitMessageTemplates": {
+        "vscodeGitClient.commitMessageTemplates": {
           "type": "array",
           "default": [
             {
@@ -1124,12 +1124,12 @@
             }
           }
         },
-        "intelliGit.commitMessageTicketPattern": {
+        "vscodeGitClient.commitMessageTicketPattern": {
           "type": "string",
           "default": "[A-Z]+-\\d+",
           "description": "Regular expression used to extract a ticket id from the current branch name for the {ticket} placeholder."
         },
-        "intelliGit.aiGenerateTimeoutMs": {
+        "vscodeGitClient.aiGenerateTimeoutMs": {
           "type": "number",
           "default": 5000,
           "minimum": 1000,
