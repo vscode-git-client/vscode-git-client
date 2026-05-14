@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import { afterEach, describe, it } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
+import { BranchRemoteNode } from '../providers/branchTreeProvider';
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const conflictMessage = 'There are some conflicts. You have to resolve them first.';
@@ -10,6 +11,7 @@ type GitOverrides = Partial<{
   cherryPick(sha: string): Promise<void>;
   mergeIntoCurrent(branch: string): Promise<void>;
   rebaseCurrentOnto(branch: string): Promise<void>;
+  setRemoteUrl(remoteName: string, remoteUrl: string): Promise<void>;
 }>;
 
 function deferred(): { promise: Promise<void>; resolve(): void } {
@@ -59,6 +61,9 @@ function registerController(
       },
       rebaseCurrentOnto: overrides.rebaseCurrentOnto ?? (async (branch: string) => {
         events.push(`git:rebase:${branch}`);
+      }),
+      setRemoteUrl: overrides.setRemoteUrl ?? (async (remoteName: string, remoteUrl: string) => {
+        events.push(`git:set-remote-url:${remoteName}:${remoteUrl}`);
       })
     } as never,
     {
@@ -68,6 +73,12 @@ function registerController(
         events.push('refresh:start');
         return refresh.promise.then(() => {
           events.push('refresh:finish');
+        });
+      },
+      refreshBranches: () => {
+        events.push('refresh-branches:start');
+        return refresh.promise.then(() => {
+          events.push('refresh-branches:finish');
         });
       }
     } as never,
@@ -91,11 +102,13 @@ function registerController(
 describe('cherry-pick and operation feedback', () => {
   const originalRegisterCommand = vscode.commands.registerCommand;
   const originalShowInformationMessage = vscode.window.showInformationMessage;
+  const originalShowInputBox = vscode.window.showInputBox;
   const originalShowWarningMessage = vscode.window.showWarningMessage;
 
   afterEach(() => {
     (vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }).registerCommand = originalRegisterCommand;
     (vscode.window as unknown as { showInformationMessage: typeof vscode.window.showInformationMessage }).showInformationMessage = originalShowInformationMessage;
+    (vscode.window as unknown as { showInputBox: typeof vscode.window.showInputBox }).showInputBox = originalShowInputBox;
     (vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage }).showWarningMessage = originalShowWarningMessage;
   });
 
@@ -217,5 +230,56 @@ describe('cherry-pick and operation feedback', () => {
 
     refresh.resolve();
     await run;
+  });
+
+  it('shows remote URL update success before waiting for branch refresh to finish', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const commands = registerController(events, refresh);
+
+    (vscode.window as unknown as {
+      showInputBox: typeof vscode.window.showInputBox;
+    }).showInputBox = async () => 'https://github.com/example/new.git';
+
+    (vscode.window as unknown as {
+      showInformationMessage: typeof vscode.window.showInformationMessage;
+    }).showInformationMessage = async (message: string) => {
+      events.push(`message:${message}`);
+      return undefined;
+    };
+
+    const changeUrl = commands.get('intelliGit.remote.changeUrl');
+    assert.ok(changeUrl, 'expected remote URL command to be registered');
+
+    const remote = new BranchRemoteNode('origin', [{
+      name: 'origin/main',
+      shortName: 'main',
+      fullName: 'refs/remotes/origin/main',
+      type: 'remote',
+      remoteName: 'origin',
+      remoteUrl: 'https://github.com/example/old.git',
+      ahead: 0,
+      behind: 0,
+      current: false
+    }], 'https://github.com/example/old.git');
+
+    const run = changeUrl(remote);
+    await delay(0);
+
+    assert.deepStrictEqual(events, [
+      'git:set-remote-url:origin:https://github.com/example/new.git',
+      'refresh-branches:start',
+      'message:Remote origin URL updated.'
+    ]);
+
+    refresh.resolve();
+    await run;
+
+    assert.deepStrictEqual(events, [
+      'git:set-remote-url:origin:https://github.com/example/new.git',
+      'refresh-branches:start',
+      'message:Remote origin URL updated.',
+      'refresh-branches:finish'
+    ]);
   });
 });

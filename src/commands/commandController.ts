@@ -473,8 +473,9 @@ export class CommandController {
       }
 
       await this.git.setRemoteUrl(remoteName, nextUrl.trim());
-      await this.state.refreshBranches();
+      const refreshPromise = this.state.refreshBranches();
       void vscode.window.showInformationMessage(`Remote ${remoteName} URL updated.`);
+      await refreshPromise;
     };
 
     register('intelliGit.remote.setUrl', setRemoteUrlFromItem);

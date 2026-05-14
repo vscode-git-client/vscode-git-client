@@ -60,6 +60,7 @@ Hierarchical branch tree grouped by prefix (`feature/*`, `release/*`, etc.) plus
 
 - Local + remote branches
 - Current branch marker with upstream tracking, ahead/behind counts
+- Remote actions include add/change/set URL with immediate update feedback
 - Branch actions (right-click or Branch Action Hub):
   - Checkout
   - Create
