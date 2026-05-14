@@ -4,6 +4,13 @@ import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const conflictMessage = 'There are some conflicts. You have to resolve them first.';
+
+type GitOverrides = Partial<{
+  cherryPick(sha: string): Promise<void>;
+  mergeIntoCurrent(branch: string): Promise<void>;
+  rebaseCurrentOnto(branch: string): Promise<void>;
+}>;
 
 function deferred(): { promise: Promise<void>; resolve(): void } {
   let resolve!: () => void;
@@ -13,26 +20,89 @@ function deferred(): { promise: Promise<void>; resolve(): void } {
   return { promise, resolve };
 }
 
-describe('cherry-pick feedback', () => {
+function registerController(
+  events: string[],
+  refresh: { promise: Promise<void> },
+  overrides: GitOverrides = {},
+  captureWarnings = false
+): Map<string, (...args: unknown[]) => Promise<void>> {
+  const commands = new Map<string, (...args: unknown[]) => Promise<void>>();
+
+  (vscode.commands as unknown as {
+    registerCommand: typeof vscode.commands.registerCommand;
+  }).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
+    commands.set(command, callback);
+    return { dispose() { } };
+  };
+
+  if (captureWarnings) {
+    (vscode.window as unknown as {
+      showWarningMessage: typeof vscode.window.showWarningMessage;
+    }).showWarningMessage = async (message: string, ...items: unknown[]) => {
+      events.push(`warning:${message.split('\n')[0]}`);
+      return items.find((item): item is string => typeof item === 'string');
+    };
+  }
+
+  const controller = new CommandController(
+    {
+      cherryPick: overrides.cherryPick ?? (async (sha: string) => {
+        events.push(`git:cherry-pick:${sha}`);
+      }),
+      getMergeConflicts: async () => [{ path: 'src/conflict.ts', status: 'UU' }],
+      getOperationState: async () => ({ kind: 'rebase' }),
+      mergeIntoCurrent: overrides.mergeIntoCurrent ?? (async (branch: string) => {
+        events.push(`git:merge:${branch}`);
+      }),
+      rebaseContinue: async () => {
+        events.push('git:rebase-continue');
+      },
+      rebaseCurrentOnto: overrides.rebaseCurrentOnto ?? (async (branch: string) => {
+        events.push(`git:rebase:${branch}`);
+      })
+    } as never,
+    {
+      branches: [],
+      conflicts: [],
+      refreshAll: () => {
+        events.push('refresh:start');
+        return refresh.promise.then(() => {
+          events.push('refresh:finish');
+        });
+      }
+    } as never,
+    {
+      openMergeConflict: async (path: string) => {
+        events.push(`open:${path}`);
+      }
+    } as never,
+    { error() { }, warn() { }, info() { } } as never,
+    {
+      getCommitActionContext: () => undefined,
+      getAllFileItems: () => [],
+      showCommit: async () => undefined
+    }
+  );
+
+  controller.register({ subscriptions: [] } as unknown as vscode.ExtensionContext);
+  return commands;
+}
+
+describe('cherry-pick and operation feedback', () => {
   const originalRegisterCommand = vscode.commands.registerCommand;
   const originalShowInformationMessage = vscode.window.showInformationMessage;
+  const originalShowWarningMessage = vscode.window.showWarningMessage;
 
   afterEach(() => {
     (vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }).registerCommand = originalRegisterCommand;
     (vscode.window as unknown as { showInformationMessage: typeof vscode.window.showInformationMessage }).showInformationMessage = originalShowInformationMessage;
+    (vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage }).showWarningMessage = originalShowWarningMessage;
   });
 
   it('shows graph cherry-pick success before waiting for the full refresh to finish', async () => {
     const events: string[] = [];
-    const commands = new Map<string, (...args: unknown[]) => Promise<void>>();
     const refresh = deferred();
-
-    (vscode.commands as unknown as {
-      registerCommand: typeof vscode.commands.registerCommand;
-    }).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
-      commands.set(command, callback);
-      return { dispose() { } };
-    };
+    const commands = registerController(events, refresh);
 
     (vscode.window as unknown as {
       showInformationMessage: typeof vscode.window.showInformationMessage;
@@ -41,30 +111,6 @@ describe('cherry-pick feedback', () => {
       return undefined;
     };
 
-    const controller = new CommandController(
-      {
-        cherryPick: async (sha: string) => {
-          events.push(`git:${sha}`);
-        }
-      } as never,
-      {
-        refreshAll: () => {
-          events.push('refresh:start');
-          return refresh.promise.then(() => {
-            events.push('refresh:finish');
-          });
-        }
-      } as never,
-      {} as never,
-      { error() { }, warn() { }, info() { } } as never,
-      {
-        getCommitActionContext: () => undefined,
-        getAllFileItems: () => [],
-        showCommit: async () => undefined
-      }
-    );
-
-    controller.register({ subscriptions: [] } as unknown as vscode.ExtensionContext);
     const cherryPick = commands.get('intelliGit.graph.cherryPick');
     assert.ok(cherryPick, 'expected cherry-pick command to be registered');
 
@@ -72,7 +118,7 @@ describe('cherry-pick feedback', () => {
     await delay(0);
 
     assert.deepStrictEqual(events, [
-      'git:abcdef123456',
+      'git:cherry-pick:abcdef123456',
       'refresh:start',
       'message:Cherry-pick succeeded for abcdef12.'
     ]);
@@ -81,10 +127,95 @@ describe('cherry-pick feedback', () => {
     await run;
 
     assert.deepStrictEqual(events, [
-      'git:abcdef123456',
+      'git:cherry-pick:abcdef123456',
       'refresh:start',
       'message:Cherry-pick succeeded for abcdef12.',
       'refresh:finish'
     ]);
+  });
+
+  it('shows graph cherry-pick conflict before waiting for the full refresh to finish', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const commands = registerController(events, refresh, {
+      cherryPick: async (sha: string) => {
+        events.push(`git:cherry-pick:${sha}`);
+        throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
+      }
+    }, true);
+    const cherryPick = commands.get('intelliGit.graph.cherryPick');
+    assert.ok(cherryPick, 'expected cherry-pick command to be registered');
+
+    const run = cherryPick('abcdef123456');
+    await delay(0);
+
+    assert.deepStrictEqual(events, [
+      'git:cherry-pick:abcdef123456',
+      'refresh:start',
+      `warning:${conflictMessage}`
+    ]);
+
+    refresh.resolve();
+    await run;
+
+    assert.deepStrictEqual(events, [
+      'git:cherry-pick:abcdef123456',
+      'refresh:start',
+      `warning:${conflictMessage}`,
+      'refresh:finish',
+      'open:src/conflict.ts'
+    ]);
+  });
+
+  it('shows merge conflict before waiting for the full refresh to finish', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const commands = registerController(events, refresh, {
+      mergeIntoCurrent: async (branch: string) => {
+        events.push(`git:merge:${branch}`);
+        throw new Error('Automatic merge failed; fix conflicts and then commit the result.');
+      }
+    }, true);
+    const merge = commands.get('intelliGit.branch.mergeIntoCurrent');
+    assert.ok(merge, 'expected merge command to be registered');
+
+    const run = merge('feature/conflict');
+    await delay(0);
+
+    assert.deepStrictEqual(events, [
+      'warning:Merge into current branch',
+      'git:merge:feature/conflict',
+      'refresh:start',
+      `warning:${conflictMessage}`
+    ]);
+
+    refresh.resolve();
+    await run;
+  });
+
+  it('shows rebase conflict before waiting for the full refresh to finish', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const commands = registerController(events, refresh, {
+      rebaseCurrentOnto: async (branch: string) => {
+        events.push(`git:rebase:${branch}`);
+        throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
+      }
+    }, true);
+    const rebase = commands.get('intelliGit.branch.rebaseOnto');
+    assert.ok(rebase, 'expected rebase command to be registered');
+
+    const run = rebase('main');
+    await delay(0);
+
+    assert.deepStrictEqual(events, [
+      'warning:Rebase current branch',
+      'git:rebase:main',
+      'refresh:start',
+      `warning:${conflictMessage}`
+    ]);
+
+    refresh.resolve();
+    await run;
   });
 });

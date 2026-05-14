@@ -29,6 +29,7 @@ interface QuickAction {
 }
 
 type CherryPickIssueKind = 'conflict' | 'nothingToCherryPick' | 'failed';
+type MergeIssueKind = 'conflict' | 'failed';
 type RebaseIssueKind = 'conflict' | 'failed';
 
 type GitScmRepository = {
@@ -583,8 +584,7 @@ export class CommandController {
         return;
       }
 
-      await this.git.mergeIntoCurrent(branch);
-      await this.state.refreshAll();
+      await this.startMergeOperation(() => this.git.mergeIntoCurrent(branch));
     });
 
     register('intelliGit.branch.rebaseOnto', async (arg?: unknown) => {
@@ -956,11 +956,7 @@ export class CommandController {
       const refreshPromise = this.state.refreshAll();
 
       if (conflictSha) {
-        await refreshPromise;
-        await this.openOperationConflictEditors('cherry-pick');
-        void vscode.window.showWarningMessage(
-          'There are some conflicts. You have to resolve them first.'
-        );
+        await this.handleOperationConflict('cherry-pick', refreshPromise);
         return;
       }
 
@@ -1467,9 +1463,8 @@ export class CommandController {
             await this.git.rebaseContinue();
           } catch (error) {
             const issue = this.classifyRebaseIssue(error);
-            await this.state.refreshAll();
             if (issue.kind === 'conflict') {
-              await this.handleRebaseConflict();
+              await this.handleOperationConflict('rebase', this.state.refreshAll());
               return;
             }
             throw error;
@@ -2360,8 +2355,7 @@ export class CommandController {
             return;
           }
 
-          await this.git.mergeIntoCurrent(branchName);
-          await this.state.refreshAll();
+          await this.startMergeOperation(() => this.git.mergeIntoCurrent(branchName));
         }
       });
 
@@ -2793,6 +2787,24 @@ export class CommandController {
     return { kind: 'failed', message };
   }
 
+  private classifyMergeIssue(error: unknown): { kind: MergeIssueKind; message?: string } {
+    const message = this.getErrorSummary(error);
+    const normalized = message.toLowerCase();
+
+    const conflictMarkers = [
+      'conflict',
+      'automatic merge failed',
+      'unmerged files',
+      'fix conflicts and then commit the result',
+      'merge failed'
+    ];
+    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
+      return { kind: 'conflict', message };
+    }
+
+    return { kind: 'failed', message };
+  }
+
   private classifyRebaseIssue(error: unknown): { kind: RebaseIssueKind; message?: string } {
     const message = this.getErrorSummary(error);
     const normalized = message.toLowerCase();
@@ -2821,14 +2833,28 @@ export class CommandController {
     return firstLine ?? 'Unknown git error.';
   }
 
+  private async startMergeOperation(run: () => Promise<void>): Promise<void> {
+    try {
+      await run();
+    } catch (error) {
+      const issue = this.classifyMergeIssue(error);
+      if (issue.kind === 'conflict') {
+        await this.handleOperationConflict('merge', this.state.refreshAll());
+        return;
+      }
+      throw error;
+    }
+
+    await this.state.refreshAll();
+  }
+
   private async startRebaseOperation(run: () => Promise<void>): Promise<void> {
     try {
       await run();
     } catch (error) {
       const issue = this.classifyRebaseIssue(error);
-      await this.state.refreshAll();
       if (issue.kind === 'conflict') {
-        await this.handleRebaseConflict();
+        await this.handleOperationConflict('rebase', this.state.refreshAll());
         return;
       }
       throw error;
@@ -2839,8 +2865,17 @@ export class CommandController {
   }
 
   private async handleRebaseConflict(): Promise<void> {
-    await this.openOperationConflictEditors('rebase');
     void vscode.window.showWarningMessage('There are some conflicts. You have to resolve them first.');
+    await this.openOperationConflictEditors('rebase');
+  }
+
+  private async handleOperationConflict(
+    operation: 'cherry-pick' | 'merge' | 'rebase',
+    refreshPromise: Promise<void> = Promise.resolve()
+  ): Promise<void> {
+    void vscode.window.showWarningMessage('There are some conflicts. You have to resolve them first.');
+    await refreshPromise;
+    await this.openOperationConflictEditors(operation);
   }
 
   private async showRebaseProgressFeedback(): Promise<void> {
@@ -2866,7 +2901,7 @@ export class CommandController {
     );
   }
 
-  private async openOperationConflictEditors(operation: 'cherry-pick' | 'rebase'): Promise<void> {
+  private async openOperationConflictEditors(operation: 'cherry-pick' | 'merge' | 'rebase'): Promise<void> {
     const conflicts = this.state.conflicts.length > 0
       ? this.state.conflicts
       : await this.git.getMergeConflicts();
