@@ -1,364 +1,319 @@
-# IntelliGit Client (VS Code Extension)
+# vscode-git-client
 
-IntelliGit is an IntelliJ-like Git client extension for VS Code focused on core parity. It adds a dedicated Activity Bar container with branch/graph/commit views, a Stashes panel in the SCM sidebar, a Repo Structure panel for worktrees and submodules, inline gutter change markers, commit message templates, and full merge/diff/compare workflows.
+`vscode-git-client` is a Git workflow extension for VS Code. It keeps daily Git work inside the editor: branch management, commit history, commit details, stashes, worktrees, submodules, gutter markers, merge/rebase/cherry-pick recovery, and branch comparison.
 
-**Panel layout:**
-- **IntelliGit** (Activity Bar): `Branches`, `Commit Details`, `Git Graph`
-- **Source Control** (SCM panel): `Stashes`
-- **Repo Structure** (bottom panel): `Worktrees`, `Submodules`
-- **Editor**: Gutter change markers, side-by-side diff, 3-way merge editor, branch comparison
+The extension was first inspired by the IntelliJ Git client experience, then adapted for VS Code and extended with workflows that are especially useful in larger repositories: worktree and submodule management, richer branch comparison filters, and cherry-pick matching that can compare commits by author, timestamp, and message instead of relying only on commit ids.
 
 ![screen-overview](media/screenshot-overview.png)
 
 ![screen-recording](media/screen-recording.gif)
 
-## Inspiration & Motivation
+## Why Use It
 
-This extension was inspired by the Git client experience in IntelliJ IDEA and other IntelliJ-based IDEs.
+- Keep advanced Git workflows in one VS Code extension instead of switching between several tools.
+- Compare branches with commit and file summaries, filters, export, and matching-message detection.
+- Inspect commits through a dedicated Commit Details view and open diffs without temporary text documents.
+- Manage stashes, worktrees, and submodules from VS Code views.
+- Recover from merge, rebase, cherry-pick, and revert conflicts with visible Continue / Skip / Abort actions.
+- Use VS Code's native merge and diff editors for the final file-level experience.
 
-While working with those tools, I found their Git workflows to be incredibly smooth and powerful — especially when it comes to:
+## Quick Start
 
-* Comparing branches and revisions
-* Cherry-picking changes across branches
-* Navigating repository history in a flexible way
+1. Open a folder that contains a Git repository.
+2. Open the extension's Activity Bar container.
+3. Use `Branches` for branch/tag operations, `Git Graph` for history, and `Commit Details` for changed files and diffs.
+4. Use VS Code Source Control for regular staging/commit work; the extension adds stash, commit-template, generated-message, amend, and shelve actions there.
+5. Use `Quick Git Actions` from the Command Palette when you know the action but not the view.
 
-After switching to Visual Studio Code, I realized that while the built-in Git integration is great for everyday tasks, some of these advanced workflows were either missing or required combining multiple extensions and external tools.
+### Where Things Live
 
-That gap became the main motivation for this project.
+| Surface                | What it contains                                                                         |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| Activity Bar container | `Branches`, `Commit Details`, `Git Graph`, `Worktrees`, `Submodules`                     |
+| Source Control panel   | `Stashes` plus SCM input/file actions                                                    |
+| Explorer context menu  | Compare files or folders with a branch, tag, or commit                                   |
+| Editor                 | Gutter change markers, file diffs, merge editor, branch comparison tabs                  |
+| Status bar             | Continue / Skip / Abort controls during merge, rebase, cherry-pick, or revert operations |
 
+## Daily Workflows
 
-### Goals
+### Browse And Switch Branches
 
-The goal of this extension is not to replace VSCode’s built-in Git, but to complement it by:
+Open `Branches` to see local branches, remote branches, tags, and a Recent group. Branches are grouped by prefix such as `feature/*` and `release/*`.
 
-* Bringing more advanced Git workflows into a single place
-* Reducing the need for multiple extensions or external tools
-* Keeping everything aligned with the VSCode ecosystem and APIs
-* Providing a smooth and intuitive developer experience
+Common actions are available from right-click menus and the Branch Action Hub:
 
+- Checkout, create, rename, or delete branches.
+- Track or untrack upstream branches.
+- Merge a selected branch into the current branch.
+- Rebase the current branch onto another branch.
+- Reset the current branch to a selected commit with `soft`, `mixed`, or `hard` confirmation.
+- Compare a branch with the current branch.
+- Open branch or tag commits in `Git Graph`.
+- Add, change, or set remote URLs with immediate update feedback.
 
-### Feedback & Contributions
+Tags appear with branches and support checkout, checkout-new-branch, copy revision, repository-at-revision, compare-with-current, patch preview, and graph navigation actions.
 
-This project is open-source and still evolving.
+### Inspect History And Commit Details
 
-If you:
+Open `Git Graph` for a tree-style commit list with refs, author/date metadata, subject-first titles, short hashes, and expandable changed files.
 
-* Find bugs
-* Have feature ideas
-* Want to improve existing workflows
+From a commit you can:
 
-Please feel free to open an issue on GitHub:
-👉 https://github.com/thanhtunguet/IntelliGit/issues
+- Open `Commit Details` and immediately inspect changed files.
+- Open file diffs against the commit parent.
+- Checkout the commit in detached mode.
+- Create a branch or tag at that commit.
+- Cherry-pick, revert, create a patch, or compare with the current branch.
+- Start an interactive rebase from the selected commit.
+- Go to a parent or child commit.
+- Multi-select commits with `Shift`, `Ctrl`, or `Cmd`; unsupported context-menu actions are disabled.
 
-Contributions and PRs are always welcome!
+`Commit Details` also supports selected-file actions: revert selected changes, cherry-pick selected changes, and create a patch from selected file changes.
 
-## Implemented Features
+### Filter Commit History
 
-### Branches (Tree View)
+Use `Filter Graph` from the Git Graph toolbar to narrow commits by:
 
-Hierarchical branch tree grouped by prefix (`feature/*`, `release/*`, etc.) plus a Recent group.
+- Branch or ref.
+- Author.
+- Message text.
+- Since and until dates.
 
-- Local + remote branches
-- Current branch marker with upstream tracking, ahead/behind counts
-- Remote actions include add/change/set URL with immediate update feedback
-- Branch actions (right-click or Branch Action Hub):
-  - Checkout
-  - Create
-  - Rename
-  - Delete
-  - Track / untrack upstream
-  - Merge into current
-  - Rebase current onto selected branch
-  - Reset current branch to selected commit (`soft|mixed|hard`) with confirmation
-  - Compare with current branch
-  - Open branch commits in Git Graph
-- Branch search/filter command (toolbar)
-- **Branch Action Hub** — quick-access picker accessible from the SCM title bar and the built-in `git.branch` menu
+Filter fields apply as you type or change values. Selecting multiple commits in Filter Graph opens a merged Commit Details range that shows the net file changes across the selection.
 
-#### Tags
+### Compare Branches
 
-Tags appear in the Branches tree alongside branches. Tag actions:
-- Checkout (detached)
-- Checkout New Branch from tag
-- Copy Revision Number
-- View Repository At Revision
-- Compare With Current
-- Create Patch
-- Open Tag Commits in Git Graph
+Use `Compare Branches` when you need to understand what differs between two refs before merging, rebasing, or cherry-picking.
 
-### Stashes (Tree View — SCM panel)
+The comparison tab shows both directions (`A..B` and `B..A`) with commit and changed-file summaries. It supports:
 
-Stash list with message, author, timestamp, file count. Stash actions:
-- Create stash (include untracked, keep index)
-- Apply
-- Pop
-- Drop (guarded)
-- Rename message
-- Patch preview (diff document)
-- Unshelve (apply without removing from stash list)
-- Shelve a specific SCM resource directly from the Source Control file list
+- File-level diff drill-down.
+- Multi-select commits with `Shift`, `Ctrl`, or `Cmd`.
+- `Cmd/Ctrl+A` to select all visible commits in the active pane.
+- `Esc` to clear selection.
+- Merged Commit Details for a continuous selected range.
+- Author, exclude-message regex, and from/to date filters.
+- Optional filters to ignore merge commits.
+- Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.
+- Export as two CSV files or one Excel workbook with two sheets.
+- Recent compare pairs persisted in workspace state.
 
-### Git Graph (Tree View)
+### Compare A File Or Folder With A Revision
 
-Commit list with graph-like glyph, refs, author/date metadata, subject-first title, and trailing short hash. Each commit is expandable to show its changed files.
+Right-click a file or folder in Explorer and choose `Compare with Revision`.
 
-**Commit actions:**
-- Open Commit Details (loads the Commit Details sidebar view and, in Git Graph tree, opens the first changed file diff)
-- Checkout commit (detached, guarded)
-- Create branch at commit
-- Create tag at commit
-- Cherry-pick commit
-- Cherry-pick feedback states: immediate success and conflict guidance, failure, and nothing-to-cherry-pick
-- On cherry-pick conflicts, IntelliGit opens conflict files in merge editors automatically (fallback: opens SCM view) and shows bottom status-bar actions for `Continue` / `Abort` while cherry-pick is in progress
-- Rebase feedback states: conflict-aware start/continue flow, conflict-file auto-open, iterative continue across multi-commit rebase steps, and abort support
-- Merge and rebase conflict warnings are shown immediately after Git reports the conflict, before the heavier state refresh opens conflict files/status controls
-- While `rebase` or `cherry-pick` is active, IntelliGit shows bottom status-bar actions for `Continue` / `Skip` / `Abort` (including step progress for rebase when available)
-- Revert commit
-- Cherry-pick range
-- Compare commit with current branch
-- Interactive rebase from selected commit
-- Go to parent commit
-- Create patch from commit
-- Open file at revision
-- Show repository at revision
-- Multi-select commits with `Shift` / `Ctrl` / `Cmd` for batch-capable context-menu actions (unsupported actions are disabled)
+- Pick from local branches, remote branches, tags, or a typed commit SHA prefix.
+- For a file, the diff opens with the selected revision on the left and the working tree on the right.
+- For multiple selected files, the same revision is applied to every selected file and each diff opens.
+- For a folder, `Commit Details` lists changed files and opens the first file in preview diff mode.
 
-**Graph filters (toolbar):**
-- branch/ref
-- author
-- message text
-- since / until dates
-- In **Filter Graph** preview, selecting multiple commits now opens a merged Commit Details range (net file changes across the selected commits)
-- Filter fields apply immediately as you type/change values; footer `Cancel / Clear Filters / Apply` buttons are removed in Filter Graph (field-level clear buttons remain)
+### Stash And Shelve Work
 
-### Commit Details (Tree View — sidebar)
+Open `Stashes` in the Source Control panel to manage saved work:
 
-A dedicated sidebar view that appears when a commit is selected from Git Graph. Shows the full list of changed files for that commit.
+- Create a stash with optional untracked files and keep-index mode.
+- Apply, pop, drop, rename, preview patch, or unshelve a stash.
+- Right-click an unstaged SCM resource and choose the shelve action to stash only that file.
 
-- Open file diff (commit vs parent) inline in the editor
-- Revert selected file changes back to the commit's parent
-- Cherry-pick selected file changes onto the current working tree
-- Create patch from selected file changes (IntelliJ-style patch preview in a diff document)
+### Resolve Conflicts
 
-### Compare with Revision (Explorer context menu)
+For merge, rebase, cherry-pick, and revert flows, the extension keeps the operation visible:
 
-Right-click any file or folder in the Explorer and choose **Compare with Revision…**.
+- Conflict files open in VS Code merge editors when possible.
+- If files cannot be opened directly, the Source Control view is revealed as a fallback.
+- Status-bar actions expose `Continue`, `Skip`, and `Abort` when those actions apply.
+- Rebase progress is shown when Git exposes the current step.
+- Finalize commands guard against unresolved conflicts.
 
-- Picker groups refs as **Local branches**, **Remote branches**, and **Tags**
-- Type a commit SHA prefix (4–40 lowercase hex chars) to resolve and select a specific commit
-- File target: opens diff with **left = selected revision**, **right = working tree**
-- Multi-select file targets: applies the same revision to every selected file and opens each file diff
-- Folder target: populates **Commit Details** with changed files and opens the first file in preview diff mode
+### Manage Worktrees
 
-### Worktrees (Tree View — Repo Structure panel)
+Open `Worktrees` to manage parallel checkouts from the Activity Bar container.
 
-Worktrees are grouped into: **Current**, **Other Worktrees**, **Locked**, **Prunable / Stale**.
-Refresh action is available from the view context menu (view title right-click / `...` menu), not as a dedicated toolbar refresh icon.
+Worktrees are grouped as `Current`, `Other Worktrees`, `Locked`, and `Prunable / Stale`.
 
-- Open worktree in this window or a new window
-- Reveal in Finder / Explorer
-- Open Terminal in worktree directory
-- Add worktree from an existing branch
-- Add worktree with a new branch
-- Add detached worktree
-- Lock / Unlock
-- Remove / Force Remove (with confirmation)
-- Preview prunable worktrees
-- Prune stale worktrees
+Available actions include:
 
-### Submodules (Tree View — Repo Structure panel)
+- Open a worktree in this window or a new window.
+- Reveal in Finder / Explorer.
+- Open a terminal in the worktree directory.
+- Add a worktree from an existing branch.
+- Add a worktree with a new branch.
+- Add a detached worktree.
+- Lock, unlock, remove, or force remove worktrees.
+- Preview and prune stale worktrees.
 
-Submodules are grouped into: **Needs Attention**, **Clean**, **Uninitialized**, **Nested**.
-Refresh action is available from the view context menu (view title right-click / `...` menu), and the toolbar keeps icon actions such as **Update All Submodules** (`arrow-down`).
+### Manage Submodules
 
-- Init submodule / Init all submodules
-- Update submodule / Update all / Update recursive
-- Sync submodule URL / Sync all
-- Open submodule in this window or a new window
-- Checkout recorded commit (when pointer is out of sync)
-- Pull tracked branch
-- Show pointer diff
-- Stage pointer change
-- Deinit submodule
+Open `Submodules` to inspect nested repositories.
+
+Submodules are grouped as `Needs Attention`, `Clean`, `Uninitialized`, and `Nested`.
+
+Available actions include:
+
+- Init one submodule or all submodules.
+- Update one submodule, update all, or update recursively.
+- Sync one URL or all URLs.
+- Open a submodule in this window or a new window.
+- Checkout the recorded commit when the pointer is out of sync.
+- Pull the tracked branch.
+- Show pointer diff.
+- Stage pointer change.
+- Deinit a submodule.
+
+### Commit From Source Control
+
+The extension adds daily commit helpers to VS Code's native Source Control panel:
+
+- Pick a reusable commit message template.
+- Generate a commit message from staged diff with a configurable timeout.
+- Amend the last commit from the SCM input box.
+- Commit with `Ctrl+Enter` / `Cmd+Enter`.
+- Stage or unstage files, run partial staging, and fetch/push/pull with previews.
+
+## Feature Reference
 
 ### Gutter Change Markers
 
-Inline gutter decorations show lines added, modified, or deleted relative to HEAD, updated as you type (debounced). Controlled by the `intelliGit.gutterMarkers.enabled` setting.
+Inline gutter decorations show added, modified, and deleted lines relative to `HEAD`. They update as you type with debounce and can be disabled with `intelliGit.gutterMarkers.enabled`.
 
-To keep editing responsive on Windows and large repositories, gutter markers automatically skip generated folders and files above the configured line-count or file-size limits.
+To keep editing responsive on Windows and large repositories, generated folders and files above the configured size or line-count limits are skipped.
 
-### SCM Integration
+### Diff And Merge Entry Points
 
-IntelliGit integrates with VS Code's native Source Control panel:
+Supported editor workflows include:
 
-- **Commit message templates** — pick a template from a configurable list; placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}`. Templates are defined in `intelliGit.commitMessageTemplates`.
-- **AI-generated commit messages** — generates a commit message from staged diff; timeout is configurable via `intelliGit.aiGenerateTimeoutMs`.
-- **Amend from SCM input** — amend the last commit with the text currently in the SCM input box.
-- **Shelve resource** — right-click any unstaged file in Source Control to create a stash from that single file.
-- Commit shortcut: `Ctrl+Enter` / `Cmd+Enter`
+- Working tree vs `HEAD`.
+- Index vs `HEAD`.
+- Commit vs parent.
+- Any two refs for a file.
+- Built-in VS Code 3-way merge editor for conflicts.
+- Next and previous conflict navigation.
 
-### Main Editor Workflows
+### Cross-Cutting Actions
 
-**3-way merge:**
-- Open conflicted file in VS Code's built-in merge editor
-- Next/previous conflict navigation commands
-- Finalize guard: blocks completion if unresolved conflicts remain
+- Quick Git Actions command palette entry.
+- Push and pull previews with incoming/outgoing summaries.
+- Fetch `--prune`.
+- Partial staging with `git add -p`.
+- File history and blame from the active editor file or Explorer context menu.
+- Guardrails for destructive operations.
+- Output-channel logging for slow Git commands.
+- Deterministic refresh after mutating operations.
 
-**Side-by-side diff entry points:**
-- Working tree vs HEAD
-- Index vs HEAD
-- Commit vs parent
-- Any two refs for a file
+## Settings
 
-**Branch comparison tab:**
-- Dedicated webview for `A..B` / `B..A` commit and changed-file summaries
-- Drill down into file-level diff
-- Multi-select commits with `Shift` / `Ctrl` / `Cmd`; context menu enables only actions that support batch execution
-- Selecting a continuous multi-commit range in one pane now opens a merged Commit Details range (net file changes across the whole selected span)
-- Quick keyboard selection helpers: `Cmd/Ctrl+A` selects all visible commits in the active pane, `Esc` clears commit selection
-- Inline filters for author, exclude-message regex, and from/to date range
-- Optional compare filters: ignore merge commits, and hide cross-side matching messages (`author + date time + message`) to reduce cherry-pick noise
-- Export visible compare results using a configurable format:
-  - `CSV` (default): exports two files, one per branch/pane
-  - `Excel`: exports one `.xlsx` with two sheets (one per branch/pane)
-- Recent compare pairs persisted in workspace state
+| Setting                                        | Default         | Description                                                                                           |
+| ---------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| `intelliGit.gitPath`                           | `"git"`         | Git executable path                                                                                   |
+| `intelliGit.commandTimeoutMs`                  | `15000`         | Timeout for Git commands in milliseconds                                                              |
+| `intelliGit.maxGraphCommits`                   | `200`           | Maximum commits shown in Git Graph                                                                    |
+| `intelliGit.recentBranchesCount`               | `3`             | Number of branches shown in the Recent group                                                          |
+| `intelliGit.gutterMarkers.enabled`             | `true`          | Show inline gutter markers for lines added, modified, or deleted vs `HEAD`                            |
+| `intelliGit.gutterMarkers.maxFileSizeKb`       | `512`           | Skip gutter marker computation for files larger than this size in KB                                  |
+| `intelliGit.gutterMarkers.maxLineCount`        | `10000`         | Skip gutter marker computation for files with more lines than this value                              |
+| `intelliGit.performance.logGitCommands`        | `false`         | Log Git commands that take 500ms or longer to the extension output channel                            |
+| `intelliGit.performance.refreshDebounceMs`     | `250`           | Debounce delay for VS Code Git repository-state auto-refresh events                                   |
+| `intelliGit.performance.saveRefreshDebounceMs` | `150`           | Debounce delay for save-triggered working-tree refresh events                                         |
+| `intelliGit.compare.exportFormat`              | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets       |
+| `intelliGit.commitMessageTemplates`            | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders |
+| `intelliGit.commitMessageTicketPattern`        | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                        |
+| `intelliGit.aiGenerateTimeoutMs`               | `5000`          | Timeout for AI commit message generation in milliseconds                                              |
 
-### Cross-cutting Features
+Default commit message templates:
 
-- Quick Git Actions command palette entry
-- Push/pull previews (incoming/outgoing commit summaries)
-- Fetch `--prune`
-- Partial staging (`git add -p`)
-- Stage file / unstage file
-- Amend last commit
-- File history and blame from active editor file (also available in Explorer right-click)
-- Guardrails for destructive operations with modal confirmation
-- Output channel logging of executed Git commands
-- Deterministic state refresh after mutating operations
+```json
+[
+  { "label": "feat", "template": "feat({scope}): {cursor}" },
+  { "label": "fix", "template": "fix({scope}): {cursor}" },
+  { "label": "chore", "template": "chore: {cursor}" },
+  { "label": "ticket", "template": "[{ticket}] {cursor}" }
+]
+```
 
-## Architecture
+## Performance Notes
 
-| Module                                                     | Purpose                                                                                      |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `src/services/gitService.ts`                               | Native `git` CLI wrapper with typed methods, error normalisation, command logging            |
-| `src/services/gitParsing.ts`                               | Output parsers for branches, stashes, log, status, blame                                     |
-| `src/services/repositoryContext.ts`                        | Resolves the active Git repository root                                                      |
-| `src/services/submoduleService.ts` / `submoduleParsing.ts` | Submodule discovery and command wrappers                                                     |
-| `src/services/worktreeParsing.ts`                          | Worktree list parser                                                                         |
-| `src/state/stateStore.ts`                                  | Central cached state for branches/stashes/graph/compare; auto-refresh on `.git` file changes |
-| `src/state/changelistStore.ts`                             | Tracks selected changes in the Commit Details view                                           |
-| `src/state/commitTemplates.ts`                             | Loads and resolves commit message templates                                                  |
-| `src/providers/branchTreeProvider.ts`                      | Branch (and tag) sidebar tree provider                                                       |
-| `src/providers/stashTreeProvider.ts`                       | Stash sidebar tree provider                                                                  |
-| `src/providers/graphTreeProvider.ts`                       | Git Graph sidebar tree provider                                                              |
-| `src/providers/commitFilesTreeProvider.ts`                 | Commit Details sidebar tree provider                                                         |
-| `src/providers/commitFileDecorationProvider.ts`            | File decoration badges in Commit Details view                                                |
-| `src/providers/worktreeTreeProvider.ts`                    | Worktrees sidebar tree provider                                                              |
-| `src/providers/submoduleTreeProvider.ts`                   | Submodules sidebar tree provider                                                             |
-| `src/commands/commandController.ts`                        | Command registration, action orchestration, guardrails                                       |
-| `src/editor/editorOrchestrator.ts`                         | Merge / diff / compare tab orchestration                                                     |
-| `src/editor/gutterDecorationController.ts`                 | Inline gutter change markers vs HEAD                                                         |
-| `src/editor/lineDiff.ts`                                   | Line-level diff computation for gutter markers                                               |
-| `src/editor/virtualGitContentProvider.ts`                  | Virtual document provider (`intelligit://`) for showing file content at a revision           |
-| `src/views/compareView.ts`                                 | Branch comparison webview UI                                                                 |
-| `src/views/graphFilterView.ts`                             | Graph filter webview/input                                                                   |
-| `src/views/branchSearchView.ts`                            | Branch search webview/input                                                                  |
-| `src/views/commitActions.ts`                               | Shared context-menu actions for commits                                                      |
-| `src/views/templateRenderer.ts`                            | Handlebars-based template rendering for webviews                                             |
+The extension activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible. VS Code Git repository-state events and save events refresh working-tree state without reloading every branch, tag, stash, worktree, submodule, and graph slice.
 
-## Available Commands
+On Windows, Git command execution uses lower concurrency than macOS/Linux to reduce `CreateProcess` pressure on the Extension Host. Additional mitigations include configurable refresh debounce settings, parallel operation-state detection, cached gutter configuration, and save debounce.
 
-Key command IDs (not exhaustive):
+If a workspace still feels slow, enable `intelliGit.performance.logGitCommands` and inspect the extension output channel for slow Git operations. Adding the repository folder and `.git` directory to Windows Defender exclusions usually has the largest practical impact.
 
-- `intelliGit.quickActions` — Quick Git Actions palette
-- `intelliGit.refresh` — Refresh all views
-- `intelliGit.branch.*` — Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
-- `intelliGit.tag.*` — Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
-- `intelliGit.stash.*` — Create, apply, pop, drop, rename, previewPatch, unshelve
-- `intelliGit.graph.*` — openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
-- `intelliGit.commit.*` — revertSelectedChanges, cherryPickSelectedChanges, amend
-- `intelliGit.diff.open` — Open diff for a file
-- `intelliGit.compare.open` — Open branch comparison
-- `intelliGit.merge.*` — openConflict, next, previous, finalize
-- `intelliGit.conflict.*` — acceptOurs, acceptTheirs, acceptBoth
-- `intelliGit.operation.*` — abort, continue, skip (merge/rebase/cherry-pick)
-- `intelliGit.git.*` — pushWithPreview, pullWithPreview, fetchPrune
-- `intelliGit.stage.*` — patch (hunk staging), file
-- `intelliGit.unstage.file`
-- `intelliGit.scm.*` — shelveResource, commitTemplate, generateCommitMessage, amendFromInput
-- `intelliGit.worktree.*` — open, openInNewWindow, addFromBranch, addNewBranch, addDetached, remove, removeForce, lock, unlock, prunePreview, prune, revealInFinder, openTerminal
-- `intelliGit.submodule.*` — init, initAll, update, updateAll, updateRecursive, sync, syncAll, open, openInNewWindow, checkoutRecorded, pullTrackedBranch, diffPointer, stagePointerChange, deinit
-- `intelliGit.compareWithRevision` (Explorer context menu)
-- `intelliGit.fileBlame.open`
+## Development
 
-## Run Locally
-
-1. Install deps:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Compile:
+Compile:
 
 ```bash
 npm run compile
 ```
 
-3. Open this folder in VS Code and press `F5` to launch the extension host.
+Open this folder in VS Code and press `F5` to launch the extension host.
 
-4. In the launched window, open Activity Bar > `IntelliGit`.
+### Architecture Map
 
-## Settings
+| Module                                                     | Purpose                                                                                                        |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `src/services/gitService.ts`                               | Git command wrapper with typed methods, VS Code Git API integrations, error normalization, and command logging |
+| `src/services/gitParsing.ts`                               | Output parsers for branches, stashes, log, status, and blame                                                   |
+| `src/services/repositoryContext.ts`                        | Resolves the active Git repository root                                                                        |
+| `src/services/submoduleService.ts` / `submoduleParsing.ts` | Submodule discovery and command wrappers                                                                       |
+| `src/services/worktreeParsing.ts`                          | Worktree list parser                                                                                           |
+| `src/state/stateStore.ts`                                  | Cached state for branches, stashes, graph, compare, worktree, submodule, and working-tree changes              |
+| `src/state/changelistStore.ts`                             | Tracks selected changes in the Commit Details view                                                             |
+| `src/state/commitTemplates.ts`                             | Loads and resolves commit message templates                                                                    |
+| `src/providers/branchTreeProvider.ts`                      | Branch and tag tree provider                                                                                   |
+| `src/providers/stashTreeProvider.ts`                       | Stash tree provider                                                                                            |
+| `src/providers/graphTreeProvider.ts`                       | Git Graph tree provider                                                                                        |
+| `src/providers/commitFilesTreeProvider.ts`                 | Commit Details tree provider                                                                                   |
+| `src/providers/worktreeTreeProvider.ts`                    | Worktree tree provider                                                                                         |
+| `src/providers/submoduleTreeProvider.ts`                   | Submodule tree provider                                                                                        |
+| `src/commands/commandController.ts`                        | Command registration, action orchestration, and guardrails                                                     |
+| `src/editor/editorOrchestrator.ts`                         | Merge, diff, revision, and compare-tab orchestration                                                           |
+| `src/editor/gutterDecorationController.ts`                 | Inline gutter change markers vs `HEAD`                                                                         |
+| `src/editor/virtualGitContentProvider.ts`                  | Virtual document provider for revision content                                                                 |
+| `src/views/compareView.ts`                                 | Branch comparison webview                                                                                      |
+| `src/views/graphFilterView.ts`                             | Filter Graph webview                                                                                           |
+| `src/views/branchSearchView.ts`                            | Branch search webview                                                                                          |
+| `src/views/commitActions.ts`                               | Shared context-menu action model for commit webviews                                                           |
+| `src/views/templateRenderer.ts`                            | Handlebars template renderer for webviews                                                                      |
 
-| Setting                                             | Default         | Description                                                                                                                    |
-| --------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `intelliGit.gitPath`                                | `"git"`         | Git executable path                                                                                                            |
-| `intelliGit.commandTimeoutMs`                       | `15000`         | Timeout for Git commands (ms)                                                                                                  |
-| `intelliGit.maxGraphCommits`                        | `200`           | Maximum commits shown in Git Graph                                                                                             |
-| `intelliGit.recentBranchesCount`                    | `3`             | Number of branches shown in the Recent group (1–10)                                                                            |
-| `intelliGit.gutterMarkers.enabled`                  | `true`          | Show inline gutter markers for lines added/modified/deleted vs HEAD                                                            |
-| `intelliGit.gutterMarkers.maxFileSizeKb`            | `512`           | Skip gutter marker computation for files larger than this size in KB                                                           |
-| `intelliGit.gutterMarkers.maxLineCount`             | `10000`         | Skip gutter marker computation for files with more lines than this value                                                       |
-| `intelliGit.performance.logGitCommands`             | `false`         | Log Git commands that take 500ms or longer to the IntelliGit output channel                                                    |
-| `intelliGit.performance.refreshDebounceMs`          | `250`           | Debounce delay (ms) for VS Code Git repository-state auto-refresh events                                                       |
-| `intelliGit.performance.saveRefreshDebounceMs`      | `150`           | Debounce delay (ms) for save-triggered changes refresh                                                                         |
-| `intelliGit.compare.exportFormat`                   | `"csv"`         | Compare Branches export format: `csv` (two files, one per branch) or `excel` (single `.xlsx` with two sheets)                |
-| `intelliGit.commitMessageTemplates`                 | *(see below)*   | Reusable commit message templates. Each item: `{label, template}`. Placeholders: `{branch}`, `{ticket}`, `{scope}`, `{cursor}` |
-| `intelliGit.commitMessageTicketPattern`             | `"[A-Z]+-\\d+"` | Regex to extract a ticket ID from the branch name for the `{ticket}` placeholder                                               |
-| `intelliGit.aiGenerateTimeoutMs`                    | `5000`          | Timeout (ms) for AI commit message generation                                                                                  |
+### Command ID Reference
 
-## Performance Notes
+Key command IDs, not exhaustive:
 
-IntelliGit activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible, so save events and VS Code Git repository-state events refresh working-tree state without reloading branches, tags, stashes, worktrees, submodules, and graph data.
+- `intelliGit.quickActions` - Quick Git Actions palette
+- `intelliGit.refresh` - Refresh all views
+- `intelliGit.branch.*` - Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
+- `intelliGit.tag.*` - Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
+- `intelliGit.stash.*` - Create, apply, pop, drop, rename, previewPatch, unshelve
+- `intelliGit.graph.*` - openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
+- `intelliGit.commit.*` - revertSelectedChanges, cherryPickSelectedChanges, amend
+- `intelliGit.compare.open` - Open branch comparison
+- `intelliGit.compareWithRevision` - Compare Explorer files or folders with a revision
+- `intelliGit.merge.*` - openConflict, next, previous, finalize
+- `intelliGit.operation.*` - abort, continue, skip
+- `intelliGit.git.*` - pushWithPreview, pullWithPreview, fetchPrune
+- `intelliGit.stage.*` / `intelliGit.unstage.file` - stage and unstage actions
+- `intelliGit.scm.*` - shelveResource, commitTemplate, generateCommitMessage, amendFromInput
+- `intelliGit.worktree.*` - worktree actions
+- `intelliGit.submodule.*` - submodule actions
+- `intelliGit.fileBlame.open` - File blame
 
-### Windows
+## Current Boundaries
 
-On Windows, Git command execution is queued with lower concurrency (2 vs 4 on macOS/Linux) to reduce `CreateProcess` pressure on the Extension Host. Additional mitigations applied in v0.15.4:
+- Single repository per window, using the first workspace folder.
+- Native Git CLI required on the system path, or configure `intelliGit.gitPath`.
+- Built-in VS Code merge and diff editors are used for reliability.
+- Git Graph is tree-based rendering with glyph hints, not a custom canvas DAG.
+- AI commit message generation requires a compatible language model provider and times out gracefully if unavailable.
+- PR and issue tracker integrations are intentionally outside the current scope.
 
-- **Configurable debounce knobs** — debounce delays are now tunable via `intelliGit.performance.refreshDebounceMs` and `intelliGit.performance.saveRefreshDebounceMs`.
-- **Parallel operation-state detection** — `git` dir stat checks for rebase/merge/cherry-pick state now run in parallel (`Promise.all`), reducing 5 sequential file-system round-trips to 1 on the happy path.
-- **Gutter config caching** — gutter-marker size/line-count limits are cached at startup and refreshed only on `onDidChangeConfiguration`, removing per-keystroke `getConfiguration()` calls.
-- **Save debounce** — `onDidSaveTextDocument` uses a 150 ms delay to coalesce rapid saves (e.g. format-on-save chains).
+## Feedback And Contributions
 
-If a workspace still feels slow, enable `intelliGit.performance.logGitCommands` and inspect the IntelliGit output channel for slow Git operations. Adding the repository folder and `.git` directory to Windows Defender exclusions usually has the largest practical impact.
-
-**Default commit message templates:**
-
-```json
-[
-  { "label": "feat",   "template": "feat({scope}): {cursor}" },
-  { "label": "fix",    "template": "fix({scope}): {cursor}" },
-  { "label": "chore",  "template": "chore: {cursor}" },
-  { "label": "ticket", "template": "[{ticket}] {cursor}" }
-]
-```
-
-## Notes / Current Boundaries
-
-- Single-repo per window (first workspace folder)
-- Native Git CLI required on system path (or configure `intelliGit.gitPath`)
-- Uses built-in VS Code merge/diff editors for reliability
-- Graph is tree-based rendering with glyph hints, not a fully custom canvas DAG
-- AI commit message generation requires a compatible language model provider; it times out gracefully if unavailable
-- PR/issue tracker integrations are intentionally not included in this core-parity scope
+Issues and pull requests are welcome: https://github.com/thanhtunguet/vscode-git-client/issues
