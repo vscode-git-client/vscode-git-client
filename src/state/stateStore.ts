@@ -4,6 +4,8 @@ import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
 import { BranchRef, CommitFilters, ComparePair, CompareResult, GitOperationState, GraphCommit, MergeConflictFile, StashEntry, SubmoduleEntry, TagRef, WorkingTreeChange, WorktreeEntry } from '../types';
 import { RefreshScheduler, RefreshScope } from './refreshScheduler';
+import { RepoChangeSet } from '../services/repositoryStateDiff';
+import { mapChangeSetToScopes } from './gitEventRouter';
 
 export type { RefreshScope } from './refreshScheduler';
 
@@ -277,15 +279,91 @@ export class StateStore {
   }
 
   attachAutoRefresh(context: vscode.ExtensionContext): void {
-    // Keep auto-refresh event-driven via the VS Code Git API only.
-    // Avoid workspace-wide .git file-system watchers to prevent excessive churn.
-    void this.git.onDidChangeRepositoryState(() => {
-      void this.requestRefresh(['changes'], { delayMs: this.getRefreshDebounceMs() });
-    }).then((disposable) => {
+    let watchersRegistered = false;
+
+    const handleStateChange = (changeSet: RepoChangeSet): void => {
+      const scopes = mapChangeSetToScopes(changeSet);
+      if (scopes.size === 0) {
+        return;
+      }
+      void this.requestRefresh(scopes, { delayMs: this.getRefreshDebounceMs() });
+    };
+
+    const attachStateListener = async (): Promise<void> => {
+      const disposable = await this.git.onRepositoryStateChange(handleStateChange);
       if (disposable) {
         context.subscriptions.push(disposable);
       }
-    });
+    };
+
+    const attachFileWatchers = async (): Promise<void> => {
+      if (watchersRegistered) {
+        return;
+      }
+      const gitDir = await this.git.getGitDir();
+      if (!gitDir) {
+        this.logger.warn(
+          'VS Code Git Client: .git directory could not be resolved; ' +
+          'stashes/worktrees/submodules will refresh only on view focus.'
+        );
+        return;
+      }
+      watchersRegistered = true;
+
+      const gitDirUri = vscode.Uri.file(gitDir);
+      const workspaceUri = vscode.Uri.file(this.git.rootPath);
+
+      const watch = (
+        base: vscode.Uri,
+        pattern: string,
+        scopes: RefreshScope[]
+      ): vscode.FileSystemWatcher => {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+          new vscode.RelativePattern(base, pattern)
+        );
+        const handler = (): void => {
+          void this.requestRefresh(scopes, { delayMs: 250 });
+        };
+        watcher.onDidCreate(handler);
+        watcher.onDidChange(handler);
+        watcher.onDidDelete(handler);
+        return watcher;
+      };
+
+      context.subscriptions.push(
+        watch(gitDirUri, 'refs/stash', ['stashes']),
+        watch(gitDirUri, 'logs/refs/stash', ['stashes']),
+        watch(gitDirUri, 'worktrees/**', ['worktrees']),
+        watch(gitDirUri, 'modules/**', ['submodules']),
+        watch(workspaceUri, '.gitmodules', ['submodules']),
+        watch(gitDirUri, '{MERGE_HEAD,REBASE_HEAD,CHERRY_PICK_HEAD,REVERT_HEAD}', ['changes']),
+        watch(gitDirUri, 'rebase-merge/**', ['changes']),
+        watch(gitDirUri, 'rebase-apply/**', ['changes'])
+      );
+    };
+
+    // Attach immediately if the repo is already open; re-attach on late open.
+    void this.git
+      .onRepositoryAvailable(() => {
+        void attachStateListener();
+        void attachFileWatchers();
+      })
+      .then((disposable) => {
+        if (disposable) {
+          context.subscriptions.push(disposable);
+        }
+      });
+
+    // Reset the registration flag on close so a re-open reinstalls listeners.
+    void this.git
+      .onRepositoryClosed(() => {
+        watchersRegistered = false;
+      })
+      .then((disposable) => {
+        if (disposable) {
+          context.subscriptions.push(disposable);
+        }
+      });
   }
 
   private _scheduleRefreshChanges(): void {

@@ -30,6 +30,15 @@ import {
 import { SubmoduleService } from './submoduleService';
 import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from './worktreeParsing';
 import { parseTrack, parseNameStatusZ, parsePorcelainStatusZ } from './gitParsing';
+import {
+  buildRepositoryFingerprint,
+  diffRepositoryFingerprints,
+  isEmptyChangeSet,
+  RepoChangeSet,
+  RepositoryFingerprint
+} from './repositoryStateDiff';
+
+export type { RepoChangeSet } from './repositoryStateDiff';
 
 const FIELD_SEPARATOR = '|~|';
 const RECORD_SEPARATOR = '|#|';
@@ -75,6 +84,8 @@ interface VsCodeGitApi {
   getRepository(uri: vscode.Uri): VsCodeGitRepository | null;
   getRepositoryRoot(uri: vscode.Uri): Promise<vscode.Uri | null>;
   openRepository(root: vscode.Uri): Promise<VsCodeGitRepository | null>;
+  readonly onDidOpenRepository?: vscode.Event<VsCodeGitRepository>;
+  readonly onDidCloseRepository?: vscode.Event<VsCodeGitRepository>;
 }
 
 interface VsCodeGitExtension {
@@ -638,9 +649,73 @@ export class GitService {
     return repository;
   }
 
-  async onDidChangeRepositoryState(listener: () => void): Promise<vscode.Disposable | undefined> {
+  /**
+   * Subscribe to VS Code Git API repository state changes with scope-aware
+   * diffing. The listener is invoked only when the diff is non-empty — VS Code
+   * fires {@code state.onDidChange} redundantly, and the redundant events
+   * would otherwise spawn no-op refreshes.
+   */
+  async onRepositoryStateChange(
+    listener: (changeSet: RepoChangeSet) => void
+  ): Promise<vscode.Disposable | undefined> {
     const repository = await this.getVsCodeRepository();
-    return repository?.state.onDidChange?.(listener);
+    if (!repository?.state.onDidChange) {
+      return undefined;
+    }
+    let last: RepositoryFingerprint = buildRepositoryFingerprint(repository.state);
+    return repository.state.onDidChange(() => {
+      const next = buildRepositoryFingerprint(repository.state);
+      const changeSet = diffRepositoryFingerprints(last, next);
+      last = next;
+      if (isEmptyChangeSet(changeSet)) {
+        return;
+      }
+      listener(changeSet);
+    });
+  }
+
+  /**
+   * Fires {@code listener} immediately if our repository is already open, then
+   * each time the VS Code Git API reports our repository being (re)opened.
+   * Lets consumers attach state listeners and watchers even when {@code vscode.git}
+   * activates after our extension.
+   */
+  async onRepositoryAvailable(listener: () => void): Promise<vscode.Disposable | undefined> {
+    const api = await this.getVsCodeGitApi();
+    if (!api) {
+      return undefined;
+    }
+    const current = await this.getVsCodeRepository();
+    if (current) {
+      listener();
+    }
+    if (!api.onDidOpenRepository) {
+      return undefined;
+    }
+    return api.onDidOpenRepository((repo) => {
+      if (this.samePath(repo.rootUri.fsPath, this.gitRoot)) {
+        this._vscodeGitRepository = repo;
+        listener();
+      }
+    });
+  }
+
+  /**
+   * Fires {@code listener} when our repository is closed by VS Code (e.g.
+   * workspace folder removed). Clears the cached repository handle so a
+   * subsequent {@link onRepositoryAvailable} can re-attach.
+   */
+  async onRepositoryClosed(listener: () => void): Promise<vscode.Disposable | undefined> {
+    const api = await this.getVsCodeGitApi();
+    if (!api?.onDidCloseRepository) {
+      return undefined;
+    }
+    return api.onDidCloseRepository((repo) => {
+      if (this.samePath(repo.rootUri.fsPath, this.gitRoot)) {
+        this._vscodeGitRepository = undefined;
+        listener();
+      }
+    });
   }
 
   private toAbsoluteRepoPath(relativeOrAbsolutePath: string): string {
@@ -697,7 +772,7 @@ export class GitService {
       : normalizedLeft === normalizedRight;
   }
 
-  private async getGitDir(): Promise<string | undefined> {
+  async getGitDir(): Promise<string | undefined> {
     if (this._gitDirCache) { return this._gitDirCache; }
     try {
       const result = await this.runGit(['rev-parse', '--git-dir']);
