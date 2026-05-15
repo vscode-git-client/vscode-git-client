@@ -27,10 +27,6 @@
     .filter-input.invalid {
       border-color: var(--vscode-inputValidation-errorBorder, #d93025);
     }
-    .filters .filter-field:has(> .input-shell > #filter-exclude-message) {
-      grid-column: 1 / 5;
-      grid-row: 2;
-    }
     {{> partials/styles/fieldClear}}
     .filter-actions {
       display: flex;
@@ -44,7 +40,8 @@
       hoverBackground="color-mix(in srgb, var(--accent), transparent 90%)"
     }}
     .filter-options {
-      grid-column: 1 / -1;
+      grid-column: 2 / -1;
+      grid-row: 2;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
