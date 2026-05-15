@@ -293,32 +293,26 @@ export class StateStore {
       this.logger.warn(`Failed to load remote branches: ${String(error)}`);
     }
 
-    // Phase C — tag names (no remote availability yet)
-    let phaseCOk = false;
+    // Phase C — tags with remote-availability already merged.
+    // Tags are published in a single emit (basic + per-remote availability) so
+    // tag icons do not flicker between "no remote" and "available on remotes".
+    // If the slower ls-remote step fails, we still publish the basic tag list
+    // with empty availability so the section is not blank.
     try {
       const basic = await this.git.getTagsBasic();
-      if (!tagsEqual(this._tags, basic)) {
-        this._tags = basic;
-        this.emitter.fire();
+      let availability: ReadonlyMap<string, ReadonlySet<string>> = new Map();
+      try {
+        availability = await this.git.getTagAvailabilityByRemote();
+      } catch (error) {
+        this.logger.warn(`Failed to compute tag remote availability: ${String(error)}`);
       }
-      phaseCOk = true;
-    } catch (error) {
-      this.logger.warn(`Failed to load tag list: ${String(error)}`);
-    }
-
-    // Phase D — tag remote availability (slow, network-bound)
-    if (!phaseCOk) {
-      return;
-    }
-    try {
-      const availability = await this.git.getTagAvailabilityByRemote();
-      const enriched = this.git.mergeTagAvailability(this._tags, availability);
+      const enriched = this.git.mergeTagAvailability(basic, availability);
       if (!tagsEqual(this._tags, enriched)) {
         this._tags = enriched;
         this.emitter.fire();
       }
     } catch (error) {
-      this.logger.warn(`Failed to compute tag remote availability: ${String(error)}`);
+      this.logger.warn(`Failed to load tag list: ${String(error)}`);
     }
   }
 

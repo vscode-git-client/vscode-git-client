@@ -12,10 +12,9 @@ The Branches view shows nothing for several seconds after activation (and after 
 
 1. Local branches appear as soon as the (very fast) `git for-each-ref refs/heads` returns.
 2. Remote branches appear next, independently.
-3. Tag names + dates appear before the slow per-remote availability lookup completes.
-4. Tag remote-availability annotations fill in last, without blocking anything else.
-5. The existing `RefreshScheduler` single-in-flight guarantee remains intact.
-6. No regression: ahead/behind indicators, date sorting, tag tooltips, and per-remote tag icons all still work — they just arrive in their natural latency order.
+3. Tags appear with their per-remote availability icons already correct — no flicker between "no remote" and "available on remotes". (Earlier two-phase tag draft caused icon flicker and was rejected.)
+4. The existing `RefreshScheduler` single-in-flight guarantee remains intact.
+5. No regression: ahead/behind indicators, date sorting, tag tooltips, and per-remote tag icons all still work — they just arrive in their natural latency order.
 
 ## Non-goals
 
@@ -28,14 +27,15 @@ The Branches view shows nothing for several seconds after activation (and after 
 
 ### Phases
 
-`StateStore.loadRefs()` becomes a private method that runs four phases sequentially, emitting state after each:
+`StateStore.loadRefs()` becomes a private method that runs three phases sequentially, emitting state after each:
 
 | Phase | Git work | State mutation | Emit? |
 | ----- | -------- | -------------- | ----- |
 | A — Local branches | `git for-each-ref refs/heads` (with the same format string used today) | Set `_branches` to local-only list, preserving sort | Yes if changed |
 | B — Remote branches | `git remote -v` + `git for-each-ref refs/remotes` | Append remotes to `_branches`, re-sort | Yes if changed |
-| C — Tags (basic) | `git for-each-ref refs/tags` (existing format minus availability) | Set `_tags` with `availableOnRemotes: []` for every tag | Yes if changed |
-| D — Tag remote availability | `git ls-remote --tags <remote>` per remote | Re-set `_tags`, populating `availableOnRemotes` per tag | Yes if changed |
+| C — Tags (with per-remote availability merged in) | `git for-each-ref refs/tags` + `git ls-remote --tags <remote>` per remote, then `mergeTagAvailability` | Set `_tags` in a single assignment with `availableOnRemotes` already populated | Yes if changed |
+
+**Why tags are not split into two phases.** Earlier drafts of this design had a phase C (basic tag names with empty `availableOnRemotes`) followed by a phase D (populate availability). User feedback flagged that this caused tag icons to flicker — first rendered without any remote icon, then re-rendered with the remote icon. Publishing tags only after both lookups complete eliminates the flicker at the cost of tags appearing slightly later than they otherwise could. If the `ls-remote` step fails, the basic tag list still publishes (with empty availability), so the section is not left blank.
 
 After phase D the existing fingerprint check in `executeRefresh` still runs; if other scopes also changed, their emit fires as today.
 
@@ -49,7 +49,7 @@ After phase D the existing fingerprint check in `executeRefresh` still runs; if 
 
 ### Error handling
 
-Each phase is wrapped in its own try/catch. A failure in phase B/C/D logs through `this.logger.warn` and **does not** clear the data published by earlier phases. The view degrades gracefully: a network outage during phase D leaves tags visible but without per-remote icons; a corrupt remote list during phase B leaves locals visible alone.
+Each phase is wrapped in its own try/catch. A failure in phase B/C logs through `this.logger.warn` and **does not** clear the data published by earlier phases. Within phase C, the inner `getTagAvailabilityByRemote` call is also independently guarded: if `ls-remote` fails, the basic tag list still publishes with empty availability so the section is not blank.
 
 ### GitService refactor
 
@@ -72,9 +72,10 @@ Each phase is wrapped in its own try/catch. A failure in phase B/C/D logs throug
 - Add a focused unit test for the phased loader in a new file `src/test/stateStoreRefs.test.ts`. The test injects a stub `GitService` whose four split methods resolve in controlled order (each gated by a deferred) and asserts:
   - `state.branches` contains only locals after phase A resolves.
   - `state.branches` contains locals + remotes after phase B resolves.
-  - `state.tags` contains entries with empty `availableOnRemotes` after phase C resolves.
-  - `state.tags` entries are enriched with `availableOnRemotes` after phase D resolves.
-  - `emitter` fires at least three times during the cycle (A, B, C — D may or may not fire depending on whether availability differs).
+  - `state.tags` is still empty after `getTagsBasic` resolves but `getTagAvailabilityByRemote` has not — this is the flicker-prevention guarantee.
+  - `state.tags` populates in a single step with `availableOnRemotes` already filled in once both tag lookups complete.
+  - A failure of `getTagAvailabilityByRemote` still publishes the basic tag list (with empty availability) rather than blanking the section.
+  - `emitter` fires at least three times during the cycle (A, B, C tags-once).
 - Existing tests must continue to pass. `getBranches()` and `getTags()` wrappers preserve their public shape.
 
 ## Files
@@ -88,7 +89,6 @@ Each phase is wrapped in its own try/catch. A failure in phase B/C/D logs throug
 
 - Local branches visible in the Branches view within ~200 ms of activation (typical workstation, warm git).
 - Remote branches appear within ~400 ms.
-- Tag names appear before the per-remote `ls-remote` round-trips complete.
-- Per-remote tag icons/tooltips fill in once availability lookup finishes; this is the slowest visible step but it happens after everything else is interactive.
-- A network failure on one or more remotes does not blank out previously published branch or tag data.
+- Tags appear with per-remote icons already correct (no flicker). They appear after branches because they wait for the slow `ls-remote` step; this is intentional.
+- A network failure on one or more remotes does not blank out previously published branch or tag data; tags still render without per-remote icons.
 - Pre-existing tests pass; new phased-loader test passes.

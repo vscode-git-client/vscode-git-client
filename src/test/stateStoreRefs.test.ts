@@ -109,7 +109,7 @@ function makeWorkspaceState(): vscode.Memento {
 const flush = () => new Promise((r) => setImmediate(r));
 
 describe('StateStore refs phased loader', () => {
-  it('publishes locals first, then remotes, then tags, then availability', async () => {
+  it('publishes locals first, then remotes, then tags with availability merged', async () => {
     const localD = deferred<BranchRef[]>();
     const remoteD = deferred<BranchRef[]>();
     const tagsD = deferred<TagRef[]>();
@@ -148,29 +148,31 @@ describe('StateStore refs phased loader', () => {
     assert.strictEqual(store.branches.length, 3, 'remotes appended after phase B');
     assert.strictEqual(store.tags.length, 0, 'tags still not loaded');
 
-    // Phase C: tag names
+    // Phase C basic resolves first — tags must NOT publish yet because
+    // availability is still pending; otherwise icons would flicker.
     tagsD.resolve([tag('v1.0.0'), tag('v0.9.0')]);
     await flush();
-    assert.strictEqual(store.tags.length, 2, 'tags visible after phase C');
-    assert.deepStrictEqual(
-      store.tags[0].availableOnRemotes ?? [],
-      [],
-      'no availability yet'
-    );
+    assert.strictEqual(store.tags.length, 0, 'tags wait for availability before publishing');
 
-    // Phase D: tag availability
+    // Availability arrives — tags publish once, already enriched.
     availD.resolve(new Map([['v1.0.0', new Set(['origin'])]]));
     await refreshPromise;
 
+    assert.strictEqual(store.tags.length, 2, 'tags visible with availability merged');
     assert.deepStrictEqual(
       store.tags[0].availableOnRemotes,
       ['origin'],
-      'availability enriches phase D'
+      'tag remote availability included in the single tag emit'
     );
+
+    // Expected at least 3 phase emits (A locals, B remotes, C tags-once).
+    // executeRefresh's final fingerprint check may add a fourth tail emit —
+    // harmless. The flicker check above (tags.length === 0 mid-cycle) is the
+    // real guarantee.
     assert.ok(emits.length >= 3, `expected at least 3 emits, got ${emits.length}`);
   });
 
-  it('tolerates phase-D failure without erasing earlier state', async () => {
+  it('falls back to basic tags when availability lookup fails', async () => {
     const stubGit = makeStubGit({
       localBranches: async () => [localBranch('main', true)],
       remoteBranches: async () => [remoteBranch('feature')],
@@ -189,12 +191,12 @@ describe('StateStore refs phased loader', () => {
 
     await store.refreshBranches();
 
-    assert.strictEqual(store.branches.length, 2, 'branches preserved despite phase D failure');
-    assert.strictEqual(store.tags.length, 1, 'tag list preserved despite phase D failure');
+    assert.strictEqual(store.branches.length, 2, 'branches still load');
+    assert.strictEqual(store.tags.length, 1, 'basic tag list still publishes');
     assert.deepStrictEqual(
       store.tags[0].availableOnRemotes ?? [],
       [],
-      'availability stays empty'
+      'availability stays empty when ls-remote fails'
     );
   });
 });
