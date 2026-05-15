@@ -57,4 +57,36 @@ describe('RefreshScheduler', () => {
 
     assert.deepStrictEqual(batches, [['changes', 'refs']]);
   });
+
+  it('coalesces multiple requests arriving during in-flight refresh into a single follow-up batch', async () => {
+    const batches: RefreshScope[][] = [];
+    let active = 0;
+    let maxActive = 0;
+    let firedExtraRequests = false;
+
+    const scheduler = new RefreshScheduler(async (scopes) => {
+      batches.push([...scopes].sort());
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+
+      if (!firedExtraRequests) {
+        firedExtraRequests = true;
+        // Fire three interleaved requests while the first refresh is still running.
+        void scheduler.request(['refs']);
+        void scheduler.request(['changes']);
+        void scheduler.request(['stashes']);
+      }
+
+      await delay(15);
+      active -= 1;
+    });
+
+    await scheduler.request(['changes']);
+    await delay(60);
+
+    assert.strictEqual(maxActive, 1, 'never overlap');
+    assert.strictEqual(batches.length, 2, 'one in-flight batch, one coalesced follow-up');
+    assert.deepStrictEqual(batches[0], ['changes']);
+    assert.deepStrictEqual(batches[1], ['changes', 'refs', 'stashes']);
+  });
 });
