@@ -279,6 +279,10 @@ export class EditorOrchestrator {
         },
         async (selection) => {
           await this.openCompareCommitRangeDetails(selection);
+        },
+        {
+          getCompareViewMode: () => this.state.getCompareViewMode(),
+          setCompareViewMode: (mode) => this.state.setCompareViewMode(mode)
         }
       );
       this.compareView.onDispose(() => {

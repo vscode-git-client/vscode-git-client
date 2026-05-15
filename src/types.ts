@@ -71,6 +71,7 @@ export interface CompareResult {
   readonly rightRef: string;
   readonly commitsOnlyLeft: GraphCommit[];
   readonly commitsOnlyRight: GraphCommit[];
+  readonly mergeBase?: GraphCommit;
   readonly changedFiles: Array<{
     readonly path: string;
     readonly status: string;

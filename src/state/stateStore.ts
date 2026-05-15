@@ -9,6 +9,9 @@ export type { RefreshScope } from './refreshScheduler';
 
 const RECENT_COMPARE_PAIRS_KEY = 'vscodeGitClient.recentComparePairs';
 const LEGACY_RECENT_COMPARE_PAIRS_KEY = 'intelliGit.recentComparePairs';
+const COMPARE_VIEW_MODE_KEY = 'vscodeGitClient.compareViewMode';
+
+export type CompareViewMode = 'list' | 'graph';
 
 export class StateStore {
   private static readonly DEFAULT_REFRESH_DEBOUNCE_MS = 250;
@@ -342,5 +345,14 @@ export class StateStore {
     const key = `${pair.left}:::${pair.right}`;
     this._recentComparePairs = [pair, ...this._recentComparePairs.filter((item) => `${item.left}:::${item.right}` !== key)].slice(0, 10);
     void this.workspaceState.update(RECENT_COMPARE_PAIRS_KEY, this._recentComparePairs);
+  }
+
+  getCompareViewMode(): CompareViewMode {
+    const raw = this.workspaceState.get<string>(COMPARE_VIEW_MODE_KEY, 'list');
+    return raw === 'graph' ? 'graph' : 'list';
+  }
+
+  async setCompareViewMode(mode: CompareViewMode): Promise<void> {
+    await this.workspaceState.update(COMPARE_VIEW_MODE_KEY, mode);
   }
 }

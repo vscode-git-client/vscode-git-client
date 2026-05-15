@@ -94,6 +94,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 - `Esc` to clear selection.
 - Merged Commit Details for a continuous selected range.
 - Fuzzy message, author, exclude-message regex, and from/to date filters.
+- Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible.
 - Optional filters to ignore merge commits.
 - Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.
 - Export as two CSV files or one Excel workbook with two sheets.

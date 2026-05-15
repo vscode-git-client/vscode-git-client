@@ -971,11 +971,14 @@ export class GitService {
 
     const diffNames = await this.runGit(['diff', '--name-status', `${leftRef}...${rightRef}`]);
 
+    const mergeBase = await this.tryGetMergeBaseCommit(leftRef, rightRef);
+
     return {
       leftRef,
       rightRef,
       commitsOnlyLeft: parseGraphRows(leftOnly.stdout),
       commitsOnlyRight: parseGraphRows(rightOnly.stdout),
+      mergeBase,
       changedFiles: diffNames.stdout
         .split('\n')
         .map((line) => line.trim())
@@ -988,6 +991,27 @@ export class GitService {
           };
         })
     };
+  }
+
+  private async tryGetMergeBaseCommit(leftRef: string, rightRef: string): Promise<GraphCommit | undefined> {
+    try {
+      const base = await this.runGit(['merge-base', leftRef, rightRef]);
+      const sha = base.stdout.trim();
+      if (!sha) {
+        return undefined;
+      }
+      const detail = await this.runGit([
+        'log',
+        '-1',
+        '--date=iso-strict',
+        `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
+        sha
+      ]);
+      const [parsed] = parseGraphRows(detail.stdout);
+      return parsed;
+    } catch {
+      return undefined;
+    }
   }
 
   async getChangedFiles(): Promise<WorkingTreeChange[]> {

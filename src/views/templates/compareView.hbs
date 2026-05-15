@@ -98,6 +98,113 @@
     {{> partials/styles/flexScrollArea className="table-wrap" overflow="auto"}}
     {{> partials/styles/tableBase cellPadding="6px 4px"}}
     {{> partials/styles/commitListBase}}
+    .mode-toggle {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-right: 8px;
+    }
+    .mode-toggle button {
+      background: transparent;
+      color: var(--fg);
+      border: 0;
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .mode-toggle button + button {
+      border-left: 1px solid var(--border);
+    }
+    .mode-toggle button:hover {
+      background: color-mix(in srgb, var(--accent), transparent 88%);
+    }
+    .mode-toggle button.active {
+      background: color-mix(in srgb, var(--accent), transparent 75%);
+      color: var(--fg);
+    }
+    .graph-canvas {
+      flex: 2;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--bg), white 3%);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .graph-banner {
+      padding: 6px 10px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--vscode-editorWarning-foreground);
+      border-bottom: 1px solid color-mix(in srgb, var(--vscode-editorWarning-foreground), transparent 65%);
+      background: color-mix(in srgb, var(--vscode-editorWarning-foreground), transparent 92%);
+    }
+    .graph-scroll {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+    }
+    .graph-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+    .graph-edge {
+      stroke: var(--border);
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .graph-edge.lane-left,
+    .graph-node.lane-left {
+      stroke: var(--accent);
+    }
+    .graph-edge.lane-right,
+    .graph-node.lane-right {
+      stroke: var(--vscode-gitDecoration-addedResourceForeground, var(--accent));
+    }
+    .graph-node.lane-base {
+      stroke: var(--muted);
+    }
+    .graph-node {
+      fill: var(--bg);
+      stroke-width: 2;
+    }
+    .graph-rows {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      position: relative;
+      z-index: 1;
+    }
+    .graph-row {
+      display: grid;
+      grid-template-columns: 64px 80px 1fr 160px 110px;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px 0 0;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .graph-row:hover {
+      background: color-mix(in srgb, var(--accent), transparent 90%);
+    }
+    .graph-row.dimmed,
+    .graph-node.dimmed {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .graph-row-spacer { display: block; }
+    .graph-row-sha { color: var(--muted); font-family: var(--vscode-editor-font-family, monospace); font-size: 11px; }
+    .graph-row-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .graph-row-author { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .graph-row-date { color: var(--muted); font-size: 11px; }
+    .graph-row-base .graph-row-subject em { color: var(--muted); font-style: italic; }
   </style>
 </head>
 <body>
@@ -131,6 +238,10 @@
       clearLabel="To date"
     }}
     <div class="filter-actions">
+      <div class="mode-toggle" role="tablist" aria-label="Compare view mode">
+        <button id="mode-toggle-list" type="button" role="tab" aria-selected="{{#if isListMode}}true{{else}}false{{/if}}" class="{{#if isListMode}}active{{/if}}" data-mode="list">List</button>
+        <button id="mode-toggle-graph" type="button" role="tab" aria-selected="{{#if isGraphMode}}true{{else}}false{{/if}}" class="{{#if isGraphMode}}active{{/if}}" data-mode="graph">Graph</button>
+      </div>
       <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
     </div>
     {{> partials/molecules/textFilterField
@@ -163,17 +274,38 @@
       </div>
     </div>
   </section>
+  {{#if isListMode}}
   <div class="grid">
     {{> partials/compareCommitTable side="left" total=leftTotal ref=leftRef rows=leftCommits}}
 
     {{> partials/compareCommitTable side="right" total=rightTotal ref=rightRef rows=rightCommits}}
   </div>
+  {{/if}}
+  {{#if isGraphMode}}
+  <section class="graph-canvas">
+    <header class="graph-banner">
+      <span data-banner-summary>{{leftRef}} ({{leftTotal}}) ↔ {{rightRef}} ({{rightTotal}}){{#if graphMergeBaseShort}} · merge base {{graphMergeBaseShort}}{{/if}}</span>
+    </header>
+    <div class="graph-scroll">
+      <svg class="graph-svg" width="56" height="{{graphSvgHeight}}" viewBox="0 0 56 {{graphSvgHeight}}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        {{{graphSvg}}}
+      </svg>
+      <ul class="graph-rows">
+        {{{graphRows}}}
+      </ul>
+    </div>
+  </section>
+  {{/if}}
 
   {{> partials/compareContextMenu}}
 
   <script>
     const vscode = acquireVsCodeApi();
     const allAuthors = {{{authorsJson}}};
+    const compareViewMode = '{{mode}}';
+    const isGraphMode = compareViewMode === 'graph';
+    const modeToggleListBtn = document.getElementById('mode-toggle-list');
+    const modeToggleGraphBtn = document.getElementById('mode-toggle-graph');
     const authorInput = document.getElementById('filter-author');
     const authorAutocomplete = document.getElementById('author-autocomplete');
     const messageInput = document.getElementById('filter-message');
@@ -194,7 +326,11 @@
     let activePane = 'left';
 
     const getVisibleCommitRows = () =>
-      Array.from(document.querySelectorAll('.commit-row')).filter((row) => row.style.display !== 'none');
+      Array.from(document.querySelectorAll('.commit-row')).filter((row) => {
+        if (row.style.display === 'none') { return false; }
+        if (isGraphMode && row.classList.contains('dimmed')) { return false; }
+        return true;
+      });
     const getVisibleCommitRowsBySide = (side) =>
       getVisibleCommitRows().filter((row) => row.getAttribute('data-side') === side);
     const getCommitSha = (row) => (row && row.getAttribute ? row.getAttribute('data-sha') || '' : '');
@@ -246,7 +382,7 @@
 
     const serializeVisibleCommits = (side) =>
       getVisibleCommitRowsBySide(side).map((row) => {
-        const dateCell = row.querySelector('.col-date span');
+        const dateCell = row.querySelector('.col-date span') || row.querySelector('.graph-row-date');
         return {
           sha: row.getAttribute('data-sha') || '',
           subject: row.getAttribute('data-subject') || '',
@@ -342,6 +478,10 @@
       const sha = row.getAttribute('data-sha') || '';
       const subject = row.getAttribute('data-subject') || '';
       if (!sha) { return; }
+      if (isGraphMode) {
+        vscode.postMessage({ type: 'commitClick', sha, subject });
+        return;
+      }
       const hasMultiModifier = event.shiftKey || event.ctrlKey || event.metaKey;
       updateSelection(row, event);
       if (hasMultiModifier) {
@@ -378,6 +518,9 @@
       const key = (event.key || '').toLowerCase();
       if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && key === 'a') {
         if (isTextInputTarget(event.target)) {
+          return;
+        }
+        if (isGraphMode) {
           return;
         }
         event.preventDefault();
@@ -557,7 +700,7 @@
       const ignoreMerges = Boolean(ignoreMergesCheckbox && ignoreMergesCheckbox.checked);
       const hideMatchingMessages = Boolean(matchingMessagesCheckbox && matchingMessagesCheckbox.checked);
       const visibleBySide = { left: 0, right: 0 };
-      const rows = Array.from(document.querySelectorAll('tr.commit-row'));
+      const rows = Array.from(document.querySelectorAll('.commit-row'));
       const oppositeKeysBySide = {
         left: new Set(),
         right: new Set()
@@ -583,16 +726,44 @@
         return { row, side, baseVisible, matchingKey };
       });
 
+      const dimmedShas = new Set();
       baseStates.forEach((state) => {
         const oppositeSide = state.side === 'left' ? 'right' : 'left';
         const hasMatchOnOpposite = (oppositeSide === 'left' || oppositeSide === 'right') && oppositeKeysBySide[oppositeSide].has(state.matchingKey);
         const visible = state.baseVisible && (!hideMatchingMessages || !hasMatchOnOpposite);
         const row = state.row;
-        row.style.display = visible ? '' : 'none';
+        if (isGraphMode) {
+          row.classList.toggle('dimmed', !visible);
+          row.style.display = '';
+          if (!visible) {
+            const sha = row.getAttribute('data-sha');
+            if (sha) { dimmedShas.add(sha); }
+          }
+        } else {
+          row.style.display = visible ? '' : 'none';
+          row.classList.remove('dimmed');
+        }
         if (visible && (state.side === 'left' || state.side === 'right')) {
           visibleBySide[state.side] += 1;
         }
       });
+
+      if (isGraphMode) {
+        Array.from(document.querySelectorAll('.graph-node[data-node-sha]')).forEach((node) => {
+          const sha = node.getAttribute('data-node-sha') || '';
+          node.classList.toggle('dimmed', dimmedShas.has(sha));
+        });
+        const banner = document.querySelector('[data-banner-summary]');
+        if (banner) {
+          const leftTotal = {{leftTotal}};
+          const rightTotal = {{rightTotal}};
+          const leftSuffix = visibleBySide.left === leftTotal ? String(leftTotal) : visibleBySide.left + '/' + leftTotal;
+          const rightSuffix = visibleBySide.right === rightTotal ? String(rightTotal) : visibleBySide.right + '/' + rightTotal;
+          const mergeBaseSuffix = {{#if graphMergeBaseShort}}' · merge base {{graphMergeBaseShort}}'{{else}}''{{/if}};
+          banner.textContent = '{{leftRef}} (' + leftSuffix + ') ↔ {{rightRef}} (' + rightSuffix + ')' + mergeBaseSuffix;
+        }
+        return;
+      }
 
       ['left', 'right'].forEach((side) => {
         updateBannerCount(side, visibleBySide[side]);
@@ -733,12 +904,23 @@
         vscode.postMessage({
           type: 'exportCompare',
           format: '{{exportFormat}}',
-          leftRef: getPaneRef('left'),
-          rightRef: getPaneRef('right'),
+          leftRef: '{{leftRef}}',
+          rightRef: '{{rightRef}}',
           leftCommits: serializeVisibleCommits('left'),
           rightCommits: serializeVisibleCommits('right')
         });
       });
+    }
+    const sendModeChange = (mode) => {
+      if (mode !== compareViewMode) {
+        vscode.postMessage({ type: 'setCompareMode', mode });
+      }
+    };
+    if (modeToggleListBtn) {
+      modeToggleListBtn.addEventListener('click', () => sendModeChange('list'));
+    }
+    if (modeToggleGraphBtn) {
+      modeToggleGraphBtn.addEventListener('click', () => sendModeChange('graph'));
     }
   </script>
 {{> partials/documentEnd}}

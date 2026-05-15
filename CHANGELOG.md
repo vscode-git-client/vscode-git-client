@@ -4,10 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Compare Branches — Message filter (fuzzy)** — new "Message" field in the filter row, before "Author", uses case-insensitive subsequence matching (type "mvw" to match "Move View Wrapper").
+- **Compare Branches — Graph mode** — new List / Graph toggle in the filter row. Graph mode renders an inline SVG showing the two branches diverging from their merge base (left lane, right lane, joined at the bottom). Existing filters dim non-matching commits in graph mode so the topology stays visible; clicking a node opens commit details the same as a list row click. The selected mode persists per workspace.
+
 ### Changed
 - Renamed the extension command/view/configuration prefix from `intelliGit.*` to `vscodeGitClient.*`, including contributed commands, view container IDs, view IDs, context keys, settings, webview IDs, and docs.
 - Rebranded user-visible extension surfaces to `VS Code Git Client`.
 - Added compatibility fallback for existing `intelliGit.*` user settings and workspace state, and hidden command aliases for already-active extension sessions.
+- **Compare Branches — Layout** — the "Exclude message (regex)" field moved to a second row alongside the existing checkboxes and export button, freeing room on the first row for the new "Message" filter.
 
 ## [0.15.5] - 2026-05-11
 

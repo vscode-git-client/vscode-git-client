@@ -6,6 +6,13 @@ import { handleCommitAction, isCommitActionMessage } from './commitActions';
 import { formatCommitDate } from './commitDate';
 import { CompareResult, GraphCommit } from '../types';
 
+export type CompareViewMode = 'list' | 'graph';
+
+export interface CompareViewModeStore {
+  getCompareViewMode(): CompareViewMode;
+  setCompareViewMode(mode: CompareViewMode): Promise<void>;
+}
+
 interface CommitClickMessage {
   readonly type: 'commitClick';
   readonly sha: string;
@@ -40,6 +47,11 @@ interface ExportCompareMessage {
   readonly rightCommits: CompareExportCommit[];
 }
 
+interface SetCompareModeMessage {
+  readonly type: 'setCompareMode';
+  readonly mode: CompareViewMode;
+}
+
 export class CompareView {
   private readonly panel: vscode.WebviewPanel;
   private disposeCallback: (() => void) | undefined;
@@ -47,7 +59,8 @@ export class CompareView {
 
   constructor(
     private readonly onCommitClick: (sha: string, subject: string) => Promise<void>,
-    private readonly onCommitRangeClick: (selection: CompareCommitRangeSelection) => Promise<void>
+    private readonly onCommitRangeClick: (selection: CompareCommitRangeSelection) => Promise<void>,
+    private readonly modeStore: CompareViewModeStore
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'vscodeGitClient.branchCompare',
@@ -87,7 +100,18 @@ export class CompareView {
   render(result: CompareResult): void {
     this.currentResult = result;
     this.panel.title = `Compare ${result.leftRef} <> ${result.rightRef}`;
-    this.panel.webview.html = renderCompareHtml(result, this.getCompareExportFormat());
+    this.panel.webview.html = renderCompareHtml(result, this.getCompareExportFormat(), this.modeStore.getCompareViewMode());
+  }
+
+  private rerender(): void {
+    if (!this.currentResult) {
+      return;
+    }
+    this.panel.webview.html = renderCompareHtml(
+      this.currentResult,
+      this.getCompareExportFormat(),
+      this.modeStore.getCompareViewMode()
+    );
   }
 
   private async handleMessage(message: unknown): Promise<void> {
@@ -106,6 +130,12 @@ export class CompareView {
 
     if (isExportCompareMessage(message)) {
       await this.exportCompare(message);
+      return;
+    }
+
+    if (isSetCompareModeMessage(message)) {
+      await this.modeStore.setCompareViewMode(message.mode);
+      this.rerender();
       return;
     }
 
@@ -259,7 +289,8 @@ export class CompareView {
 
 }
 
-function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFormat): string {
+function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFormat, mode: CompareViewMode): string {
+  const graphData = mode === 'graph' ? buildGraphRenderData(result) : undefined;
   return renderTemplate('compareView.hbs', {
     leftRef: result.leftRef,
     leftTotal: result.commitsOnlyLeft.length,
@@ -269,8 +300,143 @@ function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFor
     rightCommits: renderCommitRows(result.commitsOnlyRight, 'right'),
     authorsJson: toInlineJson(collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight)),
     exportFormat,
-    exportButtonLabel: exportFormat === 'excel' ? 'Export Excel' : 'Export CSV'
+    exportButtonLabel: exportFormat === 'excel' ? 'Export Excel' : 'Export CSV',
+    mode,
+    isListMode: mode === 'list',
+    isGraphMode: mode === 'graph',
+    graphSvg: graphData ? graphData.svg : '',
+    graphRows: graphData ? graphData.rows : '',
+    graphSvgHeight: graphData ? graphData.svgHeight : 0,
+    graphMergeBaseShort: result.mergeBase ? result.mergeBase.shortSha : ''
   });
+}
+
+interface GraphRenderData {
+  readonly svg: string;
+  readonly rows: string;
+  readonly svgHeight: number;
+}
+
+const GRAPH_ROW_HEIGHT = 24;
+const GRAPH_LANE_X_LEFT = 16;
+const GRAPH_LANE_X_RIGHT = 40;
+const GRAPH_LANE_X_BASE = (GRAPH_LANE_X_LEFT + GRAPH_LANE_X_RIGHT) / 2;
+const GRAPH_NODE_RADIUS = 5;
+
+function buildGraphRenderData(result: CompareResult): GraphRenderData {
+  const leftSorted = sortByDateDescending(result.commitsOnlyLeft);
+  const rightSorted = sortByDateDescending(result.commitsOnlyRight);
+  const interleaved = interleaveByDateDescending(leftSorted, rightSorted);
+  const totalRows = interleaved.length + (result.mergeBase ? 1 : 0);
+  const svgHeight = Math.max(totalRows * GRAPH_ROW_HEIGHT, GRAPH_ROW_HEIGHT);
+
+  const edges: string[] = [];
+  const nodes: string[] = [];
+  const rowsHtml: string[] = [];
+
+  const lastIndexBySide: { left: number; right: number } = { left: -1, right: -1 };
+
+  interleaved.forEach((entry, index) => {
+    const y = index * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
+    const x = entry.side === 'left' ? GRAPH_LANE_X_LEFT : GRAPH_LANE_X_RIGHT;
+    const laneClass = entry.side === 'left' ? 'lane-left' : 'lane-right';
+
+    const previousIndexOnSide = lastIndexBySide[entry.side];
+    if (previousIndexOnSide >= 0) {
+      const prevY = previousIndexOnSide * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
+      edges.push(
+        `<line class="graph-edge ${laneClass}" data-edge-side="${entry.side}" data-edge-from="${escapeHtml(entry.commit.sha)}" x1="${x}" y1="${prevY}" x2="${x}" y2="${y}" />`
+      );
+    }
+    lastIndexBySide[entry.side] = index;
+
+    nodes.push(
+      `<circle class="graph-node ${laneClass}" data-node-sha="${escapeHtml(entry.commit.sha)}" cx="${x}" cy="${y}" r="${GRAPH_NODE_RADIUS}" />`
+    );
+
+    const date = formatCommitDate(entry.commit.date);
+    rowsHtml.push(renderGraphRow(entry.commit, entry.side, date));
+  });
+
+  if (result.mergeBase) {
+    const baseRowIndex = interleaved.length;
+    const baseY = baseRowIndex * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
+
+    if (lastIndexBySide.left >= 0) {
+      const fromY = lastIndexBySide.left * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
+      edges.push(
+        `<path class="graph-edge lane-left" d="M ${GRAPH_LANE_X_LEFT} ${fromY} L ${GRAPH_LANE_X_LEFT} ${baseY - GRAPH_ROW_HEIGHT / 2} Q ${GRAPH_LANE_X_LEFT} ${baseY} ${GRAPH_LANE_X_BASE} ${baseY}" fill="none" />`
+      );
+    }
+    if (lastIndexBySide.right >= 0) {
+      const fromY = lastIndexBySide.right * GRAPH_ROW_HEIGHT + GRAPH_ROW_HEIGHT / 2;
+      edges.push(
+        `<path class="graph-edge lane-right" d="M ${GRAPH_LANE_X_RIGHT} ${fromY} L ${GRAPH_LANE_X_RIGHT} ${baseY - GRAPH_ROW_HEIGHT / 2} Q ${GRAPH_LANE_X_RIGHT} ${baseY} ${GRAPH_LANE_X_BASE} ${baseY}" fill="none" />`
+      );
+    }
+
+    nodes.push(
+      `<circle class="graph-node lane-base" cx="${GRAPH_LANE_X_BASE}" cy="${baseY}" r="${GRAPH_NODE_RADIUS}" />`
+    );
+    rowsHtml.push(renderGraphMergeBaseRow(result.mergeBase));
+  }
+
+  const svgInner = `${edges.join('')}${nodes.join('')}`;
+
+  return {
+    svg: svgInner,
+    rows: rowsHtml.join(''),
+    svgHeight
+  };
+}
+
+interface InterleavedEntry {
+  readonly side: 'left' | 'right';
+  readonly commit: GraphCommit;
+}
+
+function sortByDateDescending(commits: GraphCommit[]): GraphCommit[] {
+  return [...commits].sort((a, b) => parseIsoTimestamp(b.date) - parseIsoTimestamp(a.date));
+}
+
+function interleaveByDateDescending(left: GraphCommit[], right: GraphCommit[]): InterleavedEntry[] {
+  const result: InterleavedEntry[] = [];
+  let l = 0;
+  let r = 0;
+  while (l < left.length && r < right.length) {
+    const lTs = parseIsoTimestamp(left[l].date);
+    const rTs = parseIsoTimestamp(right[r].date);
+    if (lTs >= rTs) {
+      result.push({ side: 'left', commit: left[l] });
+      l += 1;
+    } else {
+      result.push({ side: 'right', commit: right[r] });
+      r += 1;
+    }
+  }
+  while (l < left.length) {
+    result.push({ side: 'left', commit: left[l] });
+    l += 1;
+  }
+  while (r < right.length) {
+    result.push({ side: 'right', commit: right[r] });
+    r += 1;
+  }
+  return result;
+}
+
+function parseIsoTimestamp(value: string): number {
+  const t = Date.parse(value);
+  return Number.isFinite(t) ? t : 0;
+}
+
+function renderGraphRow(commit: GraphCommit, side: 'left' | 'right', date: { label: string; title: string; timestamp: number }): string {
+  return `<li class="graph-row commit-row" data-sha="${escapeHtml(commit.sha)}" data-short-sha="${escapeHtml(commit.shortSha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><span class="graph-row-spacer"></span><span class="graph-row-sha">${escapeHtml(commit.shortSha)}</span><span class="graph-row-subject">${escapeHtml(commit.subject)}</span><span class="graph-row-author">${escapeHtml(commit.author)}</span><span class="graph-row-date muted" title="${escapeHtml(date.title)}">${escapeHtml(date.label)}</span></li>`;
+}
+
+function renderGraphMergeBaseRow(commit: GraphCommit): string {
+  const date = formatCommitDate(commit.date);
+  return `<li class="graph-row graph-row-base" data-sha="${escapeHtml(commit.sha)}" data-short-sha="${escapeHtml(commit.shortSha)}" title="Merge base ${escapeHtml(commit.sha)}"><span class="graph-row-spacer"></span><span class="graph-row-sha">${escapeHtml(commit.shortSha)}</span><span class="graph-row-subject"><em>merge base</em> · ${escapeHtml(commit.subject)}</span><span class="graph-row-author">${escapeHtml(commit.author)}</span><span class="graph-row-date muted" title="${escapeHtml(date.title)}">${escapeHtml(date.label)}</span></li>`;
 }
 
 function renderCommitRows(commits: GraphCommit[], side: 'left' | 'right'): string {
@@ -350,6 +516,14 @@ function normalizeShas(rawShas: readonly string[]): string[] {
         .filter(Boolean)
     )
   );
+}
+
+function isSetCompareModeMessage(value: unknown): value is SetCompareModeMessage {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph');
 }
 
 function isExportCompareMessage(value: unknown): value is ExportCompareMessage {
