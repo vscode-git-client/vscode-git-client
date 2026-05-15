@@ -15,6 +15,46 @@ const COMPARE_VIEW_MODE_KEY = 'vscodeGitClient.compareViewMode';
 
 export type CompareViewMode = 'list' | 'graph';
 
+function branchesEqual(a: readonly BranchRef[], b: readonly BranchRef[]): boolean {
+  if (a.length !== b.length) { return false; }
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    if (
+      left.name !== right.name ||
+      left.type !== right.type ||
+      left.current !== right.current ||
+      left.upstream !== right.upstream ||
+      left.ahead !== right.ahead ||
+      left.behind !== right.behind ||
+      left.lastCommitEpoch !== right.lastCommitEpoch
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function tagsEqual(a: readonly TagRef[], b: readonly TagRef[]): boolean {
+  if (a.length !== b.length) { return false; }
+  for (let i = 0; i < a.length; i += 1) {
+    const left = a[i];
+    const right = b[i];
+    const leftRemotes = left.availableOnRemotes ?? [];
+    const rightRemotes = right.availableOnRemotes ?? [];
+    if (
+      left.name !== right.name ||
+      left.sha !== right.sha ||
+      left.lastCommitEpoch !== right.lastCommitEpoch ||
+      leftRemotes.length !== rightRemotes.length ||
+      leftRemotes.some((r, idx) => r !== rightRemotes[idx])
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export class StateStore {
   private static readonly DEFAULT_REFRESH_DEBOUNCE_MS = 250;
   private _branches: BranchRef[] = [];
@@ -219,9 +259,67 @@ export class StateStore {
   }
 
   private async loadRefs(): Promise<void> {
-    const [branches, tags] = await Promise.all([this.git.getBranches(), this.git.getTags()]);
-    this._branches = branches;
-    this._tags = tags;
+    // Phase A — local branches
+    let phaseAOk = false;
+    try {
+      const locals = await this.git.getLocalBranches();
+      if (!branchesEqual(this._branches, locals)) {
+        this._branches = locals;
+        this.emitter.fire();
+      }
+      phaseAOk = true;
+    } catch (error) {
+      this.logger.warn(`Failed to load local branches: ${String(error)}`);
+    }
+
+    // Phase B — remote branches
+    try {
+      const remoteUrls = await this.git.getRemoteFetchUrls();
+      const remotes = await this.git.getRemoteBranches(remoteUrls);
+      const merged = phaseAOk
+        ? [...this._branches.filter((b) => b.type === 'local'), ...remotes]
+        : remotes;
+      merged.sort((a, b) => {
+        if (a.current) { return -1; }
+        if (b.current) { return 1; }
+        if (a.type !== b.type) { return a.type === 'local' ? -1 : 1; }
+        return a.name.localeCompare(b.name);
+      });
+      if (!branchesEqual(this._branches, merged)) {
+        this._branches = merged;
+        this.emitter.fire();
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to load remote branches: ${String(error)}`);
+    }
+
+    // Phase C — tag names (no remote availability yet)
+    let phaseCOk = false;
+    try {
+      const basic = await this.git.getTagsBasic();
+      if (!tagsEqual(this._tags, basic)) {
+        this._tags = basic;
+        this.emitter.fire();
+      }
+      phaseCOk = true;
+    } catch (error) {
+      this.logger.warn(`Failed to load tag list: ${String(error)}`);
+    }
+
+    // Phase D — tag remote availability (slow, network-bound)
+    if (!phaseCOk) {
+      return;
+    }
+    try {
+      const availability = await this.git.getTagAvailabilityByRemote();
+      const enriched = this.git.mergeTagAvailability(this._tags, availability);
+      if (!tagsEqual(this._tags, enriched)) {
+        this._tags = enriched;
+        this.emitter.fire();
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to compute tag remote availability: ${String(error)}`);
+    }
   }
 
   private async loadStashes(): Promise<void> {
