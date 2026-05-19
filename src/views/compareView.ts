@@ -47,6 +47,10 @@ interface ExportCompareMessage {
   readonly rightCommits: CompareExportCommit[];
 }
 
+interface RefreshMessage {
+  readonly type: 'refresh';
+}
+
 interface SetCompareModeMessage {
   readonly type: 'setCompareMode';
   readonly mode: CompareViewMode;
@@ -60,7 +64,8 @@ export class CompareView {
   constructor(
     private readonly onCommitClick: (sha: string, subject: string) => Promise<void>,
     private readonly onCommitRangeClick: (selection: CompareCommitRangeSelection) => Promise<void>,
-    private readonly modeStore: CompareViewModeStore
+    private readonly modeStore: CompareViewModeStore,
+    private readonly onRefresh: (leftRef: string, rightRef: string) => Promise<void>
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'vscodeGitClient.branchCompare',
@@ -136,6 +141,13 @@ export class CompareView {
     if (isSetCompareModeMessage(message)) {
       await this.modeStore.setCompareViewMode(message.mode);
       this.rerender();
+      return;
+    }
+
+    if (isRefreshMessage(message)) {
+      if (this.currentResult) {
+        await this.onRefresh(this.currentResult.leftRef, this.currentResult.rightRef);
+      }
       return;
     }
 
@@ -524,6 +536,13 @@ function isSetCompareModeMessage(value: unknown): value is SetCompareModeMessage
   }
   const candidate = value as Record<string, unknown>;
   return candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph');
+}
+
+function isRefreshMessage(value: unknown): value is RefreshMessage {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  return (value as Record<string, unknown>).type === 'refresh';
 }
 
 function isExportCompareMessage(value: unknown): value is ExportCompareMessage {

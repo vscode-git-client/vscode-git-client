@@ -283,6 +283,10 @@ export class EditorOrchestrator {
         {
           getCompareViewMode: () => this.state.getCompareViewMode(),
           setCompareViewMode: (mode) => this.state.setCompareViewMode(mode)
+        },
+        async (leftRef, rightRef) => {
+          const result = await this.state.compareBranches(leftRef, rightRef);
+          this.compareView?.render(result);
         }
       );
       this.compareView.onDispose(() => {

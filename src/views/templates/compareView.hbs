@@ -39,6 +39,33 @@
       padding="6px 10px"
       hoverBackground="color-mix(in srgb, var(--accent), transparent 90%)"
     }}
+    #btn-refresh {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--fg);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #btn-refresh:hover {
+      background: color-mix(in srgb, var(--accent), transparent 90%);
+    }
+    #btn-refresh:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    #btn-refresh.loading {
+      animation: spin 0.8s linear infinite;
+    }
     .filter-options {
       grid-column: 2 / -1;
       grid-row: 2;
@@ -242,6 +269,7 @@
         <button id="mode-toggle-list" type="button" role="tab" aria-selected="{{#if isListMode}}true{{else}}false{{/if}}" class="{{#if isListMode}}active{{/if}}" data-mode="list">List</button>
         <button id="mode-toggle-graph" type="button" role="tab" aria-selected="{{#if isGraphMode}}true{{else}}false{{/if}}" class="{{#if isGraphMode}}active{{/if}}" data-mode="graph">Graph</button>
       </div>
+      <button id="btn-refresh" type="button" title="Refresh">⟳</button>
       <button id="filter-clear" class="filter-clear" type="button">Clear filters</button>
     </div>
     {{> partials/molecules/textFilterField
@@ -909,6 +937,14 @@
           leftCommits: serializeVisibleCommits('left'),
           rightCommits: serializeVisibleCommits('right')
         });
+      });
+    }
+    const refreshBtn = document.getElementById('btn-refresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('loading');
+        vscode.postMessage({ type: 'refresh' });
       });
     }
     const sendModeChange = (mode) => {
