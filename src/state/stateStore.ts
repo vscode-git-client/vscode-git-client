@@ -63,6 +63,7 @@ export class StateStore {
   private _changes: WorkingTreeChange[] = [];
   private _graph: GraphCommit[] = [];
   private _graphHasMore = false;
+  private _loadingMoreGraph = false;
   private _compareResult: CompareResult | undefined;
   private _operationState: GitOperationState = { kind: 'none' };
   private _conflicts: MergeConflictFile[] = [];
@@ -203,6 +204,7 @@ export class StateStore {
       this._stashes = [];
       this._changes = [];
       this._graph = [];
+      this._graphHasMore = false;
       this._compareResult = undefined;
       this._operationState = { kind: 'none' };
       this._conflicts = [];
@@ -359,11 +361,17 @@ export class StateStore {
   }
 
   async loadMoreGraph(): Promise<void> {
-    const pageSize = getConfigValue<number>('maxGraphCommits', 200);
-    const page = await this.git.getGraph(pageSize, this._graph.length, this._graphFilters);
-    this._graph = [...this._graph, ...page];
-    this._graphHasMore = page.length === pageSize;
-    this.emitter.fire();
+    if (this._loadingMoreGraph) { return; }
+    this._loadingMoreGraph = true;
+    try {
+      const pageSize = getConfigValue<number>('maxGraphCommits', 200);
+      const page = await this.git.getGraph(pageSize, this._graph.length, this._graphFilters);
+      this._graph = [...this._graph, ...page];
+      this._graphHasMore = page.length === pageSize;
+      this.emitter.fire();
+    } finally {
+      this._loadingMoreGraph = false;
+    }
   }
 
   async clearGraphFilters(): Promise<void> {

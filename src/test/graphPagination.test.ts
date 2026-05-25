@@ -93,4 +93,22 @@ describe('StateStore graph pagination', () => {
     const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
     assert.strictEqual(state.graphHasMore, false);
   });
+
+  it('refreshGraph resets graphHasMore to false', async () => {
+    let callCount = 0;
+    const stubGit = makeStubGit(async () => {
+      callCount++;
+      // First call (loadMoreGraph): full page → hasMore=true
+      // Second call (loadGraph via refreshGraph): partial page → hasMore=false
+      return callCount === 1 ? makeFullPage(200) : makeFullPage(10);
+    });
+    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+
+    await state.loadMoreGraph();
+    assert.strictEqual(state.graphHasMore, true, 'should be true after full page');
+
+    await state.refreshGraph({});
+    assert.strictEqual(state.graphHasMore, false, 'should be false after partial-page reload');
+    assert.strictEqual(state.graph.length, 10, 'graph should be replaced not appended');
+  });
 });
