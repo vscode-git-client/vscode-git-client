@@ -321,6 +321,11 @@
         "icon": "$(filter-filled)"
       },
       {
+        "command": "vscodeGitClient.graph.loadMore",
+        "title": "Load More Commits",
+        "category": "Git Client"
+      },
+      {
         "command": "vscodeGitClient.diff.open",
         "title": "Open Diff"
       },

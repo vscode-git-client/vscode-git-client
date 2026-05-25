@@ -112,7 +112,10 @@ export class GraphFilterView {
         try {
           const { commits, hasMore } = await this.handlers.loadMore();
           void this.panel.webview.postMessage({ type: 'appendCommits', commits: serializeCommits(commits), hasMore });
-        } catch {
+        } catch (error) {
+          void vscode.window.showErrorMessage(
+            `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
+          );
           void this.panel.webview.postMessage({ type: 'loadMoreError' });
         }
         return;

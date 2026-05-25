@@ -1415,10 +1415,9 @@ export class CommandController {
           getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
           openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
           loadMore: async () => {
-            const prevLength = this.state.graph.length;
-            await this.state.loadMoreGraph();
+            const newCommits = await this.state.loadMoreGraph();
             return {
-              commits: this.state.graph.slice(prevLength),
+              commits: newCommits,
               hasMore: this.state.graphHasMore
             };
           }

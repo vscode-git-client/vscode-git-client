@@ -360,8 +360,8 @@ export class StateStore {
     this._graphHasMore = this._graph.length === maxGraphCommits;
   }
 
-  async loadMoreGraph(): Promise<void> {
-    if (this._loadingMoreGraph) { return; }
+  async loadMoreGraph(): Promise<GraphCommit[]> {
+    if (this._loadingMoreGraph) { return []; }
     this._loadingMoreGraph = true;
     try {
       const pageSize = getConfigValue<number>('maxGraphCommits', 200);
@@ -369,6 +369,7 @@ export class StateStore {
       this._graph = [...this._graph, ...page];
       this._graphHasMore = page.length === pageSize;
       this.emitter.fire();
+      return page;
     } finally {
       this._loadingMoreGraph = false;
     }
