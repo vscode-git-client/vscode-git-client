@@ -62,6 +62,7 @@ export class StateStore {
   private _stashes: StashEntry[] = [];
   private _changes: WorkingTreeChange[] = [];
   private _graph: GraphCommit[] = [];
+  private _graphHasMore = false;
   private _compareResult: CompareResult | undefined;
   private _operationState: GitOperationState = { kind: 'none' };
   private _conflicts: MergeConflictFile[] = [];
@@ -117,6 +118,10 @@ export class StateStore {
 
   get graph(): GraphCommit[] {
     return this._graph;
+  }
+
+  get graphHasMore(): boolean {
+    return this._graphHasMore;
   }
 
   get compareResult(): CompareResult | undefined {
@@ -350,6 +355,15 @@ export class StateStore {
   private async loadGraph(): Promise<void> {
     const maxGraphCommits = getConfigValue<number>('maxGraphCommits', 200);
     this._graph = await this.git.getGraph(maxGraphCommits, 0, this._graphFilters);
+    this._graphHasMore = this._graph.length === maxGraphCommits;
+  }
+
+  async loadMoreGraph(): Promise<void> {
+    const pageSize = getConfigValue<number>('maxGraphCommits', 200);
+    const page = await this.git.getGraph(pageSize, this._graph.length, this._graphFilters);
+    this._graph = [...this._graph, ...page];
+    this._graphHasMore = page.length === pageSize;
+    this.emitter.fire();
   }
 
   async clearGraphFilters(): Promise<void> {
