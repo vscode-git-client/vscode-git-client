@@ -23,7 +23,7 @@ function makeStubGit(getGraph: (maxCount: number, skip: number, filters?: Commit
     getTagAvailabilityByRemote: async () => new Map<string, Set<string>>(),
     mergeTagAvailability: (tags: readonly unknown[]) => tags,
     getStashes: async () => [],
-    getWorkingTreeChanges: async () => [],
+    getChangedFiles: async () => [],
     getOperationState: async () => ({ kind: 'none' as const }),
     getMergeConflicts: async () => [],
     getWorktrees: async () => [],

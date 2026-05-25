@@ -522,7 +522,7 @@ export class StateStore {
       fingerprints.push(`changes:${JSON.stringify({ changes: this._changes, operation: this._operationState, conflicts: this._conflicts })}`);
     }
     if (scopes.has('graph')) {
-      fingerprints.push(`graph:${JSON.stringify(this._graph)}`);
+      fingerprints.push(`graph:${JSON.stringify(this._graph)}:${String(this._graphHasMore)}`);
     }
     if (scopes.has('worktrees')) {
       fingerprints.push(`worktrees:${JSON.stringify(this._worktrees)}`);

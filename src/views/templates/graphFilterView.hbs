@@ -307,6 +307,7 @@
       if (msg && msg.type === 'loadMoreError') {
         state.loading = false;
         state.loadMoreErrored = true;
+        previewHeader.textContent = previewHeader.textContent + ' — error loading more (re-apply filters to retry)';
         return;
       }
     });
