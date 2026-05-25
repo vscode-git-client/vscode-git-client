@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
 import * as vscode from 'vscode';
+import { GraphTreeProvider, LoadMoreTreeItem } from '../providers/graphTreeProvider';
 import { StateStore } from '../state/stateStore';
 import { CommitFilters, GraphCommit } from '../types';
 
@@ -110,5 +111,35 @@ describe('StateStore graph pagination', () => {
     await state.refreshGraph({});
     assert.strictEqual(state.graphHasMore, false, 'should be false after partial-page reload');
     assert.strictEqual(state.graph.length, 10, 'graph should be replaced not appended');
+  });
+});
+
+function makeStateStub(graph: GraphCommit[], graphHasMore: boolean): unknown {
+  return {
+    graph,
+    graphHasMore,
+    onDidChange: (_handler: () => void) => ({ dispose: () => {} }),
+  };
+}
+
+describe('GraphTreeProvider pagination', () => {
+  it('getChildren includes LoadMoreTreeItem when graphHasMore is true', async () => {
+    const commits = [makeCommit('abc123' + '0'.repeat(34))];
+    const state = makeStateStub(commits, true);
+    const provider = new GraphTreeProvider(state as never, {} as never);
+    const children = await provider.getChildren();
+    assert.strictEqual(children.length, 2);
+    const last = children[children.length - 1];
+    assert.ok(last instanceof LoadMoreTreeItem, 'last item should be LoadMoreTreeItem');
+    assert.strictEqual(last.contextValue, 'graphLoadMore');
+  });
+
+  it('getChildren omits LoadMoreTreeItem when graphHasMore is false', async () => {
+    const commits = [makeCommit('abc123' + '0'.repeat(34))];
+    const state = makeStateStub(commits, false);
+    const provider = new GraphTreeProvider(state as never, {} as never);
+    const children = await provider.getChildren();
+    assert.strictEqual(children.length, 1);
+    assert.ok(!(children[0] instanceof LoadMoreTreeItem));
   });
 });

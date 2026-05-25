@@ -62,7 +62,20 @@ export class GraphCommitFileTreeItem extends vscode.TreeItem {
   }
 }
 
-type GraphNode = GraphCommitTreeItem | GraphCommitFolderTreeItem | GraphCommitFileTreeItem;
+export class LoadMoreTreeItem extends vscode.TreeItem {
+  constructor() {
+    super('Load More...', vscode.TreeItemCollapsibleState.None);
+    this.command = {
+      title: 'Load More',
+      command: 'vscodeGitClient.graph.loadMore',
+      arguments: []
+    };
+    this.contextValue = 'graphLoadMore';
+    this.iconPath = new vscode.ThemeIcon('chevron-down');
+  }
+}
+
+type GraphNode = GraphCommitTreeItem | GraphCommitFolderTreeItem | GraphCommitFileTreeItem | LoadMoreTreeItem;
 
 function buildFileTree(
   commit: GraphCommit,
@@ -139,7 +152,11 @@ export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
       return buildFileTree(element.commit, element.files, element.folderPath, this.git.rootPath, canRevertSelectedChanges);
     }
 
-    return this.state.graph.map((commit) => new GraphCommitTreeItem(commit));
+    const items: GraphNode[] = this.state.graph.map((commit) => new GraphCommitTreeItem(commit));
+    if (this.state.graphHasMore) {
+      items.push(new LoadMoreTreeItem());
+    }
+    return items;
   }
 
   private async canRevertSelectedChanges(sha: string): Promise<boolean> {
