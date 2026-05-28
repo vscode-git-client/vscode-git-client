@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -76,6 +76,7 @@
           "name": "Git Graph",
           "contextualTitle": "Visual commit history and branch graph",
           "visibility": "visible",
+          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-graph.svg"
         },
         {
@@ -83,6 +84,7 @@
           "name": "Worktrees",
           "contextualTitle": "Manage git worktrees for parallel development",
           "visibility": "visible",
+          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-worktrees.svg"
         },
         {
@@ -90,6 +92,7 @@
           "name": "Submodules",
           "contextualTitle": "Manage nested git submodule repositories",
           "visibility": "visible",
+          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-submodules.svg"
         }
       ],
