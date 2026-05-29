@@ -207,4 +207,40 @@ describe('GraphFilterSession', () => {
     assert.deepStrictEqual(staleSnapshot.filters, { branch: 'feature/fast' });
     assert.deepStrictEqual(staleSnapshot.commits, fastCommits);
   });
+
+  it('ignores stale loadMore results after a newer filter apply', async () => {
+    const masterCommits = [makeCommit('a'.repeat(40)), makeCommit('b'.repeat(40))];
+    const stalePage = [makeCommit('c'.repeat(40))];
+    const filteredCommits = [makeCommit('f'.repeat(40))];
+
+    let releaseLoadMore: (() => void) | undefined;
+    const loadMoreGate = new Promise<void>((resolve) => {
+      releaseLoadMore = resolve;
+    });
+
+    const session = new GraphFilterSession(async (_maxCount, skip, filters) => {
+      if (skip > 0) {
+        await loadMoreGate;
+        return stalePage;
+      }
+      if (filters?.message === 'fresh') {
+        return filteredCommits;
+      }
+      return [];
+    }, () => 2);
+
+    const loadMore = session.loadMore({ filters: {}, commits: masterCommits, hasMore: true });
+    const freshSnapshot = await session.apply({ message: 'fresh' });
+
+    assert.deepStrictEqual(freshSnapshot.filters, { message: 'fresh' });
+    assert.deepStrictEqual(freshSnapshot.commits, filteredCommits);
+
+    releaseLoadMore?.();
+    const staleResult = await loadMore;
+    const finalSnapshot = session.getSnapshot({ filters: {}, commits: masterCommits, hasMore: true });
+
+    assert.deepStrictEqual(staleResult, { commits: [], hasMore: false });
+    assert.deepStrictEqual(finalSnapshot.filters, { message: 'fresh' });
+    assert.deepStrictEqual(finalSnapshot.commits, filteredCommits);
+  });
 });

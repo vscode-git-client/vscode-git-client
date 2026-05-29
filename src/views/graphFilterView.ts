@@ -87,6 +87,7 @@ export class GraphFilterView {
     if (!GraphFilterView.current) {
       return false;
     }
+    GraphFilterView.current.applyRequestId++;
     const snapshot = await GraphFilterView.current.handlers.clear();
     GraphFilterView.current.postSnapshot(snapshot);
     return true;
@@ -145,6 +146,7 @@ export class GraphFilterView {
         return;
       }
       case 'clear':
+        this.applyRequestId++;
         this.postSnapshot(await this.handlers.clear());
         return;
       case 'close':

@@ -385,23 +385,19 @@
 
     function buildMatchPredicate(f) {
       const message = (f.message || '').trim().toLowerCase();
-      const branch = (f.branch || '').trim().toLowerCase();
       const author = (f.author || '').trim().toLowerCase();
       const since = parseSince(f.since || '');
       const until = parseUntil(f.until || '');
       return function matchesFilter(commit) {
         const subject = String(commit.subject || '').toLowerCase();
         const sha = String(commit.sha || '').toLowerCase();
-        const refs = Array.isArray(commit.refs) ? commit.refs.join(' ') : '';
-        const refsLower = refs.toLowerCase();
         const authorLower = String(commit.author || '').toLowerCase();
         const commitDate = Number(commit.dateTimestamp || 0);
         const messageOk = !message || subject.includes(message) || sha.includes(message);
-        const branchOk = !branch || refsLower.includes(branch);
         const authorOk = !author || authorLower.includes(author);
         const sinceOk = since === undefined || (Number.isFinite(commitDate) && commitDate >= since);
         const untilOk = until === undefined || (Number.isFinite(commitDate) && commitDate <= until);
-        return messageOk && branchOk && authorOk && sinceOk && untilOk;
+        return messageOk && authorOk && sinceOk && untilOk;
       };
     }
 
@@ -430,15 +426,23 @@
       previewBody.innerHTML = filtered.map(buildRow).join('');
     }
 
+    function renderEmptyStateIfNeeded() {
+      if (!previewBody.querySelector('.commit-row')) {
+        previewBody.innerHTML = '<tr><td colspan="4">No commits match current filters</td></tr>';
+      }
+    }
+
     function appendRows(newCommits) {
       const matchingRows = newCommits.filter(buildMatchPredicate(collect())).map(buildRow);
 
-      if (previewBody.querySelector('td[colspan]')) {
+      if (matchingRows.length > 0 && previewBody.querySelector('td[colspan]')) {
         previewBody.innerHTML = '';
       }
 
       if (matchingRows.length > 0) {
         previewBody.insertAdjacentHTML('beforeend', matchingRows.join(''));
+      } else {
+        renderEmptyStateIfNeeded();
       }
 
       updatePreviewHeader();

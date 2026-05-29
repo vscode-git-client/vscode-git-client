@@ -55,6 +55,7 @@ export class GraphFilterSession {
   }
 
   clear(master: GraphFilterSnapshot): GraphFilterSnapshot {
+    this.applyEpoch++;
     this.filters = {};
     this.commits = [];
     this.hasMore = false;
@@ -76,7 +77,13 @@ export class GraphFilterSession {
       }
 
       const pageSize = this.getPageSize();
-      const page = await this.loadGraph(pageSize, this.commits.length, this.filters);
+      const epoch = this.applyEpoch;
+      const filters = { ...this.filters };
+      const skip = this.commits.length;
+      const page = await this.loadGraph(pageSize, skip, filters);
+      if (epoch !== this.applyEpoch) {
+        return { commits: [], hasMore: this.getSnapshot(master).hasMore };
+      }
       this.commits = [...this.commits, ...page];
       this.hasMore = page.length === pageSize;
       return { commits: page, hasMore: this.hasMore };
