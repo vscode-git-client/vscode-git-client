@@ -293,4 +293,110 @@ describe('GitService graph branch filtering', () => {
     const commits = await git.getGraph(100, 0, { branch: 'unknown-branch-keyword-xyz' });
     assert.deepStrictEqual(commits, []);
   });
+
+  it('treats message as text filter and never throws on unknown revision-like tokens', async () => {
+    await assert.doesNotReject(async () => {
+      const commits = await git.getGraph(100, 0, { message: 'deadbeefcafebabe1234' });
+      assert.ok(Array.isArray(commits));
+    });
+  });
+
+  it('does not treat non-commit object IDs as revisions in message filter', async () => {
+    const blobSha = runGit(['hash-object', 'history.txt'], repoDir).trim();
+    await assert.doesNotReject(async () => {
+      const commits = await git.getGraph(100, 0, { message: blobSha });
+      assert.ok(Array.isArray(commits));
+    });
+  });
+});
+
+describe('GitService graph scope across refs', () => {
+  let repoDir: string;
+  let git: GitService;
+
+  before(() => {
+    repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscodegitclient-graph-scope-'));
+    runGit(['init', '-b', 'main'], repoDir);
+    runGit(['config', 'user.email', 'test@example.com'], repoDir);
+    runGit(['config', 'user.name', 'Test User'], repoDir);
+
+    fs.writeFileSync(path.join(repoDir, 'scope.txt'), 'base\n');
+    runGit(['add', '.'], repoDir);
+    runGit(['commit', '-m', 'base'], repoDir);
+
+    runGit(['checkout', '-b', 'feature/only-local'], repoDir);
+    fs.appendFileSync(path.join(repoDir, 'scope.txt'), 'local\n');
+    runGit(['commit', '-am', 'local branch only commit'], repoDir);
+
+    runGit(['checkout', 'main'], repoDir);
+
+    git = new GitService(
+      makeRepositoryContext(repoDir) as never,
+      makeLogger() as never,
+      makeConfig() as never
+    );
+  });
+
+  after(() => {
+    try {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    } catch { }
+  });
+
+  it('includes commits from non-current local branches in graph view', async () => {
+    const commits = await git.getGraph(200, 0);
+    assert.ok(commits.some((commit) => commit.subject === 'local branch only commit'));
+  });
+});
+
+describe('GitService graph scope includes remote tracking refs', () => {
+  let rootDir: string;
+  let originDir: string;
+  let localDir: string;
+  let git: GitService;
+
+  before(() => {
+    rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscodegitclient-graph-remote-scope-'));
+    originDir = path.join(rootDir, 'origin.git');
+    localDir = path.join(rootDir, 'local');
+    fs.mkdirSync(localDir, { recursive: true });
+
+    runGit(['init', '--bare', originDir], rootDir);
+
+    runGit(['init', '-b', 'main'], localDir);
+    runGit(['config', 'user.email', 'test@example.com'], localDir);
+    runGit(['config', 'user.name', 'Test User'], localDir);
+
+    fs.writeFileSync(path.join(localDir, 'remote-scope.txt'), 'base\n');
+    runGit(['add', '.'], localDir);
+    runGit(['commit', '-m', 'base'], localDir);
+    runGit(['remote', 'add', 'origin', originDir], localDir);
+    runGit(['push', '-u', 'origin', 'main'], localDir);
+
+    runGit(['checkout', '-b', 'feature/remote-only'], localDir);
+    fs.appendFileSync(path.join(localDir, 'remote-scope.txt'), 'remote\n');
+    runGit(['commit', '-am', 'remote-only branch commit'], localDir);
+    runGit(['push', '-u', 'origin', 'feature/remote-only'], localDir);
+
+    runGit(['checkout', 'main'], localDir);
+    runGit(['branch', '-D', 'feature/remote-only'], localDir);
+    runGit(['fetch', '--prune', 'origin'], localDir);
+
+    git = new GitService(
+      makeRepositoryContext(localDir) as never,
+      makeLogger() as never,
+      makeConfig() as never
+    );
+  });
+
+  after(() => {
+    try {
+      fs.rmSync(rootDir, { recursive: true, force: true });
+    } catch { }
+  });
+
+  it('includes commits reachable only from remote-tracking branches', async () => {
+    const commits = await git.getGraph(300, 0);
+    assert.ok(commits.some((commit) => commit.subject === 'remote-only branch commit'));
+  });
 });
