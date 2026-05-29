@@ -240,3 +240,57 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     assert.strictEqual(meta, undefined);
   });
 });
+
+describe('GitService graph branch filtering', () => {
+  let repoDir: string;
+  let git: GitService;
+
+  before(() => {
+    repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscodegitclient-graph-filter-'));
+    runGit(['init', '-b', 'main'], repoDir);
+    runGit(['config', 'user.email', 'test@example.com'], repoDir);
+    runGit(['config', 'user.name', 'Test User'], repoDir);
+
+    fs.writeFileSync(path.join(repoDir, 'history.txt'), 'base\n');
+    runGit(['add', '.'], repoDir);
+    runGit(['commit', '-m', 'base'], repoDir);
+
+    runGit(['checkout', '-b', 'feature/login'], repoDir);
+    fs.appendFileSync(path.join(repoDir, 'history.txt'), 'feature\n');
+    runGit(['commit', '-am', 'feature commit'], repoDir);
+
+    runGit(['checkout', 'main'], repoDir);
+    fs.appendFileSync(path.join(repoDir, 'history.txt'), 'main\n');
+    runGit(['commit', '-am', 'main commit'], repoDir);
+
+    git = new GitService(
+      makeRepositoryContext(repoDir) as never,
+      makeLogger() as never,
+      makeConfig() as never
+    );
+  });
+
+  after(() => {
+    try {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    } catch { }
+  });
+
+  it('filters graph by an exact branch name', async () => {
+    const commits = await git.getGraph(100, 0, { branch: 'feature/login' });
+    assert.ok(commits.length > 0);
+    assert.ok(commits.some((commit) => commit.refs.some((ref) => ref.includes('refs/heads/feature/login'))));
+  });
+
+  it('accepts partial branch keywords without throwing', async () => {
+    await assert.doesNotReject(async () => {
+      const commits = await git.getGraph(100, 0, { branch: 'feature' });
+      assert.ok(commits.some((commit) => commit.refs.some((ref) => ref.includes('feature/login'))));
+    });
+  });
+
+  it('returns empty graph for unknown branch keywords instead of throwing', async () => {
+    const commits = await git.getGraph(100, 0, { branch: 'unknown-branch-keyword-xyz' });
+    assert.deepStrictEqual(commits, []);
+  });
+});

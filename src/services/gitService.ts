@@ -946,7 +946,8 @@ export class GitService {
     }
 
     if (filters?.branch) {
-      args.push(filters.branch);
+      const branchKeyword = filters.branch.trim();
+      args.push(`--branches=*${branchKeyword}*`, `--remotes=*${branchKeyword}*`);
     }
     if (filters?.author) {
       args.push(`--author=${filters.author}`);
