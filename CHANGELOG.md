@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - **Compare with Revision — QuickPick refresh** — the revision picker now opens from cached refs first, lazily loads refs when empty, and offers a refresh button to update stale or partially loaded branch/tag lists without closing the picker.
 
 ### Changed
+- **Branches view remote actions** — The Remote section now exposes `Add Git remote` as a plus button on the section header, matching the existing Tags create action.
 - **Branches/Search actions** — Branches now distinguish local and remote branch context menus so local-only actions (rename/delete/track/untrack) do not appear for remote refs. Search Branches & Tags now uses tag-specific actions for tag rows instead of routing them through branch actions.
 - **Compare Branches graph selection parity** — Graph mode now keeps the same row-selection behavior as List mode, including `Shift`/`Ctrl`/`Cmd` multi-select and `Cmd/Ctrl+A` for visible commits in the active pane.
 - **Commit file rename diffs** — commit file diff actions now preserve rename source paths, so renamed files compare the old path from the parent against the new path in the selected commit instead of appearing as an add/delete-only diff.
