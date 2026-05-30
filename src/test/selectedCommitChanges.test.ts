@@ -72,8 +72,8 @@ describe('selected commit file changes', () => {
     const events: string[] = [];
     const sha = 'abcdef1234567890';
     const commit = createGraphCommit(sha);
-    const first = new GraphCommitFileTreeItem(commit, 'src/a.ts', '/repo', false);
-    const second = new GraphCommitFileTreeItem(commit, 'src/b.ts', '/repo', false);
+    const first = new GraphCommitFileTreeItem(commit, 'src/a.ts', undefined, undefined, '/repo', false);
+    const second = new GraphCommitFileTreeItem(commit, 'src/b.ts', undefined, undefined, '/repo', false);
 
     (vscode.window as unknown as {
       showWarningMessage: typeof vscode.window.showWarningMessage;

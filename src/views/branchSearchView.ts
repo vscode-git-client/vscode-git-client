@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import {
   isBranchContextMenuCommand,
+  isTagContextMenuCommand,
   renderBranchContextMenu,
-  type BranchContextMenuCommand
+  type BranchContextMenuCommand,
+  type TagContextMenuCommand
 } from './branchContextMenu';
 import { renderTemplate } from './templateRenderer';
 import { BranchRef, TagRef } from '../types';
@@ -11,7 +13,7 @@ export interface BranchSearchHandlers {
   checkout(name: string): Promise<void>;
   checkoutTag(name: string): Promise<void>;
   openActions(name: string): Promise<void>;
-  runCommand(command: BranchContextMenuCommand, name: string): Promise<void>;
+  runCommand(command: BranchContextMenuCommand | TagContextMenuCommand, name: string): Promise<void>;
 }
 
 type IncomingMessage =
@@ -124,7 +126,7 @@ export class BranchSearchView {
         await this.handlers.openActions(message.name);
         return;
       case 'tagActions':
-        await this.handlers.openActions(message.name);
+        await this.handlers.runCommand('vscodeGitClient.tag.openCommits', message.name);
         return;
       case 'branchCommand':
         if (isBranchContextMenuCommand(message.command)) {
@@ -132,7 +134,7 @@ export class BranchSearchView {
         }
         return;
       case 'tagCommand':
-        if (isBranchContextMenuCommand(message.command)) {
+        if (isTagContextMenuCommand(message.command)) {
           await this.handlers.runCommand(message.command, message.name);
         }
         return;

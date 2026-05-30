@@ -8,6 +8,7 @@ export class CommitFileTreeItem extends vscode.TreeItem {
     public readonly sha: string,
     public readonly filePath: string,
     public readonly status: string,
+    public readonly oldPath: string | undefined,
     workspaceRoot: string
   ) {
     const fileName = filePath.split('/').at(-1) ?? filePath;
@@ -17,7 +18,7 @@ export class CommitFileTreeItem extends vscode.TreeItem {
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, filePath));
     this.description = statusBadge(status);
     this.description = this.description.padStart(2, ' ');
-    this.tooltip = `${filePath}\n${statusTitle(status)}`;
+    this.tooltip = oldPath ? `${oldPath} -> ${filePath}\n${statusTitle(status)}` : `${filePath}\n${statusTitle(status)}`;
     this.command = {
       title: 'Open Diffs',
       command: 'vscodeGitClient.graph.openFileDiff',
@@ -111,7 +112,7 @@ export class CommitFolderTreeItem extends vscode.TreeItem {
 }
 
 type CommitViewNode = CommitFileTreeItem | CommitRangeFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem;
-type TreeFileEntry = { path: string; status?: string; untracked?: boolean };
+type TreeFileEntry = { path: string; status?: string; oldPath?: string; untracked?: boolean };
 export interface CommitActionContext {
   readonly sha: string;
   readonly subject: string;
@@ -296,7 +297,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     }
     const activeCommit = this.activeState;
     return activeCommit.files
-      .map((file) => new CommitFileTreeItem(activeCommit.sha, file.path, file.status, this.git.rootPath))
+      .map((file) => new CommitFileTreeItem(activeCommit.sha, file.path, file.status, file.oldPath, this.git.rootPath))
       .sort((a, b) => a.filePath.localeCompare(b.filePath));
   }
 
@@ -341,7 +342,7 @@ function buildCommitTree(
     files,
     basePath,
     workspaceRoot,
-    (filePath, status) => new CommitFileTreeItem(sha, filePath, status ?? '', workspaceRoot),
+    (filePath, status, _untracked, oldPath) => new CommitFileTreeItem(sha, filePath, status ?? '', oldPath, workspaceRoot),
     (folderPath, children) => new CommitFolderTreeItem(`commitView:${sha}`, folderPath, children, workspaceRoot)
   );
 }
@@ -403,7 +404,7 @@ function buildTree(
   files: TreeFileEntry[],
   basePath: string,
   workspaceRoot: string,
-  toFileItem: (filePath: string, status?: string, untracked?: boolean) => CommitFileTreeItem | CommitRangeFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem,
+  toFileItem: (filePath: string, status?: string, untracked?: boolean, oldPath?: string) => CommitFileTreeItem | CommitRangeFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem,
   toFolderItem: (folderPath: string, children: TreeFileEntry[]) => CommitFolderTreeItem
 ): CommitViewNode[] {
   const folders = new Map<string, TreeFileEntry[]>();
@@ -413,7 +414,7 @@ function buildTree(
     const relative = basePath ? file.path.slice(basePath.length + 1) : file.path;
     const slashIdx = relative.indexOf('/');
     if (slashIdx === -1) {
-      leaves.push(toFileItem(file.path, file.status, file.untracked));
+      leaves.push(toFileItem(file.path, file.status, file.untracked, file.oldPath));
       continue;
     }
     const segment = relative.slice(0, slashIdx);

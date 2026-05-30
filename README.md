@@ -41,7 +41,7 @@ The extension was first inspired by the IntelliJ Git client experience, then ada
 
 Open `Branches` to see local branches, remote branches, tags, and a Recent group. Branches are grouped by prefix such as `feature/*` and `release/*`.
 
-Common actions are available from right-click menus and the Branch Action Hub:
+Common actions are available from right-click menus and the Branch Action Hub. Local branches expose local-only actions such as rename, delete, track, and untrack; remote branches expose checkout/compare/merge/rebase actions without local-only destructive entries.
 
 - Checkout, create, rename, or delete branches.
 - Track or untrack upstream branches.
@@ -52,7 +52,7 @@ Common actions are available from right-click menus and the Branch Action Hub:
 - Open branch or tag commits in `Git Graph`.
 - Add, change, or set remote URLs with immediate update feedback.
 
-Tags appear with branches and support checkout, checkout-new-branch, copy revision, repository-at-revision, compare-with-current, patch preview, and graph navigation actions.
+Tags appear with branches and support checkout, checkout-new-branch, copy revision, repository-at-revision, compare-with-current, patch preview, and graph navigation actions. The branch/tag search panel uses tag-specific actions for tag rows.
 
 ### Inspect History And Commit Details
 
@@ -82,7 +82,7 @@ Use `Filter Graph` from the Git Graph toolbar to narrow commits by:
 - Message text.
 - Since and until dates.
 
-Filter fields apply as you type or change values inside the Filter Graph webview without changing the main Git Graph TreeView list. When more commits are available beyond the current page, scroll to the bottom of the commit list to automatically load the next page; the header shows "(scroll to load more)" while additional pages remain. Selecting multiple commits in Filter Graph opens a merged Commit Details range that shows the net file changes across the selection.
+Filter fields apply as you type or change values inside the Filter Graph webview without changing the main Git Graph TreeView list. The Branch field narrows branch suggestions while typing and applies commit filtering only after selecting a suggestion. When more commits are available beyond the current page, scroll to the bottom of the commit list to automatically load the next page; the header shows "(scroll to load more)" while additional pages remain. Selecting multiple commits in Filter Graph opens a merged Commit Details range that shows the net file changes across the selection.
 
 ### Compare Branches
 
@@ -96,7 +96,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 - `Esc` to clear selection.
 - Merged Commit Details for a continuous selected range.
 - Fuzzy message, author, exclude-message regex, and from/to date filters.
-- Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible.
+- Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible, while row selection and multi-select shortcuts stay available.
 - Optional filters to ignore merge commits.
 - Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.
 - Export as two CSV files or one Excel workbook with two sheets.

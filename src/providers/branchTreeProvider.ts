@@ -76,7 +76,7 @@ export class BranchTreeItem extends vscode.TreeItem {
     idScope: string
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = 'branchRef';
+    this.contextValue = branch.type === 'remote' ? 'branchRefRemote' : 'branchRefLocal';
     this.id = `branch:${idScope}:${branch.fullName}`;
     this.description = describeBranch(branch);
     this.tooltip = buildBranchTooltip(branch);

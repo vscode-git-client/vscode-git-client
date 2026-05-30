@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { GitService } from '../services/gitService';
 import { StateStore } from '../state/stateStore';
-import { GraphCommit } from '../types';
+import { CommitFileChange, GraphCommit } from '../types';
 
 export class GraphCommitTreeItem extends vscode.TreeItem {
   constructor(public readonly commit: GraphCommit) {
@@ -28,7 +28,7 @@ export class GraphCommitFolderTreeItem extends vscode.TreeItem {
   constructor(
     public readonly commit: GraphCommit,
     public readonly folderPath: string,
-    public readonly files: string[],
+    public readonly files: CommitFileChange[],
     workspaceRoot: string
   ) {
     const segment = folderPath.split('/').at(-1) ?? folderPath;
@@ -43,6 +43,8 @@ export class GraphCommitFileTreeItem extends vscode.TreeItem {
   constructor(
     public readonly commit: GraphCommit,
     public readonly filePath: string,
+    public readonly status: string | undefined,
+    public readonly oldPath: string | undefined,
     workspaceRoot: string,
     canRevertSelectedChanges: boolean
   ) {
@@ -53,7 +55,8 @@ export class GraphCommitFileTreeItem extends vscode.TreeItem {
       : 'graphCommitFile graphCommitFileCanCherryPick';
     this.id = `commitFile:${commit.sha}:${filePath}`;
     this.resourceUri = vscode.Uri.file(`${workspaceRoot}/${filePath}`);
-    this.tooltip = `${filePath}\n${commit.shortSha} ${commit.subject}\nOpen Commit File Diff`;
+    const fileLabel = oldPath ? `${oldPath} -> ${filePath}` : filePath;
+    this.tooltip = `${fileLabel}\n${commit.shortSha} ${commit.subject}\nOpen Commit File Diff`;
     this.command = {
       title: 'Open Diff',
       command: 'vscodeGitClient.graph.openFileDiff',
@@ -79,19 +82,19 @@ type GraphNode = GraphCommitTreeItem | GraphCommitFolderTreeItem | GraphCommitFi
 
 function buildFileTree(
   commit: GraphCommit,
-  files: string[],
+  files: CommitFileChange[],
   basePath: string,
   workspaceRoot: string,
   canRevertSelectedChanges: boolean
 ): GraphNode[] {
-  const folders = new Map<string, string[]>();
+  const folders = new Map<string, CommitFileChange[]>();
   const leaves: GraphCommitFileTreeItem[] = [];
 
   for (const file of files) {
-    const relative = basePath ? file.slice(basePath.length + 1) : file;
+    const relative = basePath ? file.path.slice(basePath.length + 1) : file.path;
     const slashIdx = relative.indexOf('/');
     if (slashIdx === -1) {
-      leaves.push(new GraphCommitFileTreeItem(commit, file, workspaceRoot, canRevertSelectedChanges));
+      leaves.push(new GraphCommitFileTreeItem(commit, file.path, file.status, file.oldPath, workspaceRoot, canRevertSelectedChanges));
     } else {
       const segment = relative.slice(0, slashIdx);
       const childPath = basePath ? `${basePath}/${segment}` : segment;
@@ -113,7 +116,7 @@ function buildFileTree(
 export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
   private readonly emitter = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this.emitter.event;
-  private readonly commitFilesCache = new Map<string, string[]>();
+  private readonly commitFilesCache = new Map<string, CommitFileChange[]>();
   private readonly commitAncestryCache = new Map<string, boolean>();
 
   constructor(
@@ -139,7 +142,7 @@ export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
       const commitSha = element.commit.sha;
       let files = this.commitFilesCache.get(commitSha);
       if (!files) {
-        files = await this.git.getFilesInCommit(commitSha);
+        files = await this.git.getFilesInCommitWithStatus(commitSha);
         this.commitFilesCache.set(commitSha, files);
       }
 

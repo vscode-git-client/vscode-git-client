@@ -131,6 +131,7 @@ export interface ComparePair {
 export interface CommitFileChange {
   readonly status: string;
   readonly path: string;
+  readonly oldPath?: string;
 }
 
 export interface WorkingTreeChange {

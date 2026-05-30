@@ -26,6 +26,7 @@ export function formatComparisonSummary(ref: string, ahead: number, behind: numb
 export interface NameStatusEntry {
   readonly status: string;
   readonly path: string;
+  readonly oldPath?: string;
 }
 
 export interface PorcelainStatusEntry {
@@ -56,7 +57,7 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
       }
 
       index += 2;
-      entries.push({ status, path: newPath });
+      entries.push({ status, path: newPath, oldPath });
       continue;
     }
 

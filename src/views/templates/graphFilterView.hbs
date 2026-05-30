@@ -390,6 +390,25 @@
       }, 300);
     }
 
+    function cancelPendingApply() {
+      if (applyDebounceTimer !== null) {
+        clearTimeout(applyDebounceTimer);
+        applyDebounceTimer = null;
+      }
+    }
+
+    function clearFilterInputs() {
+      messageInput.value = '';
+      branchInput.value = '';
+      selectedBranchFilter = '';
+      authorInput.value = '';
+      sinceInput.value = '';
+      untilInput.value = '';
+      branchAutocomplete.close();
+      authorAutocomplete.close();
+      inputRevision += 1;
+    }
+
     function noteFilterInputChanged() {
       inputRevision += 1;
       renderPreview();
@@ -651,19 +670,15 @@
 
     if (clearButton) {
       clearButton.addEventListener('click', () => {
+        cancelPendingApply();
+        clearFilterInputs();
         if (SHOW_APPLY) {
+          renderPreview();
           vscode.postMessage({ type: 'clear' });
           return;
         }
-        messageInput.value = '';
-        branchInput.value = '';
-        selectedBranchFilter = '';
-        authorInput.value = '';
-        sinceInput.value = '';
-        untilInput.value = '';
-        branchAutocomplete.close();
-        authorAutocomplete.close();
-        noteFilterInputChanged();
+        renderPreview();
+        scheduleApplyFilters();
       });
     }
 

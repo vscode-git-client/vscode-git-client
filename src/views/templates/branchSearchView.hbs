@@ -148,7 +148,8 @@
     const searchInput = document.getElementById('search');
     const listEl = document.getElementById('list');
     const countEl = document.getElementById('count');
-    const menu = document.getElementById('branch-context-menu');
+    const branchMenu = document.getElementById('branch-context-menu');
+    const tagMenu = document.getElementById('tag-context-menu');
 
     let branches = [];
     let tags = [];
@@ -157,6 +158,14 @@
     let selectedName = null;
     let selectedKind = null;
     let isLoading = true;
+
+    function getMenu(kind) {
+      return kind === 'tag' ? tagMenu : branchMenu;
+    }
+
+    function getActiveMenu() {
+      return getMenu(selectedKind);
+    }
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -324,12 +333,20 @@
     }
 
     function closeMenu() {
-      menu.classList.remove('visible');
+      if (branchMenu) { branchMenu.classList.remove('visible'); }
+      if (tagMenu) { tagMenu.classList.remove('visible'); }
       selectedName = null;
       selectedKind = null;
     }
 
     function openMenu(x, y, name, kind) {
+      const menu = getMenu(kind);
+      if (!menu) {
+        return;
+      }
+      selectedName = name;
+      selectedKind = kind;
+      closeMenu();
       selectedName = name;
       selectedKind = kind;
       menu.style.left = '0px';
@@ -354,7 +371,8 @@
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (menu.classList.contains('visible')) {
+        const activeMenu = getActiveMenu();
+        if (activeMenu && activeMenu.classList.contains('visible')) {
           closeMenu();
           return;
         }
@@ -382,7 +400,8 @@
     });
 
     document.addEventListener('click', (event) => {
-      if (menu.classList.contains('visible') && !menu.contains(event.target)) {
+      const activeMenu = getActiveMenu();
+      if (activeMenu && activeMenu.classList.contains('visible') && !activeMenu.contains(event.target)) {
         closeMenu();
       }
     });
@@ -408,20 +427,22 @@
       openMenu(event.clientX, event.clientY, name, kind);
     });
 
-    menu.addEventListener('click', (event) => {
-      const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-command]') : null;
-      if (!target || !selectedName) {
-        return;
-      }
+    [branchMenu, tagMenu].filter(Boolean).forEach((menuEl) => {
+      menuEl.addEventListener('click', (event) => {
+        const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-command]') : null;
+        if (!target || !selectedName) {
+          return;
+        }
 
-      const command = target.getAttribute('data-command');
-      if (!command) {
-        return;
-      }
+        const command = target.getAttribute('data-command');
+        if (!command) {
+          return;
+        }
 
-      const msgType = selectedKind === 'tag' ? 'tagCommand' : 'branchCommand';
-      vscode.postMessage({ type: msgType, command, name: selectedName });
-      closeMenu();
+        const msgType = selectedKind === 'tag' ? 'tagCommand' : 'branchCommand';
+        vscode.postMessage({ type: msgType, command, name: selectedName });
+        closeMenu();
+      });
     });
 
     listEl.addEventListener('click', (e) => {
@@ -434,8 +455,8 @@
       if (!name) return;
       if (actionBtn && actionBtn.dataset.action === 'actions') {
         e.stopPropagation();
-        const msgType = kind === 'tag' ? 'tagActions' : 'actions';
-        vscode.postMessage({ type: msgType, name });
+        const rect = actionBtn.getBoundingClientRect();
+        openMenu(rect.left, rect.bottom + 4, name, kind);
         return;
       }
       if (kind === 'tag') {

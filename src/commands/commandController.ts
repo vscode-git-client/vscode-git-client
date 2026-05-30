@@ -858,7 +858,7 @@ export class CommandController {
 
       const item = asGraphFileItem(arg);
       if (item) {
-        await this.editor.openCommitFileDiff(item.commit.sha, item.filePath);
+        await this.editor.openCommitFileDiffWithStatus(item.commit.sha, item.filePath, item.status, { oldPath: item.oldPath });
         return;
       }
 
@@ -2813,7 +2813,7 @@ export class CommandController {
       return;
     }
 
-    await this.editor.openCommitFileDiffWithStatus(sha, firstFile.filePath, firstFile.status);
+    await this.editor.openCommitFileDiffWithStatus(sha, firstFile.filePath, firstFile.status, { oldPath: firstFile.oldPath });
   }
 
   private async openSelectedFileDiffs(arg: unknown, selectedArg: unknown): Promise<boolean> {
@@ -2824,7 +2824,7 @@ export class CommandController {
         commitViewItems.map((item) => [`${item.sha}:${item.filePath}:${item.status}`, item] as const)
       ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
       for (const item of ordered) {
-        await this.editor.openCommitFileDiffWithStatus(item.sha, item.filePath, item.status);
+        await this.editor.openCommitFileDiffWithStatus(item.sha, item.filePath, item.status, { oldPath: item.oldPath });
       }
       return true;
     }

@@ -10,21 +10,55 @@ const branchContextMenuItems = [
   { command: 'vscodeGitClient.branch.rebaseOnto', label: 'Rebase Current Onto Branch' }
 ] as const;
 
+const tagContextMenuItems = [
+  { command: 'vscodeGitClient.tag.openCommits', label: 'Open Tag Commits' },
+  { command: 'vscodeGitClient.tag.checkout', label: 'Checkout Tag' },
+  { command: 'vscodeGitClient.tag.checkoutNewBranch', label: 'Checkout New Branch' },
+  { separator: true },
+  { command: 'vscodeGitClient.tag.copyRevisionNumber', label: 'Copy Revision Number' },
+  { command: 'vscodeGitClient.tag.showRepositoryAtRevision', label: 'View Repository At Revision' },
+  { command: 'vscodeGitClient.tag.compareWithCurrent', label: 'Compare With Current' },
+  { command: 'vscodeGitClient.tag.createPatch', label: 'Create Patch' }
+] as const;
+
 export type BranchContextMenuCommand = Extract<
   (typeof branchContextMenuItems)[number],
+  { readonly command: string }
+>['command'];
+
+export type TagContextMenuCommand = Extract<
+  (typeof tagContextMenuItems)[number],
   { readonly command: string }
 >['command'];
 
 const branchContextMenuCommands = new Set<string>(
   branchContextMenuItems.flatMap((item) => ('command' in item ? [item.command] : []))
 );
+const tagContextMenuCommands = new Set<string>(
+  tagContextMenuItems.flatMap((item) => ('command' in item ? [item.command] : []))
+);
 
 export function isBranchContextMenuCommand(command: string): command is BranchContextMenuCommand {
   return branchContextMenuCommands.has(command);
 }
 
+export function isTagContextMenuCommand(command: string): command is TagContextMenuCommand {
+  return tagContextMenuCommands.has(command);
+}
+
 export function renderBranchContextMenu(): string {
-  const items = branchContextMenuItems
+  return [
+    renderContextMenu('branch-context-menu', 'Branch context menu', branchContextMenuItems),
+    renderContextMenu('tag-context-menu', 'Tag context menu', tagContextMenuItems)
+  ].join('\n');
+}
+
+function renderContextMenu(
+  id: string,
+  label: string,
+  itemsSource: readonly ({ readonly command: string; readonly label: string } | { readonly separator: true })[]
+): string {
+  const items = itemsSource
     .map((item) => {
       if ('separator' in item) {
         return '    <div class="menu-separator"></div>';
@@ -34,7 +68,7 @@ export function renderBranchContextMenu(): string {
     .join('\n');
 
   return [
-    '  <div id="branch-context-menu" class="context-menu" role="menu" aria-label="Branch context menu">',
+    `  <div id="${id}" class="context-menu" role="menu" aria-label="${escapeHtml(label)}">`,
     items,
     '  </div>'
   ].join('\n');

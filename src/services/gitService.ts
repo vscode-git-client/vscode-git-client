@@ -1315,10 +1315,13 @@ export class GitService {
       .map((line) => {
         const parts = line.split('\t').filter(Boolean);
         const statusRaw = parts[0] ?? '';
-        const pathRaw = parts.at(-1) ?? '';
         const status = (statusRaw ?? '').trim();
-        const path = (pathRaw ?? '').trim();
-        return { status, path };
+        const normalizedStatus = status[0]?.toUpperCase();
+        const oldPath = normalizedStatus === 'R' || normalizedStatus === 'C'
+          ? (parts[1] ?? '').trim()
+          : undefined;
+        const path = (parts.at(-1) ?? '').trim();
+        return { status, path, oldPath };
       })
       .filter((entry) => Boolean(entry.path));
   }
@@ -1340,10 +1343,13 @@ export class GitService {
       .map((line) => {
         const parts = line.split('\t').filter(Boolean);
         const statusRaw = parts[0] ?? '';
-        const pathRaw = parts.at(-1) ?? '';
         const status = (statusRaw ?? '').trim();
-        const path = (pathRaw ?? '').trim();
-        return { status, path };
+        const normalizedStatus = status[0]?.toUpperCase();
+        const oldPath = normalizedStatus === 'R' || normalizedStatus === 'C'
+          ? (parts[1] ?? '').trim()
+          : undefined;
+        const path = (parts.at(-1) ?? '').trim();
+        return { status, path, oldPath };
       })
       .filter((entry) => Boolean(entry.path));
   }

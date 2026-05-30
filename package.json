@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -689,42 +689,42 @@
       "view/item/context": [
         {
           "command": "vscodeGitClient.branch.checkout",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && (viewItem == branchRefLocal || viewItem == branchRefRemote)",
           "group": "navigation"
         },
         {
           "command": "vscodeGitClient.branch.compareWithCurrent",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && (viewItem == branchRefLocal || viewItem == branchRefRemote)",
           "group": "navigation"
         },
         {
           "command": "vscodeGitClient.branch.rename",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRefLocal",
           "group": "navigation@1"
         },
         {
           "command": "vscodeGitClient.branch.delete",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRefLocal",
           "group": "navigation@2"
         },
         {
           "command": "vscodeGitClient.branch.track",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRefLocal",
           "group": "navigation@3"
         },
         {
           "command": "vscodeGitClient.branch.untrack",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRefLocal",
           "group": "navigation@4"
         },
         {
           "command": "vscodeGitClient.branch.mergeIntoCurrent",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && (viewItem == branchRefLocal || viewItem == branchRefRemote)",
           "group": "navigation@5"
         },
         {
           "command": "vscodeGitClient.branch.rebaseOnto",
-          "when": "view == vscodeGitClient.branches && viewItem == branchRef",
+          "when": "view == vscodeGitClient.branches && (viewItem == branchRefLocal || viewItem == branchRefRemote)",
           "group": "navigation@6"
         },
         {

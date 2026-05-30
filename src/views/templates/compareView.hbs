@@ -506,10 +506,6 @@
       const sha = row.getAttribute('data-sha') || '';
       const subject = row.getAttribute('data-subject') || '';
       if (!sha) { return; }
-      if (isGraphMode) {
-        vscode.postMessage({ type: 'commitClick', sha, subject });
-        return;
-      }
       const hasMultiModifier = event.shiftKey || event.ctrlKey || event.metaKey;
       updateSelection(row, event);
       if (hasMultiModifier) {
@@ -546,9 +542,6 @@
       const key = (event.key || '').toLowerCase();
       if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && key === 'a') {
         if (isTextInputTarget(event.target)) {
-          return;
-        }
-        if (isGraphMode) {
           return;
         }
         event.preventDefault();

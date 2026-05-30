@@ -12,6 +12,10 @@ All notable changes to this project are documented in this file.
 - **Compare with Revision — QuickPick refresh** — the revision picker now opens from cached refs first, lazily loads refs when empty, and offers a refresh button to update stale or partially loaded branch/tag lists without closing the picker.
 
 ### Changed
+- **Branches/Search actions** — Branches now distinguish local and remote branch context menus so local-only actions (rename/delete/track/untrack) do not appear for remote refs. Search Branches & Tags now uses tag-specific actions for tag rows instead of routing them through branch actions.
+- **Compare Branches graph selection parity** — Graph mode now keeps the same row-selection behavior as List mode, including `Shift`/`Ctrl`/`Cmd` multi-select and `Cmd/Ctrl+A` for visible commits in the active pane.
+- **Commit file rename diffs** — commit file diff actions now preserve rename source paths, so renamed files compare the old path from the parent against the new path in the selected commit instead of appearing as an add/delete-only diff.
+- **Filter Graph clear reliability** — clearing active Filter Graph filters now cancels pending debounced apply requests before posting the clear request, preventing stale typed filters from reappearing after Clear.
 - **Filter Graph isolation** — typing in Filter Graph fields now filters only the Filter Graph webview session; the native Git Graph TreeView remains the master commit list and is no longer replaced by Filter Graph results.
 - **Filter Graph ref scope** — unfiltered graph loading now includes commits from all local and remote-tracking refs, so Filter Graph can view/filter commits across both local and remote branches instead of only current-branch history.
 - **Filter Graph branch-input reliability** — branch filtering now prefers exact branch refs when a full branch name is entered (preventing accidental sibling-branch matches), while still supporting partial branch keywords. Concurrent apply responses are now stale-safe, preventing in-progress typing from being overwritten by late filter responses.

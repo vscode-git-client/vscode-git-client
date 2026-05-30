@@ -104,7 +104,7 @@ The header banner in graph mode shows `visible / total` per side, same numbers a
 
 ## Click behavior
 
-Clicking a graph row (anywhere on the row, including the SVG node) sends the existing `{ type: 'commitClick', sha, subject }` message — same handler as the table row click. Multi-select (Shift / Ctrl / Cmd) is **not** supported in graph mode for v1; selection state stays list-mode-only.
+Clicking a graph row (anywhere on the row, including the SVG node) uses the same row-selection behavior as list mode. A plain click selects and opens commit details; Shift/Ctrl/Cmd multi-select opens range details when the selected commits form a continuous range on one side. `Cmd/Ctrl+A` selects all visible commits in the active graph pane.
 
 ## Export
 
@@ -142,7 +142,6 @@ Graph rows reuse the existing `commit-row` row height and font conventions from 
 
 - Topology for internal merges (secondary-parent edges).
 - Drag / zoom / pan / virtualization.
-- Multi-select in graph mode.
 - Persisting mode per `(leftRef, rightRef)` pair — workspace-wide is fine.
 - Automated tests (no existing webview test harness in the repo).
 
@@ -154,4 +153,4 @@ Graph rows reuse the existing `commit-row` row height and font conventions from 
 | Placement | Mode toggle (List / Graph). |
 | Rendering | Hand-rolled inline SVG; layout computed server-side in TS. |
 | Filter interaction | Dim filtered-out nodes in place; preserve topology. |
-| Click behavior | Same `commitClick` as row click. No multi-select in graph mode. |
+| Click behavior | Same row selection model as list mode, including multi-select and select-all. |

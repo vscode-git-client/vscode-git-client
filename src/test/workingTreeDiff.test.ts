@@ -76,8 +76,8 @@ describe('parseNameStatusZ', () => {
     const stdout = 'R100\0src/old.ts\0src/new.ts\0C075\0src/old-copy.ts\0src/new-copy.ts\0';
 
     assert.deepStrictEqual(parseNameStatusZ(stdout), [
-      { status: 'R', path: 'src/new.ts' },
-      { status: 'C', path: 'src/new-copy.ts' }
+      { status: 'R', path: 'src/new.ts', oldPath: 'src/old.ts' },
+      { status: 'C', path: 'src/new-copy.ts', oldPath: 'src/old-copy.ts' }
     ]);
   });
 
@@ -86,7 +86,7 @@ describe('parseNameStatusZ', () => {
 
     assert.deepStrictEqual(parseNameStatusZ(stdout), [
       { status: 'M', path: 'src/a.ts' },
-      { status: 'R', path: 'src/new.ts' }
+      { status: 'R', path: 'src/new.ts', oldPath: 'src/old.ts' }
     ]);
   });
 
@@ -94,7 +94,7 @@ describe('parseNameStatusZ', () => {
     // A file genuinely named "A" is the new-path of a rename — must be emitted, not skipped.
     const stdout = 'R100\0src/old.ts\0A\0';
     assert.deepStrictEqual(parseNameStatusZ(stdout), [
-      { status: 'R', path: 'A' }
+      { status: 'R', path: 'A', oldPath: 'src/old.ts' }
     ]);
   });
 
@@ -104,6 +104,38 @@ describe('parseNameStatusZ', () => {
     assert.deepStrictEqual(parseNameStatusZ(stdout), [
       { status: 'M', path: 'src/a.ts' }
     ]);
+  });
+});
+
+describe('GitService commit file status parsing', () => {
+  it('preserves oldPath for renamed files in a commit', async () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vscodegitclient-rename-status-'));
+    try {
+      runGit(['init', '-b', 'main'], repoDir);
+      runGit(['config', 'user.email', 'test@example.com'], repoDir);
+      runGit(['config', 'user.name', 'Test User'], repoDir);
+
+      fs.mkdirSync(path.join(repoDir, 'src'), { recursive: true });
+      fs.writeFileSync(path.join(repoDir, 'src', 'old.ts'), 'export const value = 1;\n');
+      runGit(['add', '.'], repoDir);
+      runGit(['commit', '-m', 'base'], repoDir);
+      fs.renameSync(path.join(repoDir, 'src', 'old.ts'), path.join(repoDir, 'src', 'new.ts'));
+      runGit(['add', '-A'], repoDir);
+      runGit(['commit', '-m', 'rename file'], repoDir);
+      const sha = runGit(['rev-parse', 'HEAD'], repoDir).trim();
+
+      const git = new GitService(
+        makeRepositoryContext(repoDir) as never,
+        makeLogger() as never,
+        makeConfig() as never
+      );
+
+      assert.deepStrictEqual(await git.getFilesInCommitWithStatus(sha), [
+        { status: 'R100', path: 'src/new.ts', oldPath: 'src/old.ts' }
+      ]);
+    } finally {
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
   });
 });
 

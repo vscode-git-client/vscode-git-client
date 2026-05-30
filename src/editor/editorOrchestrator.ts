@@ -83,7 +83,9 @@ export class EditorOrchestrator {
   }
 
   async openCommitFileDiff(sha: string, filePath: string): Promise<void> {
-    await this.openCommitFileDiffWithStatus(sha, filePath);
+    const entries = await this.git.getFilesInCommitWithStatus(sha);
+    const entry = entries.find((item) => item.path === filePath);
+    await this.openCommitFileDiffWithStatus(sha, filePath, entry?.status, { oldPath: entry?.oldPath });
   }
 
   async openBranchComparisonFileDiff(leftRef: string, rightRef: string): Promise<void> {
@@ -105,15 +107,22 @@ export class EditorOrchestrator {
     });
   }
 
-  async openCommitFileDiffWithStatus(sha: string, filePath: string, status?: string): Promise<void> {
+  async openCommitFileDiffWithStatus(
+    sha: string,
+    filePath: string,
+    status?: string,
+    options?: { oldPath?: string }
+  ): Promise<void> {
     const title = `${sha.slice(0, 8)} parent ↔ commit · ${filePath}`;
     const normalizedStatus = (status ?? '').trim().toUpperCase();
+    const oldPath = options?.oldPath?.trim();
+    const leftPath = oldPath && normalizedStatus.startsWith('R') ? oldPath : filePath;
 
     let leftContent = '';
     let rightContent = '';
 
     if (normalizedStatus !== 'A') {
-      leftContent = await this.readContentOrEmpty(`${sha}^`, filePath);
+      leftContent = await this.readContentOrEmpty(`${sha}^`, leftPath);
     }
 
     if (normalizedStatus !== 'D') {
