@@ -70,6 +70,8 @@ export class StateStore {
   private _recentComparePairs: ComparePair[] = [];
   private _worktrees: WorktreeEntry[] = [];
   private _submodules: SubmoduleEntry[] = [];
+  private _worktreesLoaded = false;
+  private _submodulesLoaded = false;
   private _graphFilters: CommitFilters = {};
   private readonly emitter = new vscode.EventEmitter<void>();
   readonly onDidChange = this.emitter.event;
@@ -153,6 +155,14 @@ export class StateStore {
     return this._submodules;
   }
 
+  get worktreesLoaded(): boolean {
+    return this._worktreesLoaded;
+  }
+
+  get submodulesLoaded(): boolean {
+    return this._submodulesLoaded;
+  }
+
   async refreshAll(): Promise<void> {
     await this.requestRefresh(['full']);
   }
@@ -197,7 +207,9 @@ export class StateStore {
         this._operationState.kind !== 'none' ||
         this._conflicts.length > 0 ||
         this._worktrees.length > 0 ||
-        this._submodules.length > 0;
+        this._submodules.length > 0 ||
+        this._worktreesLoaded ||
+        this._submodulesLoaded;
 
       this._branches = [];
       this._tags = [];
@@ -210,6 +222,8 @@ export class StateStore {
       this._conflicts = [];
       this._worktrees = [];
       this._submodules = [];
+      this._worktreesLoaded = false;
+      this._submodulesLoaded = false;
       if (hadState) {
         this.emitter.fire();
       }
@@ -329,10 +343,12 @@ export class StateStore {
 
   private async loadWorktrees(): Promise<void> {
     this._worktrees = await this.git.getWorktrees().catch(() => []);
+    this._worktreesLoaded = true;
   }
 
   private async loadSubmodules(): Promise<void> {
     this._submodules = await this.git.getSubmodules().catch(() => []);
+    this._submodulesLoaded = true;
     void vscode.commands.executeCommand('setContext', 'vscodeGitClient.hasSubmodules', this._submodules.length > 0);
   }
 
@@ -525,10 +541,10 @@ export class StateStore {
       fingerprints.push(`graph:${JSON.stringify(this._graph)}:${String(this._graphHasMore)}`);
     }
     if (scopes.has('worktrees')) {
-      fingerprints.push(`worktrees:${JSON.stringify(this._worktrees)}`);
+      fingerprints.push(`worktrees:${String(this._worktreesLoaded)}:${JSON.stringify(this._worktrees)}`);
     }
     if (scopes.has('submodules')) {
-      fingerprints.push(`submodules:${JSON.stringify(this._submodules)}`);
+      fingerprints.push(`submodules:${String(this._submodulesLoaded)}:${JSON.stringify(this._submodules)}`);
     }
 
     return fingerprints.join('|');

@@ -15,6 +15,7 @@ import { SubmoduleTreeProvider } from './providers/submoduleTreeProvider';
 import { GitService } from './services/gitService';
 import { getRepositoryContext } from './services/repositoryContext';
 import { RefreshScope, StateStore } from './state/stateStore';
+import { attachSparseRepositoryViewAutoCollapse } from './viewAutoCollapse';
 
 type GitBaseApi = {
   registerRemoteSourceProvider(provider: {
@@ -175,6 +176,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   attachRefreshScopeVisibility(context, graphView, 'graph', stateStore);
   attachRefreshScopeVisibility(context, worktreeView, 'worktrees', stateStore);
   attachRefreshScopeVisibility(context, submoduleView, 'submodules', stateStore);
+  attachSparseRepositoryViewAutoCollapse(context, stateStore, logger);
 
   stateStore.attachAutoRefresh(context);
   attachOperationStatusBarActions(context, stateStore);

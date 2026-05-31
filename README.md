@@ -134,6 +134,7 @@ For merge, rebase, cherry-pick, and revert flows, the extension keeps the operat
 Open `Worktrees` to manage parallel checkouts from the Activity Bar container.
 
 Worktrees are grouped as `Current`, `Other Worktrees`, `Locked`, and `Prunable / Stale`.
+When the repository only has the main/current worktree and no submodules, the Worktrees and Submodules views auto-collapse after both lists load.
 
 Available actions include:
 
@@ -151,6 +152,7 @@ Available actions include:
 Open `Submodules` to inspect nested repositories.
 
 Submodules are grouped as `Needs Attention`, `Clean`, `Uninitialized`, and `Nested`.
+When a repository has no submodules and only the main/current worktree, this view auto-collapses with Worktrees after loading.
 
 Available actions include:
 
