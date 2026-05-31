@@ -335,6 +335,9 @@ export class CommandController {
           openActions: async (name: string) => {
             await vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', name);
           },
+          refresh: async () => {
+            await this.state.refreshBranches();
+          },
           runCommand: async (command, name) => {
             await vscode.commands.executeCommand(command, name);
           }
@@ -343,17 +346,11 @@ export class CommandController {
         () => this.state.tags,
         (listener) => this.state.onDidChange(listener)
       );
-      searchView.setLoading(true);
-      void this.state
-        .refreshBranches()
-        .catch((error) => {
-          void vscode.window.showErrorMessage(
-            `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
-          );
-        })
-        .finally(() => {
-          searchView.setLoading(false);
-        });
+      await searchView.refresh();
+    });
+
+    register('vscodeGitClient.branch.search.refresh', async () => {
+      await BranchSearchView.refreshCurrent();
     });
 
     register('vscodeGitClient.branch.checkout', async (arg?: unknown) => {

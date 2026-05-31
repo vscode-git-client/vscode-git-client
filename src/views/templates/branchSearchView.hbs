@@ -37,6 +37,34 @@
       min-width: 80px;
       text-align: right;
     }
+    {{> partials/styles/outlineButton
+      selector="#refresh"
+      padding="6px 9px"
+      radius="4px"
+      fontSize="14px"
+      hoverBackground="color-mix(in srgb, var(--accent), transparent 90%)"
+      hoverBorderColor="var(--accent)"
+    }}
+    #refresh {
+      align-items: center;
+      display: inline-flex;
+      flex-shrink: 0;
+      height: 32px;
+      justify-content: center;
+      line-height: 1;
+      width: 34px;
+    }
+    #refresh:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    #refresh.loading {
+      animation: spin 0.8s linear infinite;
+    }
     .list {
       flex: 1;
       overflow-y: auto;
@@ -137,6 +165,7 @@
     }}
     <div class="search-row">
       <input id="search" type="text" placeholder="Filter branches or tags…" autofocus spellcheck="false" />
+      <button id="refresh" type="button" title="Refresh branches and tags" aria-label="Refresh branches and tags">⟳</button>
       <span id="count" class="count">0 results</span>
     </div>
   </div>
@@ -146,6 +175,7 @@
   <script>
     const vscode = acquireVsCodeApi();
     const searchInput = document.getElementById('search');
+    const refreshBtn = document.getElementById('refresh');
     const listEl = document.getElementById('list');
     const countEl = document.getElementById('count');
     const branchMenu = document.getElementById('branch-context-menu');
@@ -177,6 +207,10 @@
       }
       if (msg && msg.type === 'loading') {
         isLoading = Boolean(msg.isLoading);
+        if (refreshBtn) {
+          refreshBtn.disabled = isLoading;
+          refreshBtn.classList.toggle('loading', isLoading);
+        }
         render(searchInput.value.trim().toLowerCase());
       }
     });
@@ -367,6 +401,13 @@
       closeMenu();
       applyFilter();
     });
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        closeMenu();
+        vscode.postMessage({ type: 'refresh' });
+      });
+    }
 
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {

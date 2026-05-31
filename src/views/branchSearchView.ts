@@ -13,6 +13,7 @@ export interface BranchSearchHandlers {
   checkout(name: string): Promise<void>;
   checkoutTag(name: string): Promise<void>;
   openActions(name: string): Promise<void>;
+  refresh(): Promise<void>;
   runCommand(command: BranchContextMenuCommand | TagContextMenuCommand, name: string): Promise<void>;
 }
 
@@ -21,6 +22,7 @@ type IncomingMessage =
   | { type: 'checkoutTag'; name: string }
   | { type: 'actions'; name: string }
   | { type: 'tagActions'; name: string }
+  | { type: 'refresh' }
   | { type: 'branchCommand'; command: string; name: string }
   | { type: 'tagCommand'; command: string; name: string }
   | { type: 'close' };
@@ -83,8 +85,21 @@ export class BranchSearchView {
     return view;
   }
 
+  static async refreshCurrent(): Promise<void> {
+    await BranchSearchView.current?.refresh();
+  }
+
   setLoading(isLoading: boolean): void {
     void this.panel.webview.postMessage({ type: 'loading', isLoading });
+  }
+
+  async refresh(): Promise<void> {
+    this.setLoading(true);
+    try {
+      await this.handlers.refresh();
+    } finally {
+      this.setLoading(false);
+    }
   }
 
   private postData(): void {
@@ -127,6 +142,9 @@ export class BranchSearchView {
         return;
       case 'tagActions':
         await this.handlers.runCommand('vscodeGitClient.tag.openCommits', message.name);
+        return;
+      case 'refresh':
+        await this.refresh();
         return;
       case 'branchCommand':
         if (isBranchContextMenuCommand(message.command)) {
