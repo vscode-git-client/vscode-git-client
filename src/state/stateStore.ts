@@ -280,10 +280,19 @@ export class StateStore {
   }
 
   private async loadRefs(): Promise<void> {
-    // Phase A — local branches
+    await Promise.all([
+      this.loadBranches(),
+      this.loadTags()
+    ]);
+  }
+
+  private async loadBranches(): Promise<void> {
+    const remoteUrlsPromise = this.git.getRemoteFetchUrls().catch(() => new Map<string, string>());
+    let locals: BranchRef[] | undefined;
+
     let phaseAOk = false;
     try {
-      const locals = await this.git.getLocalBranches();
+      locals = await this.git.getLocalBranches();
       if (!branchesEqual(this._branches, locals)) {
         this._branches = locals;
         this.emitter.fire();
@@ -293,12 +302,11 @@ export class StateStore {
       this.logger.warn(`Failed to load local branches: ${String(error)}`);
     }
 
-    // Phase B — remote branches
     try {
-      const remoteUrls = await this.git.getRemoteFetchUrls();
+      const remoteUrls = await remoteUrlsPromise;
       const remotes = await this.git.getRemoteBranches(remoteUrls);
       const merged = phaseAOk
-        ? [...this._branches.filter((b) => b.type === 'local'), ...remotes]
+        ? [...(locals ?? []), ...remotes]
         : remotes;
       merged.sort((a, b) => {
         if (a.current) { return -1; }
@@ -313,20 +321,21 @@ export class StateStore {
     } catch (error) {
       this.logger.warn(`Failed to load remote branches: ${String(error)}`);
     }
+  }
 
-    // Phase C — tags with remote-availability already merged.
-    // Tags are published in a single emit (basic + per-remote availability) so
-    // tag icons do not flicker between "no remote" and "available on remotes".
-    // If the slower ls-remote step fails, we still publish the basic tag list
-    // with empty availability so the section is not blank.
+  private async loadTags(): Promise<void> {
+    const availabilityPromise = this.git.getTagAvailabilityByRemote().catch((error) => {
+      this.logger.warn(`Failed to compute tag remote availability: ${String(error)}`);
+      return new Map<string, Set<string>>();
+    });
     try {
       const basic = await this.git.getTagsBasic();
-      let availability: ReadonlyMap<string, ReadonlySet<string>> = new Map();
-      try {
-        availability = await this.git.getTagAvailabilityByRemote();
-      } catch (error) {
-        this.logger.warn(`Failed to compute tag remote availability: ${String(error)}`);
+      if (!tagsEqual(this._tags, basic)) {
+        this._tags = basic;
+        this.emitter.fire();
       }
+
+      const availability: ReadonlyMap<string, ReadonlySet<string>> = await availabilityPromise;
       const enriched = this.git.mergeTagAvailability(basic, availability);
       if (!tagsEqual(this._tags, enriched)) {
         this._tags = enriched;

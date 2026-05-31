@@ -41,6 +41,8 @@ The extension was first inspired by the IntelliJ Git client experience, then ada
 
 Open `Branches` to see local branches, remote branches, tags, and a Recent group. Branches are grouped by prefix such as `feature/*` and `release/*`.
 
+Branch and tag refreshes are cached in extension state and load in parallel when the extension activates, the view opens, or git repository events trigger a ref refresh. The tree renders from that state, so basic tags can appear while slower remote-availability checks continue in the background.
+
 Common actions are available from right-click menus and the Branch Action Hub. Local branches expose local-only actions such as rename, delete, track, and untrack; remote branches expose checkout/compare/merge/rebase actions without local-only destructive entries.
 
 - Checkout, create, rename, or delete branches.
@@ -240,7 +242,7 @@ Default commit message templates:
 
 ## Performance Notes
 
-The extension activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible. VS Code Git repository-state events and save events refresh working-tree state without reloading every branch, tag, stash, worktree, submodule, and graph slice.
+The extension activates lazily when one of its views or commands is used. Refreshes are scoped to the visible surface where possible. Branch and tag data are cached in `StateStore`; the Branches view renders cached state while local branches, remote branches, basic tags, and tag remote-availability refresh in parallel. VS Code Git repository-state events and save events refresh working-tree state without reloading every branch, tag, stash, worktree, submodule, and graph slice.
 
 On Windows, Git command execution uses lower concurrency than macOS/Linux to reduce `CreateProcess` pressure on the Extension Host. Additional mitigations include configurable refresh debounce settings, parallel operation-state detection, cached gutter configuration, and save debounce.
 
