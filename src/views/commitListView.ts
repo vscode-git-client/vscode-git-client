@@ -90,7 +90,11 @@ export class CommitListView {
     this.postInitial();
   }
 
-  appendCommits(commits: readonly GraphCommit[], hasMore: boolean): void {
+  appendCommits(
+    commits: readonly GraphCommit[],
+    hasMore: boolean,
+    opts: { streaming?: boolean; maxedOut?: boolean; maxCount?: number } = {}
+  ): void {
     if (commits.length > 0) {
       this.options = {
         ...this.options,
@@ -100,7 +104,10 @@ export class CommitListView {
     void this.panel.webview.postMessage({
       type: 'appendCommits',
       commits: serializeCommits(commits),
-      hasMore
+      hasMore,
+      streaming: opts.streaming,
+      maxedOut: opts.maxedOut,
+      maxCount: opts.maxCount
     });
   }
 

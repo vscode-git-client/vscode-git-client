@@ -158,7 +158,11 @@
       commits: [],
       loading: false,
       hasMore: false,
-      loadMoreErrored: false
+      loadMoreErrored: false,
+      streaming: false,
+      streamingSeen: false,
+      maxedOut: false,
+      maxCount: 0
     };
     const messageInput = document.getElementById('message');
     const branchInput = document.getElementById('branch');
@@ -277,6 +281,10 @@
         state.loading = false;
         state.loadMoreErrored = false;
         state.hasMore = Boolean(msg.hasMore);
+        state.streaming = false;
+        state.streamingSeen = false;
+        state.maxedOut = false;
+        state.maxCount = Number(msg.maxCount) || 0;
         const f = msg.filters || {};
         messageInput.value = f.message || '';
         branchInput.value = f.branch || '';
@@ -299,6 +307,18 @@
         state.loading = false;
         state.loadMoreErrored = false;
         state.hasMore = Boolean(msg.hasMore);
+        if (typeof msg.streaming === 'boolean') {
+          state.streaming = msg.streaming;
+          if (msg.streaming) {
+            state.streamingSeen = true;
+          }
+        }
+        if (typeof msg.maxedOut === 'boolean') {
+          state.maxedOut = msg.maxedOut;
+        }
+        if (typeof msg.maxCount === 'number' && msg.maxCount > 0) {
+          state.maxCount = msg.maxCount;
+        }
         const newCommits = Array.isArray(msg.commits) ? msg.commits : [];
         state.commits = state.commits.concat(newCommits);
         const newAuthors = newCommits
@@ -444,8 +464,19 @@
 
     function updatePreviewHeader() {
       const filtered = getFilteredCommits();
-      const suffix = state.hasMore ? ' (scroll to load more)' : '';
-      previewHeader.textContent = 'Matching commits: ' + filtered.length + suffix;
+      if (state.streaming) {
+        previewHeader.textContent = 'Loading commits... ' + filtered.length + ' loaded so far';
+        return;
+      }
+      let label = 'Matching commits: ' + filtered.length;
+      if (state.maxedOut && state.maxCount > 0) {
+        label += ' (showing latest ' + state.maxCount + ' — raise maxDirectoryTimelineCommits to load more)';
+      } else if (state.hasMore) {
+        label += ' (scroll to load more)';
+      } else if (state.streamingSeen) {
+        label += ' (all loaded)';
+      }
+      previewHeader.textContent = label;
     }
 
     function renderPreview() {

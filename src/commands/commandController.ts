@@ -2404,14 +2404,20 @@ export class CommandController {
       );
     });
 
+    let totalLoaded = 0;
     try {
       await this.git.directoryHistory(repoRelativePath, maxCommits, (batch) => {
-        view.appendCommits(batch, false);
+        totalLoaded += batch.length;
+        view.appendCommits(batch, false, { streaming: true, maxCount: maxCommits });
       });
-      // Final flush so the webview clears the "Loading commits..." placeholder
-      // (and shows "No commits match current filters") when no commits were
-      // produced at all.
-      view.appendCommits([], false);
+      // Sentinel final message: clears placeholder when the directory had no
+      // matching commits at all, and flips the header out of streaming mode so
+      // the user sees either "(all loaded)" or the "(showing latest N)" hint.
+      view.appendCommits([], false, {
+        streaming: false,
+        maxedOut: totalLoaded >= maxCommits,
+        maxCount: maxCommits
+      });
     } catch (error) {
       view.setLoading(false);
       throw error;
