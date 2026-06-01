@@ -304,6 +304,10 @@ export class CommandController {
       void vscode.window.setStatusBarMessage('VS Code Git Client refreshed', 1500);
     });
 
+    register('vscodeGitClient.commitView.close', async () => {
+      await this.commitFilesView.clear();
+    });
+
     register('vscodeGitClient.quickActions', async () => {
       await this.openQuickActions();
     });

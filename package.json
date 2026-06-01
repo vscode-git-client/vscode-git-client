@@ -78,7 +78,6 @@
           "name": "Git Graph",
           "contextualTitle": "Visual commit history and branch graph",
           "visibility": "visible",
-          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-graph.svg"
         },
         {
@@ -86,7 +85,6 @@
           "name": "Worktrees",
           "contextualTitle": "Manage git worktrees for parallel development",
           "visibility": "visible",
-          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-worktrees.svg"
         },
         {
@@ -94,7 +92,6 @@
           "name": "Submodules",
           "contextualTitle": "Manage nested git submodule repositories",
           "visibility": "visible",
-          "when": "!vscodeGitClient.commitViewVisible",
           "icon": "media/icon-submodules.svg"
         }
       ],
@@ -459,6 +456,11 @@
         "title": "Unshelve Stash"
       },
       {
+        "command": "vscodeGitClient.commitView.close",
+        "title": "Close Commit Details",
+        "icon": "$(close)"
+      },
+      {
         "command": "vscodeGitClient.commit.revertSelectedChanges",
         "title": "Revert Selected Changes"
       },
@@ -646,6 +648,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "vscodeGitClient.commitView.close",
+          "when": "view == vscodeGitClient.commitView",
+          "group": "navigation@9"
+        },
         {
           "command": "vscodeGitClient.worktree.addFromBranch",
           "when": "view == vscodeGitClient.worktrees",

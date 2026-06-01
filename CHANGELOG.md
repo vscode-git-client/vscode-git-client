@@ -17,6 +17,8 @@ All notable changes to this project are documented in this file.
 - **Sparse repository view auto-collapse** — Worktrees and Submodules now auto-collapse after loading when the repository only has the main/current worktree and no submodules.
 
 ### Changed
+- **Commit Details no longer hides sibling views** — opening Commit Details previously removed `Git Graph`, `Worktrees`, and `Submodules` from the activity bar container because the underlying `when` clause hides views entirely (VS Code has no public API to programmatically collapse a section). All four views are now always present and the user collapses or resizes them manually like any other side-bar view.
+- **Close button on Commit Details header** — Commit Details now exposes a `Close Commit Details` ($(close)) action in its view title menu. Clicking it dismisses the Commit Details section (it reappears the next time you open a commit). The previous default collapse-all chevron only collapsed file folders inside the tree, which gave the impression the header button "did nothing".
 - **Search Branches & Tags loading count** — the search panel now shows the available branch/tag result count as soon as cached or partially refreshed refs arrive, instead of keeping the count label on `Loading...` until every refs phase completes.
 - **Branches view remote actions** — The Remote section now exposes `Add Git remote` as a plus button on the section header, matching the existing Tags create action.
 - **Branches/Search actions** — Branches now distinguish local and remote branch context menus so local-only actions (rename/delete/track/untrack) do not appear for remote refs. Search Branches & Tags now uses tag-specific actions for tag rows instead of routing them through branch actions.
