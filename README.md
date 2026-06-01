@@ -170,6 +170,8 @@ Available actions include:
 - Stage pointer change.
 - Deinit a submodule.
 
+Long-running submodule operations (`Init All`, `Update All`, `Update Recursive`) stream `git` output live to the **VS Code Git Client** Output channel and can be cancelled from the progress notification. Per-submodule operations also stream to the channel; click `Show Output` on any failure toast to jump to the log.
+
 ### Commit From Source Control
 
 The extension adds daily commit helpers to VS Code's native Source Control panel:

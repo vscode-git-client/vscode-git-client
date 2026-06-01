@@ -39,6 +39,7 @@ All notable changes to this project are documented in this file.
 - Rebranded user-visible extension surfaces to `VS Code Git Client`.
 - Added compatibility fallback for existing `intelliGit.*` user settings and workspace state, and hidden command aliases for already-active extension sessions.
 - **Compare Branches — Layout** — the "Exclude message (regex)" field moved to a second row alongside the existing checkboxes and export button, freeing room on the first row for the new "Message" filter.
+- **Submodule operations stream output and can be cancelled** — `Init`, `Update`, `Update Recursive`, `Sync`, `Deinit`, `Checkout Recorded`, and `Pull Tracked Branch` now run with no fixed timeout and stream `git` output live to the `VS Code Git Client` Output channel. A VS Code progress notification with a `Cancel` button drives each operation; cancelling kills the running `git` child process. Bulk operations (`Init All`, `Update All`, `Update Recursive`, `Sync All`) auto-reveal the Output channel; per-submodule operations stream silently. On non-zero exit, a warning toast offers a `Show Output` action to jump to the log.
 
 ## [0.15.5] - 2026-05-11
 
