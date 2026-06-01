@@ -1609,6 +1609,17 @@ export class GitService {
     return parseGraphRows(result.stdout);
   }
 
+  async directoryHistory(path: string, maxCount: number): Promise<GraphCommit[]> {
+    const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
+    const args = ['log', '--date=iso-strict', `--max-count=${maxCount}`, `--format=${format}`];
+    const normalizedPath = path.trim();
+    if (normalizedPath) {
+      args.push('--', normalizedPath);
+    }
+    const result = await this.runGit(args);
+    return parseGraphRows(result.stdout);
+  }
+
   async fileBlame(path: string): Promise<string> {
     const result = await this.runGit(['blame', '--', path]);
     return result.stdout;

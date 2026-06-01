@@ -31,7 +31,7 @@ The extension was first inspired by the IntelliJ Git client experience, then ada
 | ---------------------- | ---------------------------------------------------------------------------------------- |
 | Activity Bar container | `Branches`, `Commit Details`, `Git Graph`, `Worktrees`, `Submodules`                     |
 | Source Control panel   | `Stashes` plus SCM input/file actions                                                    |
-| Explorer context menu  | Compare files or folders with a branch, tag, or commit                                   |
+| Explorer context menu  | Compare files or folders with a branch, tag, or commit; open directory timelines         |
 | Editor                 | Gutter change markers, file diffs, merge editor, branch comparison tabs                  |
 | Status bar             | Continue / Skip / Abort controls during merge, rebase, cherry-pick, or revert operations |
 
@@ -59,6 +59,8 @@ Tags appear with branches and support checkout, checkout-new-branch, copy revisi
 ### Inspect History And Commit Details
 
 Open `Git Graph` for a tree-style commit list with refs, author/date metadata, subject-first titles, short hashes, and expandable changed files. When there are more commits beyond the current page, a "Load More..." item appears at the bottom of the tree; click it to load the next page. The `maxGraphCommits` setting controls how many commits load per page (default 200).
+
+Right-click a folder in Explorer and choose `Open Directory Timeline` to list commits that changed any nested child file under that folder. The timeline opens in the same commit-list surface as branch and tag histories, so commit details and file diffs work the same way.
 
 From a commit you can:
 
@@ -305,6 +307,7 @@ Key command IDs, not exhaustive:
 - `vscodeGitClient.commit.*` - revertSelectedChanges, cherryPickSelectedChanges, createPatchSelectedChanges, applyPatch, amend
 - `vscodeGitClient.compare.open` - Open branch comparison
 - `vscodeGitClient.compareWithRevision` - Compare Explorer files or folders with a revision
+- `vscodeGitClient.directoryTimeline.open` - Open commits that touched nested files under an Explorer folder
 - `vscodeGitClient.merge.*` - openConflict, next, previous, finalize
 - `vscodeGitClient.operation.*` - abort, continue, skip
 - `vscodeGitClient.git.*` - pushWithPreview, pullWithPreview, fetchPrune

@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -24,6 +24,7 @@
     "onCommand:vscodeGitClient.quickActions",
     "onCommand:vscodeGitClient.branch.actionHub",
     "onCommand:vscodeGitClient.compareWithRevision",
+    "onCommand:vscodeGitClient.directoryTimeline.open",
     "onCommand:vscodeGitClient.fileBlame.open",
     "onCommand:vscodeGitClient.scm.shelveResource",
     "onCommand:vscodeGitClient.scm.commitTemplate",
@@ -440,6 +441,10 @@
       {
         "command": "vscodeGitClient.compareWithRevision",
         "title": "Compare with Revision"
+      },
+      {
+        "command": "vscodeGitClient.directoryTimeline.open",
+        "title": "Open Directory Timeline"
       },
       {
         "command": "vscodeGitClient.workingTreeCompare.openFileDiff",
@@ -1051,11 +1056,20 @@
           "command": "vscodeGitClient.compareWithRevision",
           "when": "resourceScheme == file",
           "group": "z_vscodeGitClient@1"
+        },
+        {
+          "command": "vscodeGitClient.directoryTimeline.open",
+          "when": "resourceScheme == file && explorerResourceIsFolder",
+          "group": "z_vscodeGitClient@2"
         }
       ],
       "commandPalette": [
         {
           "command": "vscodeGitClient.compareWithRevision",
+          "when": "false"
+        },
+        {
+          "command": "vscodeGitClient.directoryTimeline.open",
           "when": "false"
         },
         {

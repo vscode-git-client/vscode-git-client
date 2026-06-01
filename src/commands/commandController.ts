@@ -1909,6 +1909,45 @@ export class CommandController {
       }
     });
 
+    register('vscodeGitClient.directoryTimeline.open', async (arg?: unknown) => {
+      const targetUri = asFileResourceUri(arg);
+      if (!targetUri) {
+        void vscode.window.showWarningMessage('Right-click a folder in the Explorer to view its timeline.');
+        return;
+      }
+
+      if (!(await this.git.isRepo())) {
+        void vscode.window.showErrorMessage('Not inside a Git repository');
+        return;
+      }
+
+      let stat: vscode.FileStat;
+      try {
+        stat = await vscode.workspace.fs.stat(targetUri);
+      } catch {
+        void vscode.window.showErrorMessage('Selected folder is no longer available.');
+        return;
+      }
+
+      if ((stat.type & vscode.FileType.Directory) === 0) {
+        void vscode.window.showWarningMessage('Select a folder in the Explorer to view its timeline.');
+        return;
+      }
+
+      const gitRoot = await this.git.getGitRoot();
+      const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
+      const normalizedTarget = targetUri.fsPath.replace(/[\\/]+$/, '');
+      const repoRelative = normalizedTarget === normalizedRoot
+        ? ''
+        : this.git.toRepoRelative(targetUri.fsPath);
+      if (repoRelative === undefined) {
+        void vscode.window.showErrorMessage('Not inside a Git repository');
+        return;
+      }
+
+      await this.openDirectoryTimeline(repoRelative);
+    });
+
     register('vscodeGitClient.fileBlame.open', async () => {
       const file = this.getActiveFilePath();
       if (!file) {
@@ -2320,6 +2359,45 @@ export class CommandController {
         id,
         title,
         hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
+        branches: this.state.branches,
+        commits
+      });
+    } finally {
+      view.setLoading(false);
+    }
+  }
+
+  private async openDirectoryTimeline(repoRelativePath: string): Promise<void> {
+    const maxCommits = Math.max(1, getConfigValue<number>('maxGraphCommits', 200));
+    const displayPath = repoRelativePath || '.';
+    const title = `Directory Timeline: ${displayPath}`;
+    const id = `directoryTimeline:${repoRelativePath || '<root>'}`;
+    const hint = `Showing up to ${maxCommits} commits that changed files under ${displayPath}. Filters update the table locally.`;
+    const isInDirectory = (filePath: string): boolean =>
+      repoRelativePath === '' || filePath === repoRelativePath || filePath.startsWith(`${repoRelativePath}/`);
+    const view = CommitListView.open(
+      {
+        id,
+        title,
+        hint,
+        branches: this.state.branches,
+        commits: []
+      },
+      {
+        openCommitDetails: async (sha, subject) => this.openCommitDetails(sha, subject, { allowToggle: true }),
+        getCommitFiles: async (sha) => (await this.git.getFilesInCommit(sha)).filter(isInDirectory),
+        openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
+      }
+    );
+
+    view.setLoading(true);
+    try {
+      await this.state.refreshBranches();
+      const commits = await this.git.directoryHistory(repoRelativePath, maxCommits);
+      view.update({
+        id,
+        title,
+        hint,
         branches: this.state.branches,
         commits
       });
