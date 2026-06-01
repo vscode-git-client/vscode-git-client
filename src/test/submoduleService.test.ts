@@ -8,7 +8,6 @@ interface Captured { args: string[]; cwd?: string; }
 
 class FakeSubmoduleService extends SubmoduleService {
   readonly spawned: Captured[] = [];
-  readonly headers: string[] = [];
 
   constructor() {
     super(

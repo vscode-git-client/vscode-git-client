@@ -81,4 +81,18 @@ describe('spawnGitStreaming', () => {
     const doneCall = calls.find(c => c.type === 'done');
     assert.ok(doneCall, 'expected done() to be called');
   });
+
+  it('calls sink.error and resolves with null exitCode on spawn failure', async () => {
+    const { sink, calls } = recorder();
+    const result = await spawnGitStreaming(
+      '/nonexistent/binary-that-does-not-exist',
+      [],
+      { gitRoot: process.cwd(), sink }
+    );
+    assert.strictEqual(result.exitCode, null);
+    const errorCall = calls.find(c => c.type === 'error');
+    assert.ok(errorCall, 'expected error() to be called');
+    const doneCall = calls.find(c => c.type === 'done');
+    assert.ok(doneCall, 'expected done() to be called');
+  });
 });
