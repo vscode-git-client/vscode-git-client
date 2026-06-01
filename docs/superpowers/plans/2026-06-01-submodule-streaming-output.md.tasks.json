@@ -1,0 +1,47 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-01-submodule-streaming-output.md",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 0: Add SubmoduleLogSink interface",
+      "status": "pending",
+      "description": "**Goal:** A vscode-free sink interface usable by SubmoduleService and tests.\n\n**Files:**\n- Create: src/services/submoduleLogSink.ts\n\n**Acceptance Criteria:**\n- Interface exports header, stdout, stderr, done, error\n- NULL_SINK constant provided\n- No `import * as vscode`\n\n**Verify:** `npm run check-types`\n\n```json:metadata\n{\"files\": [\"src/services/submoduleLogSink.ts\"], \"verifyCommand\": \"npm run check-types\", \"acceptanceCriteria\": [\"Interface exports 5 methods\", \"NULL_SINK provided\", \"No vscode import\"]}\n```"
+    },
+    {
+      "id": 1,
+      "subject": "Task 1: Implement spawnGitStreaming with TDD",
+      "status": "pending",
+      "blockedBy": [0],
+      "description": "**Goal:** A line-buffered, cancellable, no-timeout git spawn primitive on SubmoduleService.\n\n**Files:**\n- Create: src/test/submoduleStreaming.test.ts\n- Modify: src/services/submoduleService.ts (export spawnGitStreaming + private wrapper method)\n\n**Acceptance Criteria:**\n- No commandTimeoutMs/setTimeout\n- stdout/stderr split on \\n, trailing partial flushed on close\n- \\r-only progress redraws collapsed to last segment\n- AbortSignal triggers child.kill() and resolves with exitCode null\n- Resolves with {exitCode}; never rejects on non-zero exit\n- sink.header called by CALLER (not by helper)\n- sink.error fires only for child 'error' event\n\n**Verify:** `npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/submoduleStreaming.test.js`\n\n```json:metadata\n{\"files\": [\"src/services/submoduleService.ts\", \"src/services/submoduleLogSink.ts\", \"src/test/submoduleStreaming.test.ts\"], \"verifyCommand\": \"npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/submoduleStreaming.test.js\", \"acceptanceCriteria\": [\"No timeout\", \"Line-buffered\", \"\\\\r-only collapsed\", \"AbortSignal kills child\", \"Never rejects on non-zero exit\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Switch submodule mutating ops to streaming path",
+      "status": "pending",
+      "blockedBy": [1],
+      "description": "**Goal:** All 8 mutating methods spawn via spawnGitStreaming, accept {sink?, signal?}, return {exitCode: number|null}.\n\n**Files:**\n- Modify: src/services/submoduleService.ts (rewrite 8 methods)\n- Modify: src/services/gitService.ts ~lines 1895-1920 (pass-throughs + imports)\n- Create: src/test/submoduleService.test.ts\n\n**Acceptance Criteria:**\n- 8 methods routed through spawnGitStreaming\n- Each calls sink.header('$ git ' + args.join(' ')) before spawn\n- Signature: (...existingArgs, opts?) => Promise<{exitCode}>\n- pullSubmoduleTrackedBranch uses cwd=submodulePath\n- Read-only methods unchanged\n- GitService wrappers match\n\n**Verify:** `npm run check-types && npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/submoduleService.test.js`\n\n```json:metadata\n{\"files\": [\"src/services/submoduleService.ts\", \"src/services/gitService.ts\", \"src/test/submoduleService.test.ts\"], \"verifyCommand\": \"npm run check-types && npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/submoduleService.test.js\", \"acceptanceCriteria\": [\"8 methods routed\", \"Header lines\", \"GitService wrappers match\", \"Read-only ops unchanged\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Add Logger.appendRaw and wire SubmoduleProgress adapter",
+      "status": "pending",
+      "blockedBy": [2],
+      "description": "**Goal:** Each vscodeGitClient.submodule.* mutating command runs inside vscode.window.withProgress with Cancel; output streams to channel; bulk auto-shows; warning toast on non-zero exit.\n\n**Files:**\n- Modify: src/logger.ts (add appendRaw)\n- Modify: src/commands/commandController.ts (add withSubmoduleProgress; rewrite 11 submodule.* registrations)\n\n**Acceptance Criteria:**\n- Logger.appendRaw writes verbatim\n- All mutating ops wrapped\n- Bulk (initAll/updateAll/updateRecursive/syncAll) auto-show; per-item silent\n- Cancel kills child within ~1s\n- Non-zero exit + not cancelled → warning toast with Show Output action\n- state.refreshSubmodules() in finally always\n- Old showInformationMessage toasts removed\n\n**Verify:** `npm run check-types && npm run lint && npm test`\n\n```json:metadata\n{\"files\": [\"src/logger.ts\", \"src/commands/commandController.ts\"], \"verifyCommand\": \"npm run check-types && npm run lint && npm test\", \"acceptanceCriteria\": [\"appendRaw added\", \"All ops wrapped\", \"Bulk auto-show\", \"Cancel works\", \"Warning toast\", \"refreshSubmodules in finally\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Manual smoke verification in Extension Development Host",
+      "status": "pending",
+      "blockedBy": [3],
+      "description": "**Goal:** Confirm user-facing behavior on a real repo with multiple submodules.\n\n**Files:** none (manual verification)\n\n**Acceptance Criteria:**\n- Update All auto-reveals channel; notification with Cancel\n- Channel shows header + live progress + [done in Ns, exit 0]\n- Per-submodule update doesn't auto-show\n- Cancel kills git ~1s; channel shows [cancelled]; tree refreshes\n- Broken URL → non-zero exit + warning toast with Show Output\n- No 15s timeout error\n\n**Verify:** manual\n\n```json:metadata\n{\"files\": [], \"verifyCommand\": \"manual\", \"acceptanceCriteria\": [\"Auto-show bulk\", \"Silent per-item\", \"Cancel works\", \"Warning toast\", \"No 15s timeout\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 5: Update CHANGELOG and README",
+      "status": "pending",
+      "blockedBy": [4],
+      "description": "**Goal:** Document the user-visible behavior change.\n\n**Files:**\n- Modify: CHANGELOG.md ([Unreleased] → Changed)\n- Modify: README.md (Manage Submodules section)\n\n**Acceptance Criteria:**\n- CHANGELOG describes streamed output + Cancel + Output channel + 15s timeout removal\n- README mentions Output channel for long-running submodule ops\n\n**Verify:** `git diff CHANGELOG.md README.md`\n\n```json:metadata\n{\"files\": [\"CHANGELOG.md\", \"README.md\"], \"verifyCommand\": \"git diff CHANGELOG.md README.md\", \"acceptanceCriteria\": [\"CHANGELOG entry\", \"README note\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-01T00:00:00Z"
+}
