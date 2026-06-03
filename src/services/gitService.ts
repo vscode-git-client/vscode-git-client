@@ -1129,6 +1129,30 @@ export class GitService {
     return result.stdout;
   }
 
+  async getPatchBetweenWorkingTreeAndRefForFiles(ref: string, filePaths: string[]): Promise<string> {
+    if (filePaths.length === 0) {
+      return '';
+    }
+
+    const trackedResult = await this.runGit(['diff', '--binary', ref, '--', ...filePaths]);
+    const untrackedResult = await this.runGit(['ls-files', '--others', '--exclude-standard', '-z', '--', ...filePaths]);
+    const untrackedPaths = untrackedResult.stdout
+      .split('\0')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    const patches = [trackedResult.stdout];
+    for (const filePath of untrackedPaths) {
+      const result = await this.runGitAllowExitCodes(
+        ['diff', '--binary', '--no-index', '--', '/dev/null', filePath],
+        [0, 1]
+      );
+      patches.push(result.stdout);
+    }
+
+    return patches.filter((part) => part.trim()).join('\n');
+  }
+
   async canApplyPatchToWorkingTree(patch: string): Promise<boolean> {
     if (!patch.trim()) {
       return false;
@@ -2056,6 +2080,56 @@ export class GitService {
         clearTimeout(timer);
         this.logGitDuration(command, startedAt);
         if (code === 0) {
+          resolve({ stdout, stderr });
+          return;
+        }
+
+        const error = new Error(stderr || `Git command failed with exit code ${code}: ${command}`);
+        reject(error);
+      });
+    }));
+  }
+
+  private async runGitAllowExitCodes(args: string[], allowedExitCodes: readonly number[]): Promise<GitCommandResult> {
+    const gitPath = getConfigValue<string>('gitPath', 'git');
+    const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
+    const command = `${gitPath} ${args.join(' ')}`;
+    this.logger.info(`git ${args.join(' ')}`);
+
+    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
+      const startedAt = Date.now();
+      const child = cp.spawn(gitPath, args, {
+        cwd: this.gitRoot,
+        windowsHide: true
+      });
+
+      const timer = setTimeout(() => {
+        child.kill();
+        this.logGitDuration(command, startedAt);
+        reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
+      }, timeoutMs);
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (chunk) => {
+        stdout += chunk.toString();
+      });
+
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk.toString();
+      });
+
+      child.on('error', (error) => {
+        clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
+        reject(error);
+      });
+
+      child.on('close', (code) => {
+        clearTimeout(timer);
+        this.logGitDuration(command, startedAt);
+        if (code !== null && allowedExitCodes.includes(code)) {
           resolve({ stdout, stderr });
           return;
         }

@@ -267,4 +267,72 @@ describe('selected commit file changes', () => {
     ]);
     assert.ok(first.contextValue?.includes('commitViewSelectableChange'));
   });
+
+  it('reverts selected working-tree comparison file rows from Commit Details', async () => {
+    const events: string[] = [];
+    const ref = 'HEAD~1';
+    const first = new WorkingTreeCompareFileTreeItem(ref, 'HEAD~1', 'src/a.ts', 'M', false, '/repo');
+    const second = new WorkingTreeCompareFileTreeItem(ref, 'HEAD~1', 'src/new.ts', 'A', true, '/repo');
+    const patch = 'diff --git a/src/a.ts b/src/a.ts\n';
+
+    (vscode.window as unknown as {
+      showWarningMessage: typeof vscode.window.showWarningMessage;
+    }).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) => acceptLabel;
+    (vscode.window as unknown as {
+      showInformationMessage: typeof vscode.window.showInformationMessage;
+    }).showInformationMessage = async (message: string) => {
+      events.push(`message:${message}`);
+      return undefined;
+    };
+
+    const commands = registerController(
+      {
+        getPatchBetweenWorkingTreeAndRefForFiles: async (revision: string, filePaths: string[]) => {
+          events.push(`git:working-tree-patch:${revision}:${filePaths.join(',')}`);
+          return patch;
+        },
+        reverseApplyPatchToWorkingTree: async (value: string) => {
+          events.push(`git:reverse-apply:${value === patch}`);
+        }
+      },
+      {
+        branches: [],
+        conflicts: [],
+        refreshAll: async () => {
+          events.push('refresh');
+        }
+      },
+      undefined,
+      {
+        getCommitActionContext: (selectedItems: readonly unknown[]) => ({
+          kind: 'workingTreeCompare',
+          ref,
+          refLabel: 'HEAD~1',
+          filePaths: selectedItems
+            .filter((item): item is WorkingTreeCompareFileTreeItem => item instanceof WorkingTreeCompareFileTreeItem)
+            .map((item) => item.filePath)
+            .sort((a, b) => a.localeCompare(b)),
+          canRevertSelected: true,
+          canCherryPickSelected: false,
+          canCreatePatchSelected: true
+        }),
+        getAllFileItems: () => [],
+        showCommit: async () => undefined,
+        clear: async () => undefined,
+        isShowingCommit: () => false
+      } as never
+    );
+
+    const revert = commands.get('vscodeGitClient.commit.revertSelectedChanges');
+    assert.ok(revert, 'expected selected-changes revert command to be registered');
+
+    await revert(second, [first, second]);
+
+    assert.deepStrictEqual(events, [
+      `git:working-tree-patch:${ref}:src/a.ts,src/new.ts`,
+      'git:reverse-apply:true',
+      'refresh',
+      'message:Reverted selected changes from HEAD~1 in the current checkout.'
+    ]);
+  });
 });

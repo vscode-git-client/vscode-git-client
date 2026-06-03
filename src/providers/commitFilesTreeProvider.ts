@@ -111,8 +111,8 @@ export class CommitFolderTreeItem extends vscode.TreeItem {
   }
 }
 
-export type CommitSelectableFileTreeItem = CommitFileTreeItem | CommitRangeFileTreeItem;
-type CommitViewNode = CommitSelectableFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem;
+export type CommitSelectableFileTreeItem = CommitFileTreeItem | CommitRangeFileTreeItem | WorkingTreeCompareFileTreeItem;
+type CommitViewNode = CommitSelectableFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem;
 type TreeFileEntry = { path: string; status?: string; oldPath?: string; untracked?: boolean };
 export type CommitActionContext =
   | {
@@ -122,6 +122,7 @@ export type CommitActionContext =
     readonly filePaths: string[];
     readonly canRevertSelected: boolean;
     readonly canCherryPickSelected: boolean;
+    readonly canCreatePatchSelected: boolean;
   }
   | {
     readonly kind: 'range';
@@ -132,6 +133,16 @@ export type CommitActionContext =
     readonly filePaths: string[];
     readonly canRevertSelected: boolean;
     readonly canCherryPickSelected: boolean;
+    readonly canCreatePatchSelected: boolean;
+  }
+  | {
+    readonly kind: 'workingTreeCompare';
+    readonly ref: string;
+    readonly refLabel: string;
+    readonly filePaths: string[];
+    readonly canRevertSelected: boolean;
+    readonly canCherryPickSelected: boolean;
+    readonly canCreatePatchSelected: boolean;
   };
 type ActiveTreeState =
   | { mode: 'commit'; sha: string; subject: string; files: CommitFileChange[]; canRevertSelected: boolean }
@@ -234,6 +245,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', canRevert);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', !canRevert);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', !canRevert);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -250,6 +262,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -272,6 +285,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', true);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', true);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -290,8 +304,9 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.updateViewTitle('Commit Details');
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', true);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', true);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -302,6 +317,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
   }
 
   getAllFileItems(): CommitFileTreeItem[] {
@@ -331,7 +347,8 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         subject: activeCommit.subject,
         filePaths,
         canRevertSelected: activeCommit.canRevertSelected,
-        canCherryPickSelected: !activeCommit.canRevertSelected
+        canCherryPickSelected: !activeCommit.canRevertSelected,
+        canCreatePatchSelected: !activeCommit.canRevertSelected
       };
     }
 
@@ -349,7 +366,25 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         toLabel: activeRange.toLabel,
         filePaths,
         canRevertSelected: true,
-        canCherryPickSelected: true
+        canCherryPickSelected: true,
+        canCreatePatchSelected: true
+      };
+    }
+
+    if (this.activeState.mode === 'workingTreeCompare') {
+      const activeCompare = this.activeState;
+      const allFiles = activeCompare.files.map((file) => file.path);
+      const selectedPaths = selectedFilePaths(selectedItems, WorkingTreeCompareFileTreeItem);
+      const filePaths = selectedPaths.length > 0 ? selectedPaths : allFiles;
+
+      return {
+        kind: 'workingTreeCompare',
+        ref: activeCompare.ref,
+        refLabel: activeCompare.refLabel,
+        filePaths,
+        canRevertSelected: true,
+        canCherryPickSelected: false,
+        canCreatePatchSelected: true
       };
     }
 

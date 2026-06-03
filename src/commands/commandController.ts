@@ -52,7 +52,7 @@ type GitScmExtensionExports = {
   getAPI(version: 1): GitScmApi;
 };
 
-type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem | WorkingTreeCompareFileTreeItem;
+type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem;
 type SelectedChangeTarget =
   | {
     kind: 'commit';
@@ -61,6 +61,7 @@ type SelectedChangeTarget =
     filePaths: string[];
     canRevert: boolean;
     canCherryPick: boolean;
+    canCreatePatch: boolean;
     detailLabel: string;
     shortLabel: string;
   }
@@ -73,6 +74,18 @@ type SelectedChangeTarget =
     filePaths: string[];
     canRevert: boolean;
     canCherryPick: boolean;
+    canCreatePatch: boolean;
+    detailLabel: string;
+    shortLabel: string;
+  }
+  | {
+    kind: 'workingTreeCompare';
+    ref: string;
+    refLabel: string;
+    filePaths: string[];
+    canRevert: boolean;
+    canCherryPick: boolean;
+    canCreatePatch: boolean;
     detailLabel: string;
     shortLabel: string;
   };
@@ -1221,8 +1234,11 @@ export class CommandController {
 
       if (target.kind === 'commit') {
         await this.git.revertCommitFiles(target.sha, target.filePaths);
-      } else {
+      } else if (target.kind === 'range') {
         const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+        await this.git.reverseApplyPatchToWorkingTree(patch);
+      } else {
+        const patch = await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
         await this.git.reverseApplyPatchToWorkingTree(patch);
       }
       await this.state.refreshAll();
@@ -1258,6 +1274,11 @@ export class CommandController {
         return;
       }
 
+      if (target.kind !== 'range') {
+        void vscode.window.showWarningMessage('Selected files are already available in the working tree.');
+        return;
+      }
+
       const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
       await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
     });
@@ -1269,14 +1290,16 @@ export class CommandController {
         return;
       }
 
-      if (!target.canCherryPick) {
-        void vscode.window.showWarningMessage('Selected files are already available in the current branch.');
+      if (!target.canCreatePatch) {
+        void vscode.window.showWarningMessage('Selected files cannot be used to create a patch from this view.');
         return;
       }
 
       const patch = target.kind === 'commit'
         ? await this.git.getPatchForCommitFiles(target.sha, target.filePaths)
-        : await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+        : target.kind === 'range'
+          ? await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths)
+          : await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
       if (!patch.trim()) {
         void vscode.window.showInformationMessage('No patch content generated for the selected files.');
         return;
@@ -1307,7 +1330,9 @@ export class CommandController {
         await vscode.workspace.fs.writeFile(targetUri, Buffer.from(patch, 'utf8'));
       }
 
-      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
+      if (target.kind !== 'workingTreeCompare') {
+        await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
+      }
     });
 
     register('vscodeGitClient.commit.applyPatch', async () => {
@@ -3310,7 +3335,11 @@ export class CommandController {
     const selectedItems = this.toSelectedItems(arg, selectedArg);
     if (
       selectedItems.length > 0 &&
-      (selectedItems[0] instanceof CommitFileTreeItem || selectedItems[0] instanceof CommitRangeFileTreeItem)
+      (
+        selectedItems[0] instanceof CommitFileTreeItem ||
+        selectedItems[0] instanceof CommitRangeFileTreeItem ||
+        selectedItems[0] instanceof WorkingTreeCompareFileTreeItem
+      )
     ) {
       const context = this.commitFilesView.getCommitActionContext(selectedItems as CommitSelectableFileTreeItem[]);
       if (!context || context.filePaths.length === 0) {
@@ -3345,6 +3374,7 @@ export class CommandController {
       filePaths,
       canRevert,
       canCherryPick: !canRevert,
+      canCreatePatch: !canRevert,
       detailLabel: `Commit: ${sha}`,
       shortLabel: sha.slice(0, 8)
     };
@@ -3359,8 +3389,23 @@ export class CommandController {
         filePaths: context.filePaths,
         canRevert: context.canRevertSelected,
         canCherryPick: context.canCherryPickSelected,
+        canCreatePatch: context.canCreatePatchSelected,
         detailLabel: `Commit: ${context.sha}`,
         shortLabel: context.sha.slice(0, 8)
+      };
+    }
+
+    if (context.kind === 'workingTreeCompare') {
+      return {
+        kind: 'workingTreeCompare',
+        ref: context.ref,
+        refLabel: context.refLabel,
+        filePaths: context.filePaths,
+        canRevert: context.canRevertSelected,
+        canCherryPick: context.canCherryPickSelected,
+        canCreatePatch: context.canCreatePatchSelected,
+        detailLabel: `Compare with revision: ${context.refLabel}`,
+        shortLabel: context.refLabel
       };
     }
 
@@ -3373,6 +3418,7 @@ export class CommandController {
       filePaths: context.filePaths,
       canRevert: context.canRevertSelected,
       canCherryPick: context.canCherryPickSelected,
+      canCreatePatch: context.canCreatePatchSelected,
       detailLabel: `Range: ${context.fromLabel}..${context.toLabel}`,
       shortLabel: `${context.fromLabel}..${context.toLabel}`
     };

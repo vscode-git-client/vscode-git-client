@@ -43,6 +43,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphMultiCommitSelection', false);
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', false);
 

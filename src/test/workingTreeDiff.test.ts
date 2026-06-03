@@ -241,6 +241,17 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     assert.ok(paths.includes('src/new-untracked.ts'), 'src/new-untracked.ts missing');
   });
 
+  it('builds a working-tree patch for tracked and untracked selected files', async () => {
+    const patch = await git.getPatchBetweenWorkingTreeAndRefForFiles(baseCommitSha, [
+      'src/index.ts',
+      'src/new-untracked.ts'
+    ]);
+
+    assert.ok(patch.includes('diff --git a/src/index.ts b/src/index.ts'), 'expected tracked file patch');
+    assert.ok(patch.includes('diff --git a/src/new-untracked.ts b/src/new-untracked.ts'), 'expected untracked file patch');
+    assert.ok(patch.includes('new file mode'), 'expected untracked file to be represented as an added file');
+  });
+
   // (c) resolveRevisionToCommit with valid sha returns metadata
   it('resolves a valid commit sha to metadata', async () => {
     const meta = await git.resolveRevisionToCommit(baseCommitSha);
