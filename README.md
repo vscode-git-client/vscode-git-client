@@ -114,6 +114,7 @@ Right-click a file or folder in Explorer and choose `Compare with Revision`.
 - For a file, the diff opens with the selected revision on the left and the working tree on the right.
 - For multiple selected files, the same revision is applied to every selected file and each diff opens.
 - For a folder, `Commit Details` lists changed files and opens the first file in preview diff mode.
+- Right-click an open diff tab or editor and choose `Swap Compare Direction` to reopen the same comparison with left and right revisions reversed.
 
 ### Stash And Shelve Work
 

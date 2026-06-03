@@ -8,6 +8,12 @@ import { CompareCommitRangeSelection, CompareView } from '../views/compareView';
 import { VirtualGitContentProvider } from './virtualGitContentProvider';
 
 const EMPTY_TREE_SHA = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+const VIRTUAL_GIT_SCHEME = 'vscodegitclient';
+const WORKTREE_REF = 'WORKTREE';
+
+type ComparableDiffSide =
+  | { kind: 'ref'; ref: string; relativePath: string }
+  | { kind: 'worktree'; relativePath: string };
 
 export class EditorOrchestrator {
   private compareView: CompareView | undefined;
@@ -164,22 +170,40 @@ export class EditorOrchestrator {
     opts: { preview: boolean; status?: string }
   ): Promise<void> {
     const left = await this.createVirtualUri(ref, relativePath);
-
-    let right: vscode.Uri;
-    const gitRoot = await this.git.getGitRoot();
-    const onDiskUri = vscode.Uri.file(path.join(gitRoot, relativePath));
-    const fileMissing = opts.status === 'D' || !(await this.fileExists(onDiskUri));
-    if (fileMissing) {
-      const normalized = relativePath.replaceAll(path.sep, '/');
-      right = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent('WORKTREE')}/${normalized}`);
-      this.contentProvider.setContent(right, '');
-    } else {
-      right = onDiskUri;
-    }
+    const right = await this.createWorkingTreeUri(relativePath, opts.status);
 
     const title = `${refLabel} ↔ working tree · ${relativePath}`;
     await vscode.commands.executeCommand('vscode.diff', left, right, title, {
       preview: opts.preview,
+      preserveFocus: false
+    });
+  }
+
+  async swapActiveCompareDirection(): Promise<void> {
+    const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
+    const input = activeTab?.input;
+    if (!(input instanceof vscode.TabInputTextDiff)) {
+      void vscode.window.showInformationMessage('Open a VS Code Git Client diff tab to swap compare direction.');
+      return;
+    }
+
+    const left = await this.parseComparableDiffSide(input.original);
+    const right = await this.parseComparableDiffSide(input.modified);
+    if (!left || !right) {
+      void vscode.window.showInformationMessage('This diff tab was not opened by VS Code Git Client.');
+      return;
+    }
+
+    if (left.relativePath !== right.relativePath) {
+      void vscode.window.showInformationMessage('Cannot swap diff direction for sides that point at different files.');
+      return;
+    }
+
+    const leftUri = await this.createComparableDiffUri(right);
+    const rightUri = await this.createComparableDiffUri(left);
+    const title = `${formatComparableSideLabel(right)} ↔ ${formatComparableSideLabel(left)} · ${left.relativePath}`;
+    await vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, {
+      preview: false,
       preserveFocus: false
     });
   }
@@ -312,10 +336,60 @@ export class EditorOrchestrator {
 
   private async createVirtualUri(ref: string, relativePath: string): Promise<vscode.Uri> {
     const normalized = relativePath.replaceAll(path.sep, '/');
-    const uri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(ref)}/${normalized}`);
+    const uri = withVirtualGitMetadata(
+      vscode.Uri.parse(`${VIRTUAL_GIT_SCHEME}:${encodeURIComponent(ref)}/${normalized}`),
+      { kind: 'ref', ref, relativePath: normalized }
+    );
     const content = await this.git.getFileContentFromRef(ref, relativePath);
     this.contentProvider.setContent(uri, content);
     return uri;
+  }
+
+  private async createWorkingTreeUri(relativePath: string, status?: string): Promise<vscode.Uri> {
+    const gitRoot = await this.git.getGitRoot();
+    const onDiskUri = vscode.Uri.file(path.join(gitRoot, relativePath));
+    const fileMissing = status === 'D' || !(await this.fileExists(onDiskUri));
+    if (!fileMissing) {
+      return onDiskUri;
+    }
+
+    const normalized = relativePath.replaceAll(path.sep, '/');
+    const uri = withVirtualGitMetadata(
+      vscode.Uri.parse(`${VIRTUAL_GIT_SCHEME}:${encodeURIComponent(WORKTREE_REF)}/${normalized}`),
+      { kind: 'worktree', ref: WORKTREE_REF, relativePath: normalized }
+    );
+    this.contentProvider.setContent(uri, '');
+    return uri;
+  }
+
+  private async createComparableDiffUri(side: ComparableDiffSide): Promise<vscode.Uri> {
+    if (side.kind === 'worktree') {
+      return this.createWorkingTreeUri(side.relativePath);
+    }
+    return this.createVirtualUri(side.ref, side.relativePath);
+  }
+
+  private async parseComparableDiffSide(uri: vscode.Uri): Promise<ComparableDiffSide | undefined> {
+    if (uri.scheme === VIRTUAL_GIT_SCHEME) {
+      const parsed = parseVirtualGitUri(uri);
+      if (!parsed) {
+        return undefined;
+      }
+      if (parsed.kind === 'worktree') {
+        return { kind: 'worktree', relativePath: parsed.relativePath };
+      }
+      return { kind: 'ref', ref: parsed.ref, relativePath: parsed.relativePath };
+    }
+
+    if (uri.scheme === 'file') {
+      const repoRelative = this.git.toRepoRelative(uri.fsPath);
+      if (repoRelative === undefined) {
+        return undefined;
+      }
+      return { kind: 'worktree', relativePath: repoRelative };
+    }
+
+    return undefined;
   }
 
   private async readContentOrEmpty(ref: string, relativePath: string): Promise<string> {
@@ -346,4 +420,67 @@ function formatRevisionLabel(ref: string): string {
     return token.slice(0, 8);
   }
   return token;
+}
+
+function formatComparableSideLabel(side: ComparableDiffSide): string {
+  return side.kind === 'worktree' ? 'working tree' : formatRevisionLabel(side.ref);
+}
+
+function parseVirtualGitUri(uri: vscode.Uri): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
+  const fromQuery = parseVirtualGitMetadata(uri.query);
+  if (fromQuery) {
+    return fromQuery;
+  }
+
+  const raw = uri.toString(true);
+  const prefix = `${VIRTUAL_GIT_SCHEME}:`;
+  if (!raw.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const payload = raw.slice(prefix.length);
+  const separator = payload.indexOf('/');
+  if (separator < 0) {
+    return undefined;
+  }
+
+  const ref = decodeURIComponent(payload.slice(0, separator));
+  const relativePath = decodeURI(payload.slice(separator + 1));
+  if (!ref || !relativePath) {
+    return undefined;
+  }
+
+  return {
+    kind: ref === WORKTREE_REF ? 'worktree' : 'ref',
+    ref,
+    relativePath
+  };
+}
+
+function withVirtualGitMetadata(
+  uri: vscode.Uri,
+  metadata: { kind: 'ref' | 'worktree'; ref: string; relativePath: string }
+): vscode.Uri {
+  const query = new URLSearchParams({
+    kind: metadata.kind,
+    ref: metadata.ref,
+    path: metadata.relativePath
+  });
+  return uri.with({ query: query.toString() });
+}
+
+function parseVirtualGitMetadata(query: string): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
+  if (!query) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams(query);
+  const kind = params.get('kind') === 'worktree' ? 'worktree' : 'ref';
+  const ref = params.get('ref') ?? '';
+  const relativePath = params.get('path') ?? '';
+  if (!ref || !relativePath) {
+    return undefined;
+  }
+
+  return { kind, ref, relativePath };
 }

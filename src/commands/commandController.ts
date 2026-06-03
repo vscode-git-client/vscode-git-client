@@ -1007,6 +1007,10 @@ export class CommandController {
       });
     });
 
+    register('vscodeGitClient.compareWithRevision.swapDirection', async () => {
+      await this.editor.swapActiveCompareDirection();
+    });
+
     register('vscodeGitClient.graph.openRepositoryFileAtRevision', async (arg?: unknown) => {
       const item = asRevisionViewFileItem(arg);
       if (!item) {

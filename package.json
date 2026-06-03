@@ -24,6 +24,7 @@
     "onCommand:vscodeGitClient.quickActions",
     "onCommand:vscodeGitClient.branch.actionHub",
     "onCommand:vscodeGitClient.compareWithRevision",
+    "onCommand:vscodeGitClient.compareWithRevision.swapDirection",
     "onCommand:vscodeGitClient.directoryTimeline.open",
     "onCommand:vscodeGitClient.fileBlame.open",
     "onCommand:vscodeGitClient.scm.shelveResource",
@@ -438,6 +439,10 @@
       {
         "command": "vscodeGitClient.compareWithRevision",
         "title": "Compare with Revision"
+      },
+      {
+        "command": "vscodeGitClient.compareWithRevision.swapDirection",
+        "title": "Swap Compare Direction"
       },
       {
         "command": "vscodeGitClient.directoryTimeline.open",
@@ -1070,9 +1075,25 @@
           "group": "z_vscodeGitClient@2"
         }
       ],
+      "editor/title/context": [
+        {
+          "command": "vscodeGitClient.compareWithRevision.swapDirection",
+          "group": "navigation@50"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "vscodeGitClient.compareWithRevision.swapDirection",
+          "group": "navigation@50"
+        }
+      ],
       "commandPalette": [
         {
           "command": "vscodeGitClient.compareWithRevision",
+          "when": "false"
+        },
+        {
+          "command": "vscodeGitClient.compareWithRevision.swapDirection",
           "when": "false"
         },
         {
