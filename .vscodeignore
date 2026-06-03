@@ -20,3 +20,4 @@ scripts/
 eslint.config.*
 .gitignore
 .worktrees/
+.codegraph/
