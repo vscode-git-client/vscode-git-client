@@ -73,7 +73,7 @@ From a commit you can:
 - Go to a parent or child commit.
 - Multi-select commits with `Shift`, `Ctrl`, or `Cmd`; unsupported context-menu actions are disabled.
 
-`Commit Details` and expanded Git Graph file rows also support selected-file actions: `Open Diffs` (single or multi-select), branch-aware `Revert Selected Changes` / `Cherry-pick Selected Changes`, and `Create Patch from Selected Changes` (save to file or copy to clipboard, then apply to the current working tree).
+`Commit Details` and expanded Git Graph file rows also support selected-file actions: `Open Diffs` (single or multi-select), branch-aware `Revert Selected Changes` / `Cherry-pick Selected Changes`, and `Create Patch from Selected Changes` (save to file or copy to clipboard, then apply to the current working tree). The same selected-change actions are available when `Commit Details` is showing a merged/range diff from Filter Graph or Compare Branches.
 
 You can also run `Apply Patch to Working Tree` from the Command Palette to apply patch text from clipboard or a patch file.
 

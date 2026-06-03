@@ -8,6 +8,7 @@ import {
   CommitActionContext,
   CommitFileTreeItem,
   CommitRangeFileTreeItem,
+  CommitSelectableFileTreeItem,
   RevisionFileTreeItem,
   WorkingTreeCompareFileTreeItem
 } from '../providers/commitFilesTreeProvider';
@@ -50,6 +51,31 @@ type GitScmApi = {
 type GitScmExtensionExports = {
   getAPI(version: 1): GitScmApi;
 };
+
+type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem;
+type SelectedChangeTarget =
+  | {
+    kind: 'commit';
+    sha: string;
+    subject: string;
+    filePaths: string[];
+    canRevert: boolean;
+    canCherryPick: boolean;
+    detailLabel: string;
+    shortLabel: string;
+  }
+  | {
+    kind: 'range';
+    fromRef: string;
+    toRef: string;
+    fromLabel: string;
+    toLabel: string;
+    filePaths: string[];
+    canRevert: boolean;
+    canCherryPick: boolean;
+    detailLabel: string;
+    shortLabel: string;
+  };
 
 interface WithSubmoduleProgressOptions {
   title: string;
@@ -124,7 +150,7 @@ export class CommandController {
     private readonly editor: EditorOrchestrator,
     private readonly logger: Logger,
     private readonly commitFilesView: {
-      getCommitActionContext(selectedItems: readonly CommitFileTreeItem[]): CommitActionContext | undefined;
+      getCommitActionContext(selectedItems: readonly CommitSelectableFileTreeItem[]): CommitActionContext | undefined;
       getAllFileItems(): CommitFileTreeItem[];
       showCommit(sha: string, subject: string): Promise<void>;
       clear(): Promise<void>;
@@ -1176,22 +1202,27 @@ export class CommandController {
       }
 
       if (!target.canRevert) {
-        void vscode.window.showWarningMessage('Selected files belong to a commit that is not in the current branch.');
+        void vscode.window.showWarningMessage('Selected files cannot be reverted from the current branch.');
         return;
       }
 
       const confirmed = await confirmDangerousAction({
         title: 'Revert selected changes',
-        detail: `Commit: ${target.sha}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
+        detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
         acceptLabel: 'Revert'
       });
       if (!confirmed) {
         return;
       }
 
-      await this.git.revertCommitFiles(target.sha, target.filePaths);
+      if (target.kind === 'commit') {
+        await this.git.revertCommitFiles(target.sha, target.filePaths);
+      } else {
+        const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+        await this.git.reverseApplyPatchToWorkingTree(patch);
+      }
       await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Reverted selected changes from ${target.sha.slice(0, 8)} in the current checkout.`);
+      void vscode.window.showInformationMessage(`Reverted selected changes from ${target.shortLabel} in the current checkout.`);
     });
 
     register('vscodeGitClient.commit.cherryPickSelectedChanges', async (arg?: unknown, selected?: unknown) => {
@@ -1202,23 +1233,29 @@ export class CommandController {
       }
 
       if (!target.canCherryPick) {
-        void vscode.window.showWarningMessage('Selected files belong to a commit that is already in the current branch.');
+        void vscode.window.showWarningMessage('Selected files are already available in the current branch.');
         return;
       }
 
       const confirmed = await confirmDangerousAction({
         title: 'Cherry-pick selected changes',
-        detail: `Commit: ${target.sha}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
+        detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
         acceptLabel: 'Cherry-pick'
       });
       if (!confirmed) {
         return;
       }
 
-      await this.git.cherryPickCommitFiles(target.sha, target.filePaths);
-      const refreshPromise = this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Cherry-picked selected changes from ${target.sha.slice(0, 8)} into the current checkout.`);
-      await refreshPromise;
+      if (target.kind === 'commit') {
+        await this.git.cherryPickCommitFiles(target.sha, target.filePaths);
+        const refreshPromise = this.state.refreshAll();
+        void vscode.window.showInformationMessage(`Cherry-picked selected changes from ${target.shortLabel} into the current checkout.`);
+        await refreshPromise;
+        return;
+      }
+
+      const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
     });
 
     register('vscodeGitClient.commit.createPatchSelectedChanges', async (arg?: unknown, selected?: unknown) => {
@@ -1229,11 +1266,13 @@ export class CommandController {
       }
 
       if (!target.canCherryPick) {
-        void vscode.window.showWarningMessage('Selected files belong to a commit that is already in the current branch.');
+        void vscode.window.showWarningMessage('Selected files are already available in the current branch.');
         return;
       }
 
-      const patch = await this.git.getPatchForCommitFiles(target.sha, target.filePaths);
+      const patch = target.kind === 'commit'
+        ? await this.git.getPatchForCommitFiles(target.sha, target.filePaths)
+        : await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
       if (!patch.trim()) {
         void vscode.window.showInformationMessage('No patch content generated for the selected files.');
         return;
@@ -1264,7 +1303,7 @@ export class CommandController {
         await vscode.workspace.fs.writeFile(targetUri, Buffer.from(patch, 'utf8'));
       }
 
-      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.sha.slice(0, 8)}` });
+      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
     });
 
     register('vscodeGitClient.commit.applyPatch', async () => {
@@ -3111,6 +3150,22 @@ export class CommandController {
       return true;
     }
 
+    const rangeItems = selectedItems.filter((item): item is CommitRangeFileTreeItem => item instanceof CommitRangeFileTreeItem);
+    if (rangeItems.length > 0) {
+      const ordered = [...new Map(
+        rangeItems.map((item) => [`${item.fromRef}:${item.toRef}:${item.filePath}:${item.status}`, item] as const)
+      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
+      for (const item of ordered) {
+        await this.editor.openCommitRangeFileDiff(
+          item.fromRef,
+          item.toRef,
+          item.filePath,
+          { fromLabel: item.fromLabel, toLabel: item.toLabel }
+        );
+      }
+      return true;
+    }
+
     const graphItems = selectedItems.filter((item): item is GraphCommitFileTreeItem => item instanceof GraphCommitFileTreeItem);
     if (graphItems.length > 0) {
       const ordered = [...new Map(
@@ -3231,20 +3286,17 @@ export class CommandController {
   private async resolveSelectedCommitFiles(
     arg: unknown,
     selectedArg: unknown
-  ): Promise<{ sha: string; subject: string; filePaths: string[]; canRevert: boolean; canCherryPick: boolean } | undefined> {
+  ): Promise<SelectedChangeTarget | undefined> {
     const selectedItems = this.toSelectedItems(arg, selectedArg);
-    if (selectedItems.length > 0 && selectedItems[0] instanceof CommitFileTreeItem) {
-      const context = this.commitFilesView.getCommitActionContext(selectedItems as CommitFileTreeItem[]);
+    if (
+      selectedItems.length > 0 &&
+      (selectedItems[0] instanceof CommitFileTreeItem || selectedItems[0] instanceof CommitRangeFileTreeItem)
+    ) {
+      const context = this.commitFilesView.getCommitActionContext(selectedItems as CommitSelectableFileTreeItem[]);
       if (!context || context.filePaths.length === 0) {
         return undefined;
       }
-      return {
-        sha: context.sha,
-        subject: context.subject,
-        filePaths: context.filePaths,
-        canRevert: context.canRevertSelected,
-        canCherryPick: context.canCherryPickSelected
-      };
+      return this.toSelectedChangeTarget(context);
     }
 
     const graphItems = selectedItems.filter((item): item is GraphCommitFileTreeItem => item instanceof GraphCommitFileTreeItem);
@@ -3267,20 +3319,51 @@ export class CommandController {
 
     const canRevert = await this.git.isCommitInCurrentBranch(sha);
     return {
+      kind: 'commit',
       sha,
       subject: commit.subject,
       filePaths,
       canRevert,
-      canCherryPick: !canRevert
+      canCherryPick: !canRevert,
+      detailLabel: `Commit: ${sha}`,
+      shortLabel: sha.slice(0, 8)
     };
   }
 
-  private toSelectedItems(arg: unknown, selectedArg: unknown): Array<GraphCommitFileTreeItem | CommitFileTreeItem> {
+  private toSelectedChangeTarget(context: CommitActionContext): SelectedChangeTarget {
+    if (context.kind === 'commit') {
+      return {
+        kind: 'commit',
+        sha: context.sha,
+        subject: context.subject,
+        filePaths: context.filePaths,
+        canRevert: context.canRevertSelected,
+        canCherryPick: context.canCherryPickSelected,
+        detailLabel: `Commit: ${context.sha}`,
+        shortLabel: context.sha.slice(0, 8)
+      };
+    }
+
+    return {
+      kind: 'range',
+      fromRef: context.fromRef,
+      toRef: context.toRef,
+      fromLabel: context.fromLabel,
+      toLabel: context.toLabel,
+      filePaths: context.filePaths,
+      canRevert: context.canRevertSelected,
+      canCherryPick: context.canCherryPickSelected,
+      detailLabel: `Range: ${context.fromLabel}..${context.toLabel}`,
+      shortLabel: `${context.fromLabel}..${context.toLabel}`
+    };
+  }
+
+  private toSelectedItems(arg: unknown, selectedArg: unknown): SelectableChangeTreeItem[] {
     const selectedList = Array.isArray(selectedArg) ? selectedArg : [];
     const first = this.extractSelectableItem(arg);
     const fromSelected = selectedList
       .map((item) => this.extractSelectableItem(item))
-      .filter((item): item is GraphCommitFileTreeItem | CommitFileTreeItem => Boolean(item));
+      .filter((item): item is SelectableChangeTreeItem => Boolean(item));
 
     const all = [...fromSelected];
     if (first) {
@@ -3290,11 +3373,14 @@ export class CommandController {
     return [...new Set(all)];
   }
 
-  private extractSelectableItem(value: unknown): GraphCommitFileTreeItem | CommitFileTreeItem | undefined {
+  private extractSelectableItem(value: unknown): SelectableChangeTreeItem | undefined {
     if (value instanceof GraphCommitFileTreeItem) {
       return value;
     }
     if (value instanceof CommitFileTreeItem) {
+      return value;
+    }
+    if (value instanceof CommitRangeFileTreeItem) {
       return value;
     }
     return undefined;

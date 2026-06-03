@@ -14,7 +14,7 @@ export class CommitFileTreeItem extends vscode.TreeItem {
     const fileName = filePath.split('/').at(-1) ?? filePath;
     super(fileName, vscode.TreeItemCollapsibleState.None);
     this.id = `commitView:file:${sha}:${filePath}`;
-    this.contextValue = 'commitViewFile';
+    this.contextValue = 'commitViewFile commitViewSelectableChange';
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, filePath));
     this.description = statusBadge(status);
     this.description = this.description.padStart(2, ' ');
@@ -40,7 +40,7 @@ export class CommitRangeFileTreeItem extends vscode.TreeItem {
     const fileName = filePath.split('/').at(-1) ?? filePath;
     super(fileName, vscode.TreeItemCollapsibleState.None);
     this.id = `commitView:range:file:${fromRef}:${toRef}:${filePath}`;
-    this.contextValue = 'commitRangeFile';
+    this.contextValue = 'commitRangeFile commitViewSelectableChange';
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, filePath));
     this.description = statusBadge(status).padStart(2, ' ');
     this.tooltip = `${filePath}\n${statusTitle(status)}\n${fromLabel} ↔ ${toLabel}`;
@@ -111,15 +111,28 @@ export class CommitFolderTreeItem extends vscode.TreeItem {
   }
 }
 
-type CommitViewNode = CommitFileTreeItem | CommitRangeFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem;
+export type CommitSelectableFileTreeItem = CommitFileTreeItem | CommitRangeFileTreeItem;
+type CommitViewNode = CommitSelectableFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem;
 type TreeFileEntry = { path: string; status?: string; oldPath?: string; untracked?: boolean };
-export interface CommitActionContext {
-  readonly sha: string;
-  readonly subject: string;
-  readonly filePaths: string[];
-  readonly canRevertSelected: boolean;
-  readonly canCherryPickSelected: boolean;
-}
+export type CommitActionContext =
+  | {
+    readonly kind: 'commit';
+    readonly sha: string;
+    readonly subject: string;
+    readonly filePaths: string[];
+    readonly canRevertSelected: boolean;
+    readonly canCherryPickSelected: boolean;
+  }
+  | {
+    readonly kind: 'range';
+    readonly fromRef: string;
+    readonly toRef: string;
+    readonly fromLabel: string;
+    readonly toLabel: string;
+    readonly filePaths: string[];
+    readonly canRevertSelected: boolean;
+    readonly canCherryPickSelected: boolean;
+  };
 type ActiveTreeState =
   | { mode: 'commit'; sha: string; subject: string; files: CommitFileChange[]; canRevertSelected: boolean }
   | {
@@ -257,8 +270,8 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.updateViewTitle(`Commit Details ${fromLabel}..${toLabel}`);
     this.emitter.fire();
     await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', true);
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', true);
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -301,25 +314,46 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       .sort((a, b) => a.filePath.localeCompare(b.filePath));
   }
 
-  getCommitActionContext(selectedItems: readonly CommitFileTreeItem[]): CommitActionContext | undefined {
-    if (!this.activeState || this.activeState.mode !== 'commit') {
+  getCommitActionContext(selectedItems: readonly CommitSelectableFileTreeItem[]): CommitActionContext | undefined {
+    if (!this.activeState) {
       return undefined;
     }
 
-    const activeCommit = this.activeState;
-    const allFiles = activeCommit.files.map((file) => file.path);
-    const selectedPaths = [...new Set(selectedItems.map((item) => item.filePath).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b)
-    );
-    const filePaths = selectedPaths.length > 0 ? selectedPaths : allFiles;
+    if (this.activeState.mode === 'commit') {
+      const activeCommit = this.activeState;
+      const allFiles = activeCommit.files.map((file) => file.path);
+      const selectedPaths = selectedFilePaths(selectedItems, CommitFileTreeItem);
+      const filePaths = selectedPaths.length > 0 ? selectedPaths : allFiles;
 
-    return {
-      sha: activeCommit.sha,
-      subject: activeCommit.subject,
-      filePaths,
-      canRevertSelected: activeCommit.canRevertSelected,
-      canCherryPickSelected: !activeCommit.canRevertSelected
-    };
+      return {
+        kind: 'commit',
+        sha: activeCommit.sha,
+        subject: activeCommit.subject,
+        filePaths,
+        canRevertSelected: activeCommit.canRevertSelected,
+        canCherryPickSelected: !activeCommit.canRevertSelected
+      };
+    }
+
+    if (this.activeState.mode === 'range') {
+      const activeRange = this.activeState;
+      const allFiles = activeRange.files.map((file) => file.path);
+      const selectedPaths = selectedFilePaths(selectedItems, CommitRangeFileTreeItem);
+      const filePaths = selectedPaths.length > 0 ? selectedPaths : allFiles;
+
+      return {
+        kind: 'range',
+        fromRef: activeRange.fromRef,
+        toRef: activeRange.toRef,
+        fromLabel: activeRange.fromLabel,
+        toLabel: activeRange.toLabel,
+        filePaths,
+        canRevertSelected: true,
+        canCherryPickSelected: true
+      };
+    }
+
+    return undefined;
   }
 
   private updateViewTitle(title: string): void {
@@ -454,6 +488,18 @@ function normalizedStatus(statusRaw: string): string {
   const token = (statusRaw ?? '').trim();
   if (!token) return '?';
   return token[0].toUpperCase();
+}
+
+function selectedFilePaths<T extends CommitSelectableFileTreeItem>(
+  selectedItems: readonly CommitSelectableFileTreeItem[],
+  ctor: new (...args: never[]) => T
+): string[] {
+  return [...new Set(
+    selectedItems
+      .filter((item): item is T => item instanceof ctor)
+      .map((item) => item.filePath)
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
 }
 
 function formatRevisionNumber(revision: string): string {

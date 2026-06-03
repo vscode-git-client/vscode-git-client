@@ -6,6 +6,7 @@ import * as path from 'path';
 import { describe, it, afterEach } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
+import { CommitRangeFileTreeItem } from '../providers/commitFilesTreeProvider';
 import { GraphCommitFileTreeItem } from '../providers/graphTreeProvider';
 import { GitService } from '../services/gitService';
 import { GraphCommit } from '../types';
@@ -28,7 +29,14 @@ function createGraphCommit(sha: string): GraphCommit {
 
 function registerController(
   git: Record<string, unknown>,
-  state: Record<string, unknown>
+  state: Record<string, unknown>,
+  commitFilesView?: {
+    getCommitActionContext(selectedItems: readonly unknown[]): unknown;
+    getAllFileItems(): unknown[];
+    showCommit(sha: string, subject: string): Promise<void>;
+    clear(): Promise<void>;
+    isShowingCommit(sha: string): boolean;
+  }
 ): Map<string, (...args: unknown[]) => Promise<void>> {
   const commands = new Map<string, (...args: unknown[]) => Promise<void>>();
 
@@ -44,13 +52,13 @@ function registerController(
     state as never,
     {} as never,
     { error() { }, warn() { }, info() { } } as never,
-    {
+    (commitFilesView ?? {
       getCommitActionContext: () => undefined,
       getAllFileItems: () => [],
       showCommit: async () => undefined,
       clear: async () => undefined,
       isShowingCommit: () => false
-    }
+    }) as never
   );
 
   controller.register({ subscriptions: [] } as unknown as vscode.ExtensionContext);
@@ -145,5 +153,80 @@ describe('selected commit file changes', () => {
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  it('cherry-picks multiple selected Commit Details range file rows', async () => {
+    const events: string[] = [];
+    const fromRef = 'feature-base^';
+    const toRef = 'feature-tip';
+    const first = new CommitRangeFileTreeItem(fromRef, toRef, 'base', 'tip', 'src/a.ts', 'M', '/repo');
+    const second = new CommitRangeFileTreeItem(fromRef, toRef, 'base', 'tip', 'src/b.ts', 'A', '/repo');
+    const patch = 'diff --git a/src/a.ts b/src/a.ts\n';
+
+    (vscode.window as unknown as {
+      showWarningMessage: typeof vscode.window.showWarningMessage;
+    }).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) => acceptLabel;
+    (vscode.window as unknown as {
+      showInformationMessage: typeof vscode.window.showInformationMessage;
+    }).showInformationMessage = async (message: string) => {
+      events.push(`message:${message}`);
+      return undefined;
+    };
+
+    const commands = registerController(
+      {
+        getPatchBetweenRefsForFiles: async (from: string, to: string, filePaths: string[]) => {
+          events.push(`git:range-patch:${from}:${to}:${filePaths.join(',')}`);
+          return patch;
+        },
+        getChangedFiles: async () => [],
+        canApplyPatchToWorkingTree: async (value: string) => {
+          events.push(`git:can-apply:${value === patch}`);
+          return true;
+        },
+        applyPatchToWorkingTree: async (value: string) => {
+          events.push(`git:apply-patch:${value === patch}`);
+        }
+      },
+      {
+        branches: [],
+        conflicts: [],
+        refreshAll: async () => {
+          events.push('refresh');
+        }
+      },
+      {
+        getCommitActionContext: (selectedItems: readonly unknown[]) => ({
+          kind: 'range',
+          fromRef,
+          toRef,
+          fromLabel: 'base',
+          toLabel: 'tip',
+          filePaths: selectedItems
+            .filter((item): item is CommitRangeFileTreeItem => item instanceof CommitRangeFileTreeItem)
+            .map((item) => item.filePath)
+            .sort((a, b) => a.localeCompare(b)),
+          canRevertSelected: true,
+          canCherryPickSelected: true
+        }),
+        getAllFileItems: () => [],
+        showCommit: async () => undefined,
+        clear: async () => undefined,
+        isShowingCommit: () => false
+      } as never
+    );
+
+    const cherryPick = commands.get('vscodeGitClient.commit.cherryPickSelectedChanges');
+    assert.ok(cherryPick, 'expected selected-changes cherry-pick command to be registered');
+
+    await cherryPick(first, [first, second]);
+
+    assert.deepStrictEqual(events, [
+      `git:range-patch:${fromRef}:${toRef}:src/a.ts,src/b.ts`,
+      'git:can-apply:true',
+      'git:apply-patch:true',
+      'refresh',
+      'message:Applied patch from selected changes from base..tip to the current working tree.'
+    ]);
   });
 });

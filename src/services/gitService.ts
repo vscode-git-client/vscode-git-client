@@ -1120,6 +1120,15 @@ export class GitService {
     return result.stdout;
   }
 
+  async getPatchBetweenRefsForFiles(fromRef: string, toRef: string, filePaths: string[]): Promise<string> {
+    if (filePaths.length === 0) {
+      return '';
+    }
+
+    const result = await this.runGit(['diff', '--binary', fromRef, toRef, '--', ...filePaths]);
+    return result.stdout;
+  }
+
   async canApplyPatchToWorkingTree(patch: string): Promise<boolean> {
     if (!patch.trim()) {
       return false;
@@ -1152,6 +1161,14 @@ export class GitService {
     }
 
     await this.runGitWithStdin(['apply', '--3way', '--whitespace=nowarn'], patch);
+  }
+
+  async reverseApplyPatchToWorkingTree(patch: string): Promise<void> {
+    if (!patch.trim()) {
+      return;
+    }
+
+    await this.runGitWithStdin(['apply', '--3way', '--whitespace=nowarn', '-R'], patch);
   }
 
   async getCompare(leftRef: string, rightRef: string): Promise<CompareResult> {
