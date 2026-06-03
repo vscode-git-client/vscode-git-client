@@ -6,7 +6,7 @@ import * as path from 'path';
 import { describe, it, afterEach } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
-import { CommitRangeFileTreeItem } from '../providers/commitFilesTreeProvider';
+import { CommitRangeFileTreeItem, WorkingTreeCompareFileTreeItem } from '../providers/commitFilesTreeProvider';
 import { GraphCommitFileTreeItem } from '../providers/graphTreeProvider';
 import { GitService } from '../services/gitService';
 import { GraphCommit } from '../types';
@@ -30,6 +30,7 @@ function createGraphCommit(sha: string): GraphCommit {
 function registerController(
   git: Record<string, unknown>,
   state: Record<string, unknown>,
+  editor?: Record<string, unknown>,
   commitFilesView?: {
     getCommitActionContext(selectedItems: readonly unknown[]): unknown;
     getAllFileItems(): unknown[];
@@ -50,7 +51,7 @@ function registerController(
   const controller = new CommandController(
     git as never,
     state as never,
-    {} as never,
+    (editor ?? {}) as never,
     { error() { }, warn() { }, info() { } } as never,
     (commitFilesView ?? {
       getCommitActionContext: () => undefined,
@@ -195,6 +196,7 @@ describe('selected commit file changes', () => {
           events.push('refresh');
         }
       },
+      undefined,
       {
         getCommitActionContext: (selectedItems: readonly unknown[]) => ({
           kind: 'range',
@@ -228,5 +230,41 @@ describe('selected commit file changes', () => {
       'refresh',
       'message:Applied patch from selected changes from base..tip to the current working tree.'
     ]);
+  });
+
+  it('opens multiple selected working-tree comparison file diffs from Commit Details', async () => {
+    const events: string[] = [];
+    const first = new WorkingTreeCompareFileTreeItem('HEAD', 'HEAD', 'src/a.ts', 'M', false, '/repo');
+    const second = new WorkingTreeCompareFileTreeItem('HEAD', 'HEAD', 'src/b.ts', 'A', true, '/repo');
+
+    const commands = registerController(
+      {},
+      {
+        branches: [],
+        conflicts: [],
+        refreshAll: async () => undefined
+      },
+      {
+        openWorkingTreeFileDiff: async (
+          filePath: string,
+          ref: string,
+          refLabel: string,
+          options: { preview: boolean; status?: string }
+        ) => {
+          events.push(`${filePath}:${ref}:${refLabel}:${options.preview}:${options.status}`);
+        }
+      }
+    );
+
+    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    assert.ok(openDiffs, 'expected open diffs command to be registered');
+
+    await openDiffs(second, [first, second]);
+
+    assert.deepStrictEqual(events, [
+      'src/a.ts:HEAD:HEAD:true:M',
+      'src/b.ts:HEAD:HEAD:true:A'
+    ]);
+    assert.ok(first.contextValue?.includes('commitViewSelectableChange'));
   });
 });

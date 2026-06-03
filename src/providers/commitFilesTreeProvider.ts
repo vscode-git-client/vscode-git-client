@@ -84,7 +84,7 @@ export class WorkingTreeCompareFileTreeItem extends vscode.TreeItem {
     const fileName = filePath.split('/').at(-1) ?? filePath;
     super(fileName, vscode.TreeItemCollapsibleState.None);
     this.id = `commitView:workingTreeCompare:${ref}:${filePath}`;
-    this.contextValue = 'workingTreeCompareFile';
+    this.contextValue = 'workingTreeCompareFile commitViewSelectableChange';
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, filePath));
     this.description = untracked ? 'Untracked' : statusBadge(status).padStart(2, ' ');
     this.tooltip = `${filePath}\n${untracked ? 'Untracked' : statusTitle(status)}`;

@@ -52,7 +52,7 @@ type GitScmExtensionExports = {
   getAPI(version: 1): GitScmApi;
 };
 
-type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem;
+type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem | WorkingTreeCompareFileTreeItem;
 type SelectedChangeTarget =
   | {
     kind: 'commit';
@@ -3170,6 +3170,22 @@ export class CommandController {
       return true;
     }
 
+    const workingTreeCompareItems = selectedItems.filter(
+      (item): item is WorkingTreeCompareFileTreeItem => item instanceof WorkingTreeCompareFileTreeItem
+    );
+    if (workingTreeCompareItems.length > 0) {
+      const ordered = [...new Map(
+        workingTreeCompareItems.map((item) => [`${item.ref}:${item.filePath}:${item.status}`, item] as const)
+      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
+      for (const item of ordered) {
+        await this.editor.openWorkingTreeFileDiff(item.filePath, item.ref, item.refLabel, {
+          preview: true,
+          status: item.status
+        });
+      }
+      return true;
+    }
+
     const graphItems = selectedItems.filter((item): item is GraphCommitFileTreeItem => item instanceof GraphCommitFileTreeItem);
     if (graphItems.length > 0) {
       const ordered = [...new Map(
@@ -3385,6 +3401,9 @@ export class CommandController {
       return value;
     }
     if (value instanceof CommitRangeFileTreeItem) {
+      return value;
+    }
+    if (value instanceof WorkingTreeCompareFileTreeItem) {
       return value;
     }
     return undefined;
