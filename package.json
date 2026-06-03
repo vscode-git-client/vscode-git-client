@@ -1182,6 +1182,15 @@
           "default": "csv",
           "description": "Default export format for Compare Branches webview. CSV exports two branch-specific files; Excel exports one .xlsx with two sheets."
         },
+        "vscodeGitClient.compareWithRevision.defaultDirection": {
+          "type": "string",
+          "enum": [
+            "forward",
+            "reverse"
+          ],
+          "default": "forward",
+          "description": "Default diff direction for Compare with Revision. forward opens working tree on the left and selected revision on the right; reverse opens selected revision on the left and working tree on the right."
+        },
         "vscodeGitClient.commitMessageTemplates": {
           "type": "array",
           "default": [

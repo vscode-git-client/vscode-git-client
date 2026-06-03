@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 - **Compare Branches — Refresh** — the compare webview now has a refresh button that refetches commits for the current left/right refs without reopening the panel and recovers cleanly if the refresh fails.
 - **Compare with Revision — QuickPick refresh** — the revision picker now opens from cached refs first, lazily loads refs when empty, and offers a refresh button to update stale or partially loaded branch/tag lists without closing the picker.
 - **Compare with Revision — Swap direction** — diff tabs opened by VS Code Git Client now expose `Swap Compare Direction` from the editor/tab context menu, reopening the same file comparison with left and right revisions reversed.
+- **Compare with Revision — Default direction setting** — `vscodeGitClient.compareWithRevision.defaultDirection` now controls the default side order for revision diffs. The default `forward` opens `working tree ↔ selected revision`; set `reverse` to open `selected revision ↔ working tree`.
 - **Search Branches & Tags refresh** — the branch/tag search panel now has a refresh button beside the filter input and a `Refresh` entry in its webview context menu.
 - **Sparse repository view auto-collapse** — Worktrees and Submodules now auto-collapse after loading when the repository only has the main/current worktree and no submodules.
 

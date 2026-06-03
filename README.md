@@ -111,7 +111,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 Right-click a file or folder in Explorer and choose `Compare with Revision`.
 
 - Pick from local branches, remote branches, tags, or a typed commit SHA prefix.
-- For a file, the diff opens with the selected revision on the left and the working tree on the right.
+- For a file, the diff opens with the working tree on the left and the selected revision on the right by default. Set `vscodeGitClient.compareWithRevision.defaultDirection` to `reverse` to open the selected revision on the left instead.
 - For multiple selected files, the same revision is applied to every selected file and each diff opens.
 - For a folder, `Commit Details` lists changed files and opens the first file in preview diff mode.
 - Right-click an open diff tab or editor and choose `Swap Compare Direction` to reopen the same comparison with left and right revisions reversed.
@@ -228,6 +228,7 @@ Supported editor workflows include:
 | `vscodeGitClient.performance.refreshDebounceMs`     | `250`           | Debounce delay for VS Code Git repository-state auto-refresh events                                                                                                              |
 | `vscodeGitClient.performance.saveRefreshDebounceMs` | `150`           | Debounce delay for save-triggered working-tree refresh events                                                                                                                    |
 | `vscodeGitClient.compare.exportFormat`              | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets                                                                                  |
+| `vscodeGitClient.compareWithRevision.defaultDirection` | `"forward"`  | Compare with Revision diff direction: `forward` opens working tree on the left and selected revision on the right; `reverse` swaps those sides                                   |
 | `vscodeGitClient.commitMessageTemplates`            | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders                                                                            |
 | `vscodeGitClient.commitMessageTicketPattern`        | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                                                                                                   |
 | `vscodeGitClient.aiGenerateTimeoutMs`               | `5000`          | Timeout for AI commit message generation in milliseconds                                                                                                                         |

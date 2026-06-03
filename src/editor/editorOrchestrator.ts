@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { getConfigValue } from '../configuration';
 import { CommitFilesTreeProvider } from '../providers/commitFilesTreeProvider';
 import { GitService } from '../services/gitService';
 import { StateStore } from '../state/stateStore';
@@ -14,6 +15,7 @@ const WORKTREE_REF = 'WORKTREE';
 type ComparableDiffSide =
   | { kind: 'ref'; ref: string; relativePath: string }
   | { kind: 'worktree'; relativePath: string };
+type CompareWithRevisionDirection = 'forward' | 'reverse';
 
 export class EditorOrchestrator {
   private compareView: CompareView | undefined;
@@ -167,12 +169,17 @@ export class EditorOrchestrator {
     relativePath: string,
     ref: string,
     refLabel: string,
-    opts: { preview: boolean; status?: string }
+    opts: { preview: boolean; status?: string; direction?: CompareWithRevisionDirection }
   ): Promise<void> {
-    const left = await this.createVirtualUri(ref, relativePath);
-    const right = await this.createWorkingTreeUri(relativePath, opts.status);
+    const direction = opts.direction ?? getCompareWithRevisionDirection();
+    const revisionSide: ComparableDiffSide = { kind: 'ref', ref, relativePath };
+    const worktreeSide: ComparableDiffSide = { kind: 'worktree', relativePath };
+    const leftSide = direction === 'reverse' ? revisionSide : worktreeSide;
+    const rightSide = direction === 'reverse' ? worktreeSide : revisionSide;
+    const left = await this.createComparableDiffUri(leftSide, opts.status);
+    const right = await this.createComparableDiffUri(rightSide, opts.status);
 
-    const title = `${refLabel} ↔ working tree · ${relativePath}`;
+    const title = `${formatCompareWithRevisionSideLabel(leftSide, ref, refLabel)} ↔ ${formatCompareWithRevisionSideLabel(rightSide, ref, refLabel)} · ${relativePath}`;
     await vscode.commands.executeCommand('vscode.diff', left, right, title, {
       preview: opts.preview,
       preserveFocus: false
@@ -362,9 +369,9 @@ export class EditorOrchestrator {
     return uri;
   }
 
-  private async createComparableDiffUri(side: ComparableDiffSide): Promise<vscode.Uri> {
+  private async createComparableDiffUri(side: ComparableDiffSide, status?: string): Promise<vscode.Uri> {
     if (side.kind === 'worktree') {
-      return this.createWorkingTreeUri(side.relativePath);
+      return this.createWorkingTreeUri(side.relativePath, status);
     }
     return this.createVirtualUri(side.ref, side.relativePath);
   }
@@ -424,6 +431,22 @@ function formatRevisionLabel(ref: string): string {
 
 function formatComparableSideLabel(side: ComparableDiffSide): string {
   return side.kind === 'worktree' ? 'working tree' : formatRevisionLabel(side.ref);
+}
+
+function formatCompareWithRevisionSideLabel(
+  side: ComparableDiffSide,
+  ref: string,
+  refLabel: string
+): string {
+  if (side.kind === 'worktree') {
+    return 'working tree';
+  }
+  return side.ref === ref ? refLabel : formatRevisionLabel(side.ref);
+}
+
+function getCompareWithRevisionDirection(): CompareWithRevisionDirection {
+  const configured = getConfigValue<string>('compareWithRevision.defaultDirection', 'forward');
+  return configured === 'reverse' ? 'reverse' : 'forward';
 }
 
 function parseVirtualGitUri(uri: vscode.Uri): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
