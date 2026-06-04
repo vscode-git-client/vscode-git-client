@@ -161,7 +161,7 @@
   <div class="header">
     {{> partials/molecules/viewHeading
       title="Search Branches & Tags"
-      hint="Type to filter branches and tags. Enter to checkout the top match. ↑/↓ to move. Esc to close."
+      hint="Type to filter branches and tags. Click a result for actions. Enter to checkout the top match. ↑/↓ to move. Esc to close."
     }}
     <div class="search-row">
       <input id="search" type="text" placeholder="Filter branches or tags…" autofocus spellcheck="false" />
@@ -500,11 +500,13 @@
         openMenu(rect.left, rect.bottom + 4, name, kind);
         return;
       }
-      if (kind === 'tag') {
-        vscode.postMessage({ type: 'checkoutTag', name });
-      } else {
-        vscode.postMessage({ type: 'checkout', name });
+      e.stopPropagation();
+      const idx = Number(row.dataset.index);
+      if (Number.isFinite(idx)) {
+        focusRow(idx);
       }
+      const rect = row.getBoundingClientRect();
+      openMenu(rect.left + 28, rect.bottom + 4, name, kind);
     });
   </script>
 {{> partials/documentEnd}}
