@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { getConfigValue } from '../configuration';
 import { EditorOrchestrator } from '../editor/editorOrchestrator';
 import { confirmDangerousAction } from '../guards';
@@ -25,7 +26,7 @@ import { BranchSearchView } from '../views/branchSearchView';
 import { CommitListView } from '../views/commitListView';
 import { GraphFilterView } from '../views/graphFilterView';
 import { GraphFilterSession } from '../views/graphFilterSession';
-import { pickRevisionToCompare } from '../views/revisionPicker';
+import { pickRevisionToCompare, RevisionSelection } from '../views/revisionPicker';
 
 interface QuickAction {
   label: string;
@@ -2121,21 +2122,13 @@ export class CommandController {
     });
 
     register('vscodeGitClient.worktree.addFromBranch', async () => {
-      const branches = this.state.branches.filter((b) => b.type === 'local');
-      const picked = await vscode.window.showQuickPick(
-        branches.map((b) => ({ label: b.name })),
-        { title: 'Add worktree from branch', placeHolder: 'Select branch' }
-      );
-      if (!picked) { return; }
+      const selection = await this.pickWorktreeRevision('Add worktree from branch, tag, or revision');
+      if (!selection) { return; }
 
-      const targetPath = await vscode.window.showInputBox({
-        title: 'Worktree path',
-        placeHolder: '../my-worktree',
-        validateInput: (v) => v.trim() ? undefined : 'Path is required'
-      });
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
       if (!targetPath) { return; }
 
-      await this.git.addWorktree(targetPath.trim(), picked.label);
+      await this.git.addWorktree(targetPath, selection.ref);
       await this.state.refreshWorktrees();
     });
 
@@ -2147,42 +2140,30 @@ export class CommandController {
       });
       if (!branchName) { return; }
 
-      const base = await this.pickBranchName('Select base branch (optional — press Enter to skip)');
+      const base = await this.pickWorktreeRevision('Select base branch, tag, or revision');
 
-      const targetPath = await vscode.window.showInputBox({
-        title: 'Worktree path',
-        placeHolder: '../my-worktree',
-        validateInput: (v) => v.trim() ? undefined : 'Path is required'
-      });
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
       if (!targetPath) { return; }
 
-      await this.git.addWorktreeBranch(targetPath.trim(), branchName.trim(), base ?? undefined);
+      await this.git.addWorktreeBranch(targetPath, branchName.trim(), base?.ref);
       await this.state.refreshWorktrees();
     });
 
     register('vscodeGitClient.worktree.addDetached', async () => {
-      const ref = await vscode.window.showInputBox({
-        title: 'Detached worktree at ref',
-        placeHolder: 'HEAD, commit SHA, or tag',
-        validateInput: (v) => v.trim() ? undefined : 'Ref is required'
-      });
-      if (!ref) { return; }
+      const selection = await this.pickWorktreeRevision('Detached worktree at branch, tag, or revision');
+      if (!selection) { return; }
 
-      const targetPath = await vscode.window.showInputBox({
-        title: 'Worktree path',
-        placeHolder: '../my-worktree',
-        validateInput: (v) => v.trim() ? undefined : 'Path is required'
-      });
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
       if (!targetPath) { return; }
 
       const confirmed = await confirmDangerousAction({
         title: 'Add detached worktree',
-        detail: `This creates a worktree in detached HEAD state at ${ref}`,
+        detail: `This creates a worktree in detached HEAD state at ${selection.ref}`,
         acceptLabel: 'Create Detached'
       });
       if (!confirmed) { return; }
 
-      await this.git.addDetachedWorktree(targetPath.trim(), ref.trim());
+      await this.git.addDetachedWorktree(targetPath, selection.ref);
       await this.state.refreshWorktrees();
     });
 
@@ -3062,6 +3043,37 @@ export class CommandController {
     }
 
     return selectionPromise;
+  }
+
+  private async pickWorktreeRevision(title: string): Promise<RevisionSelection | undefined> {
+    return pickRevisionToCompare(
+      this.git,
+      () => this.state.branches,
+      () => this.state.tags,
+      () => this.state.refreshBranches(),
+      {
+        title,
+        placeholder: 'Select a local branch, remote branch, tag, or type a revision',
+        emptyPlaceholder: 'No branches or tags found - type a revision',
+        loadingPlaceholder: 'Loading branches and tags...',
+        refreshingPlaceholder: 'Refreshing branches and tags...',
+        allowTypedRevision: true
+      }
+    );
+  }
+
+  private async pickWorktreeTargetPath(title: string): Promise<string | undefined> {
+    const gitRoot = await this.git.getGitRoot();
+    const picked = await vscode.window.showOpenDialog({
+      title,
+      openLabel: 'Use Folder',
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      defaultUri: vscode.Uri.file(path.dirname(gitRoot))
+    });
+
+    return picked?.[0]?.fsPath;
   }
 
   private async pickStashRef(title: string): Promise<string | undefined> {

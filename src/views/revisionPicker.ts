@@ -4,7 +4,7 @@ import type { BranchRef, TagRef } from '../types';
 
 // ── Exported types ────────────────────────────────────────────────────────────
 
-export type RevisionKind = 'branch' | 'remote' | 'tag' | 'commit';
+export type RevisionKind = 'branch' | 'remote' | 'tag' | 'commit' | 'revision';
 
 export interface RevisionSelection {
   readonly ref: string;
@@ -16,6 +16,15 @@ export interface RevisionSelection {
 
 interface RevisionPickerItem extends vscode.QuickPickItem {
   readonly revision?: RevisionSelection;
+}
+
+export interface PickRevisionOptions {
+  readonly title?: string;
+  readonly placeholder?: string;
+  readonly emptyPlaceholder?: string;
+  readonly loadingPlaceholder?: string;
+  readonly refreshingPlaceholder?: string;
+  readonly allowTypedRevision?: boolean;
 }
 
 // ── Pure helpers (exported for testing) ──────────────────────────────────────
@@ -97,7 +106,8 @@ export async function pickRevisionToCompare(
   git: GitService,
   getBranches: () => readonly BranchRef[],
   getTags: () => readonly TagRef[],
-  onRefresh: () => Promise<void>
+  onRefresh: () => Promise<void>,
+  options: PickRevisionOptions = {}
 ): Promise<RevisionSelection | undefined> {
   return new Promise<RevisionSelection | undefined>((resolve) => {
     let resolved = false;
@@ -112,7 +122,9 @@ export async function pickRevisionToCompare(
     };
 
     const qp = vscode.window.createQuickPick<RevisionPickerItem>();
-    qp.placeholder = 'Select a branch, tag, or type a commit SHA…';
+    const defaultPlaceholder = options.placeholder ?? 'Select a branch, tag, or type a commit SHA...';
+    qp.title = options.title;
+    qp.placeholder = defaultPlaceholder;
     qp.matchOnDescription = true;
     const refreshButton: vscode.QuickInputButton = {
       iconPath: new vscode.ThemeIcon('refresh'),
@@ -147,8 +159,8 @@ export async function pickRevisionToCompare(
           }
           applyBaseItems();
           qp.placeholder = baseItems.length > 0
-            ? 'Select a branch, tag, or type a commit SHA…'
-            : 'No branches found — type a commit SHA';
+            ? defaultPlaceholder
+            : (options.emptyPlaceholder ?? 'No branches found - type a commit SHA');
         })
         .catch(() => {
           if (!disposed) {
@@ -218,8 +230,14 @@ export async function pickRevisionToCompare(
 
     qp.onDidAccept(() => {
       const [selected] = qp.selectedItems;
-      qp.hide();
+      const typed = qp.value.trim();
+      if (!selected?.revision && options.allowTypedRevision && typed) {
+        settle({ ref: typed, label: typed, kind: isLikelyShaPrefix(typed.toLowerCase()) ? 'commit' : 'revision' });
+        qp.hide();
+        return;
+      }
       settle(selected?.revision);
+      qp.hide();
     });
 
     qp.onDidHide(() => {
@@ -234,14 +252,14 @@ export async function pickRevisionToCompare(
 
     qp.onDidTriggerButton((button) => {
       if (button === refreshButton) {
-        refreshItems('Refreshing branches and tags…');
+        refreshItems(options.refreshingPlaceholder ?? 'Refreshing branches and tags...');
       }
     });
 
     qp.show();
 
     if (qp.items.length === 0) {
-      refreshItems('Loading branches and tags…');
+      refreshItems(options.loadingPlaceholder ?? 'Loading branches and tags...');
     }
   });
 }

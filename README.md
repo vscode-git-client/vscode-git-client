@@ -146,9 +146,10 @@ Available actions include:
 - Open a worktree in this window or a new window.
 - Reveal in Finder / Explorer.
 - Open a terminal in the worktree directory.
-- Add a worktree from an existing branch.
-- Add a worktree with a new branch.
-- Add a detached worktree.
+- Add a worktree from a local branch, remote branch, tag, or typed revision.
+- Add a worktree with a new branch based on a local branch, remote branch, tag, or typed revision.
+- Add a detached worktree from a local branch, remote branch, tag, or typed revision.
+- Pick the destination folder from the file explorer dialog instead of typing the path manually.
 - Lock, unlock, remove, or force remove worktrees.
 - Preview and prune stale worktrees.
 
