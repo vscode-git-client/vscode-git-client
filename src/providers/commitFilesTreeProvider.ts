@@ -106,13 +106,17 @@ export class CommitFolderTreeItem extends vscode.TreeItem {
     const segment = folderPath.split('/').at(-1) ?? folderPath;
     super(segment, vscode.TreeItemCollapsibleState.Expanded);
     this.id = `${idPrefix}:folder:${folderPath}`;
-    this.contextValue = 'commitViewFolder';
+    this.contextValue = 'commitViewFolder commitViewSelectableChange';
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, folderPath));
   }
 }
 
-export type CommitSelectableFileTreeItem = CommitFileTreeItem | CommitRangeFileTreeItem | WorkingTreeCompareFileTreeItem;
-type CommitViewNode = CommitSelectableFileTreeItem | CommitFolderTreeItem | RevisionFileTreeItem;
+export type CommitSelectableFileTreeItem =
+  | CommitFileTreeItem
+  | CommitRangeFileTreeItem
+  | WorkingTreeCompareFileTreeItem
+  | CommitFolderTreeItem;
+type CommitViewNode = CommitSelectableFileTreeItem | RevisionFileTreeItem;
 type TreeFileEntry = { path: string; status?: string; oldPath?: string; untracked?: boolean };
 export type CommitActionContext =
   | {
@@ -120,6 +124,7 @@ export type CommitActionContext =
     readonly sha: string;
     readonly subject: string;
     readonly filePaths: string[];
+    readonly fileStatuses?: Readonly<Record<string, string>>;
     readonly canRevertSelected: boolean;
     readonly canCherryPickSelected: boolean;
     readonly canCreatePatchSelected: boolean;
@@ -131,6 +136,7 @@ export type CommitActionContext =
     readonly fromLabel: string;
     readonly toLabel: string;
     readonly filePaths: string[];
+    readonly fileStatuses?: Readonly<Record<string, string>>;
     readonly canRevertSelected: boolean;
     readonly canCherryPickSelected: boolean;
     readonly canCreatePatchSelected: boolean;
@@ -140,6 +146,7 @@ export type CommitActionContext =
     readonly ref: string;
     readonly refLabel: string;
     readonly filePaths: string[];
+    readonly fileStatuses?: Readonly<Record<string, string>>;
     readonly canRevertSelected: boolean;
     readonly canCherryPickSelected: boolean;
     readonly canCreatePatchSelected: boolean;
@@ -346,6 +353,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         sha: activeCommit.sha,
         subject: activeCommit.subject,
         filePaths,
+        fileStatuses: statusMap(activeCommit.files),
         canRevertSelected: activeCommit.canRevertSelected,
         canCherryPickSelected: !activeCommit.canRevertSelected,
         canCreatePatchSelected: !activeCommit.canRevertSelected
@@ -365,6 +373,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         fromLabel: activeRange.fromLabel,
         toLabel: activeRange.toLabel,
         filePaths,
+        fileStatuses: statusMap(activeRange.files),
         canRevertSelected: true,
         canCherryPickSelected: true,
         canCreatePatchSelected: true
@@ -382,6 +391,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
         ref: activeCompare.ref,
         refLabel: activeCompare.refLabel,
         filePaths,
+        fileStatuses: statusMap(activeCompare.files),
         canRevertSelected: true,
         canCherryPickSelected: false,
         canCreatePatchSelected: true
@@ -530,11 +540,20 @@ function selectedFilePaths<T extends CommitSelectableFileTreeItem>(
   ctor: new (...args: never[]) => T
 ): string[] {
   return [...new Set(
-    selectedItems
-      .filter((item): item is T => item instanceof ctor)
-      .map((item) => item.filePath)
-      .filter(Boolean)
+    selectedItems.flatMap((item) => {
+      if (item instanceof CommitFolderTreeItem) {
+        return item.children.map((child) => child.path);
+      }
+      if (item instanceof ctor) {
+        return [item.filePath];
+      }
+      return [];
+    }).filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
+}
+
+function statusMap(files: readonly TreeFileEntry[]): Readonly<Record<string, string>> {
+  return Object.fromEntries(files.map((file) => [file.path, file.status ?? '']));
 }
 
 function formatRevisionNumber(revision: string): string {

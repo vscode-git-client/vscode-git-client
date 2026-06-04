@@ -475,7 +475,7 @@
       },
       {
         "command": "vscodeGitClient.commit.createPatchSelectedChanges",
-        "title": "Create Patch from Selected Changes"
+        "title": "Create Patch"
       },
       {
         "command": "vscodeGitClient.commit.applyPatch",

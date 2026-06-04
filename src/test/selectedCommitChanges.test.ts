@@ -6,7 +6,12 @@ import * as path from 'path';
 import { describe, it, afterEach } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
-import { CommitRangeFileTreeItem, WorkingTreeCompareFileTreeItem } from '../providers/commitFilesTreeProvider';
+import {
+  CommitFilesTreeProvider,
+  CommitFolderTreeItem,
+  CommitRangeFileTreeItem,
+  WorkingTreeCompareFileTreeItem
+} from '../providers/commitFilesTreeProvider';
 import { GraphCommitFileTreeItem } from '../providers/graphTreeProvider';
 import { GitService } from '../services/gitService';
 import { GraphCommit } from '../types';
@@ -266,6 +271,73 @@ describe('selected commit file changes', () => {
       'src/b.ts:HEAD:HEAD:true:A'
     ]);
     assert.ok(first.contextValue?.includes('commitViewSelectableChange'));
+  });
+
+  it('treats selected Commit Details folders as all files inside them', async () => {
+    const provider = new CommitFilesTreeProvider({
+      rootPath: '/repo'
+    } as never);
+    await provider.showWorkingTreeComparison({
+      ref: 'HEAD',
+      refLabel: 'HEAD',
+      scopePath: 'src',
+      files: [
+        { path: 'src/a.ts', status: 'M', untracked: false },
+        { path: 'src/nested/b.ts', status: 'A', untracked: true }
+      ]
+    });
+
+    const roots = await provider.getChildren();
+    const folder = roots.find((item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem);
+    assert.ok(folder, 'expected folder row');
+    assert.ok(folder.contextValue?.includes('commitViewSelectableChange'));
+
+    const context = provider.getCommitActionContext([folder]);
+    assert.deepStrictEqual(context?.filePaths, ['src/a.ts', 'src/nested/b.ts']);
+  });
+
+  it('opens file diffs for all files inside a selected Commit Details folder', async () => {
+    const events: string[] = [];
+    const provider = new CommitFilesTreeProvider({
+      rootPath: '/repo'
+    } as never);
+    await provider.showWorkingTreeComparison({
+      ref: 'HEAD',
+      refLabel: 'HEAD',
+      scopePath: 'src',
+      files: [
+        { path: 'src/a.ts', status: 'M', untracked: false },
+        { path: 'src/nested/b.ts', status: 'A', untracked: true }
+      ]
+    });
+    const roots = await provider.getChildren();
+    const folder = roots.find((item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem);
+    assert.ok(folder, 'expected folder row');
+
+    const commands = registerController(
+      {},
+      {
+        branches: [],
+        conflicts: [],
+        refreshAll: async () => undefined
+      },
+      {
+        openWorkingTreeFileDiff: async (filePath: string, ref: string, refLabel: string) => {
+          events.push(`${filePath}:${ref}:${refLabel}`);
+        }
+      },
+      provider as never
+    );
+
+    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    assert.ok(openDiffs, 'expected open diffs command to be registered');
+
+    await openDiffs(folder, [folder]);
+
+    assert.deepStrictEqual(events, [
+      'src/a.ts:HEAD:HEAD',
+      'src/nested/b.ts:HEAD:HEAD'
+    ]);
   });
 
   it('reverts selected working-tree comparison file rows from Commit Details', async () => {

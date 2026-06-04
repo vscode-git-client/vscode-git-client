@@ -7,6 +7,7 @@ import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../providers/bran
 import {
   CommitActionContext,
   CommitFileTreeItem,
+  CommitFolderTreeItem,
   CommitRangeFileTreeItem,
   CommitSelectableFileTreeItem,
   RevisionFileTreeItem,
@@ -1305,7 +1306,7 @@ export class CommandController {
         return;
       }
 
-      const output = await this.pickPatchOutputTarget('Create Patch from Selected Changes');
+      const output = await this.pickPatchOutputTarget('Create Patch');
       if (!output) {
         return;
       }
@@ -3168,6 +3169,21 @@ export class CommandController {
 
   private async openSelectedFileDiffs(arg: unknown, selectedArg: unknown): Promise<boolean> {
     const selectedItems = this.toSelectedItems(arg, selectedArg);
+    const commitSelectableItems = selectedItems.filter(
+      (item): item is CommitSelectableFileTreeItem =>
+        item instanceof CommitFileTreeItem ||
+        item instanceof CommitRangeFileTreeItem ||
+        item instanceof WorkingTreeCompareFileTreeItem ||
+        item instanceof CommitFolderTreeItem
+    );
+    if (commitSelectableItems.some((item) => item instanceof CommitFolderTreeItem)) {
+      const context = this.commitFilesView.getCommitActionContext(commitSelectableItems);
+      if (context && context.filePaths.length > 0) {
+        await this.openCommitActionContextDiffs(context);
+        return true;
+      }
+    }
+
     const commitViewItems = selectedItems.filter((item): item is CommitFileTreeItem => item instanceof CommitFileTreeItem);
     if (commitViewItems.length > 0) {
       const ordered = [...new Map(
@@ -3223,6 +3239,33 @@ export class CommandController {
     }
 
     return false;
+  }
+
+  private async openCommitActionContextDiffs(context: CommitActionContext): Promise<void> {
+    const orderedPaths = [...new Set(context.filePaths)].sort((a, b) => a.localeCompare(b));
+    if (context.kind === 'commit') {
+      for (const filePath of orderedPaths) {
+        await this.editor.openCommitFileDiffWithStatus(context.sha, filePath, context.fileStatuses?.[filePath]);
+      }
+      return;
+    }
+
+    if (context.kind === 'range') {
+      for (const filePath of orderedPaths) {
+        await this.editor.openCommitRangeFileDiff(context.fromRef, context.toRef, filePath, {
+          fromLabel: context.fromLabel,
+          toLabel: context.toLabel
+        });
+      }
+      return;
+    }
+
+    for (const filePath of orderedPaths) {
+      await this.editor.openWorkingTreeFileDiff(filePath, context.ref, context.refLabel, {
+        preview: true,
+        status: context.fileStatuses?.[filePath]
+      });
+    }
   }
 
   private async pickPatchOutputTarget(title: string): Promise<'clipboard' | 'file' | undefined> {
@@ -3338,7 +3381,8 @@ export class CommandController {
       (
         selectedItems[0] instanceof CommitFileTreeItem ||
         selectedItems[0] instanceof CommitRangeFileTreeItem ||
-        selectedItems[0] instanceof WorkingTreeCompareFileTreeItem
+        selectedItems[0] instanceof WorkingTreeCompareFileTreeItem ||
+        selectedItems[0] instanceof CommitFolderTreeItem
       )
     ) {
       const context = this.commitFilesView.getCommitActionContext(selectedItems as CommitSelectableFileTreeItem[]);
@@ -3450,6 +3494,9 @@ export class CommandController {
       return value;
     }
     if (value instanceof WorkingTreeCompareFileTreeItem) {
+      return value;
+    }
+    if (value instanceof CommitFolderTreeItem) {
       return value;
     }
     return undefined;
