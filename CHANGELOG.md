@@ -71,6 +71,9 @@ All notable changes to this project are documented in this file.
 - **Edit commit message across commit surfaces** — enabled `Edit Commit Message...` in shared commit context menu used by Git Graph, Compare Branches, and Filter Graph. The action now opens a rewrite flow that updates the selected commit message (via automated interactive rebase) instead of staying disabled.
 - **Commit Details selected-files context menu** — added `Create Patch` to the Commit Details tree so multi-file selections now expose IDE-style patch preview alongside branch-aware `Revert selected changes` / `Cherry-pick selected changes`.
 
+### Fixed
+- **Rebase current onto branch** — `Rebase Current Onto Branch` now runs through the extension's git CLI runner instead of VS Code's Git API wrapper, avoiding generic `Failed to execute git` failures and preserving the extension's rebase conflict handling for local and remote refs.
+
 ## [0.15.4] - 2026-05-10
 
 ### Changed

@@ -453,12 +453,6 @@ export class GitService {
   }
 
   async rebaseCurrentOnto(branch: string): Promise<void> {
-    const repository = await this.getVsCodeRepository();
-    if (repository) {
-      this.logger.info(`vscode.git rebase ${branch}`);
-      await repository.rebase(branch);
-      return;
-    }
     await this.runGit(['rebase', branch]);
   }
 
