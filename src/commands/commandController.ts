@@ -20,6 +20,7 @@ import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
 import { SubmoduleTreeItem } from '../providers/submoduleTreeProvider';
 import { GitService } from '../services/gitService';
 import { SubmoduleLogSink } from '../services/submoduleLogSink';
+import { resolveWorktreeTargetPath } from '../services/worktreeTargetPath';
 import { expandTemplate, loadTemplates } from '../state/commitTemplates';
 import { StateStore } from '../state/stateStore';
 import { BranchSearchView } from '../views/branchSearchView';
@@ -2125,7 +2126,7 @@ export class CommandController {
       const selection = await this.pickWorktreeRevision('Add worktree from branch, tag, or revision');
       if (!selection) { return; }
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
       if (!targetPath) { return; }
 
       await this.git.addWorktree(targetPath, selection.ref);
@@ -2142,7 +2143,7 @@ export class CommandController {
 
       const base = await this.pickWorktreeRevision('Select base branch, tag, or revision');
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', branchName.trim());
       if (!targetPath) { return; }
 
       await this.git.addWorktreeBranch(targetPath, branchName.trim(), base?.ref);
@@ -2153,7 +2154,7 @@ export class CommandController {
       const selection = await this.pickWorktreeRevision('Detached worktree at branch, tag, or revision');
       if (!selection) { return; }
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder');
+      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
       if (!targetPath) { return; }
 
       const confirmed = await confirmDangerousAction({
@@ -3062,7 +3063,7 @@ export class CommandController {
     );
   }
 
-  private async pickWorktreeTargetPath(title: string): Promise<string | undefined> {
+  private async pickWorktreeTargetPath(title: string, refName: string): Promise<string | undefined> {
     const gitRoot = await this.git.getGitRoot();
     const picked = await vscode.window.showOpenDialog({
       title,
@@ -3073,7 +3074,18 @@ export class CommandController {
       defaultUri: vscode.Uri.file(path.dirname(gitRoot))
     });
 
-    return picked?.[0]?.fsPath;
+    const selectedFolderPath = picked?.[0]?.fsPath;
+    if (!selectedFolderPath) {
+      return undefined;
+    }
+
+    const resolved = await resolveWorktreeTargetPath(selectedFolderPath, gitRoot, refName);
+    if (!resolved.ok) {
+      void vscode.window.showErrorMessage(resolved.message);
+      return undefined;
+    }
+
+    return resolved.targetPath;
   }
 
   private async pickStashRef(title: string): Promise<string | undefined> {

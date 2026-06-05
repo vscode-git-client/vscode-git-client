@@ -149,7 +149,7 @@ Available actions include:
 - Add a worktree from a local branch, remote branch, tag, or typed revision.
 - Add a worktree with a new branch based on a local branch, remote branch, tag, or typed revision.
 - Add a detached worktree from a local branch, remote branch, tag, or typed revision.
-- Pick the destination folder from the file explorer dialog instead of typing the path manually.
+- Pick the destination from the file explorer dialog: an empty folder is used directly, while a non-empty folder is treated as the parent for an auto-named child folder such as `sample-project-staging`.
 - Lock, unlock, remove, or force remove worktrees.
 - Preview and prune stale worktrees.
 
