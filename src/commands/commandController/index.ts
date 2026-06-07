@@ -1,163 +1,71 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import { getConfigValue } from '../configuration';
-import { EditorOrchestrator } from '../editor/editorOrchestrator';
-import { confirmDangerousAction } from '../guards';
-import { Logger } from '../logger';
-import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../providers/branchTreeProvider';
+import { getConfigValue } from '../../configuration';
+import { EditorOrchestrator } from '../../editor/editorOrchestrator';
+import { confirmDangerousAction } from '../../guards';
+import { Logger } from '../../logger';
+import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../../providers/branchTreeProvider';
 import {
   CommitActionContext,
   CommitFileTreeItem,
-  CommitFolderTreeItem,
   CommitRangeFileTreeItem,
-  CommitSelectableFileTreeItem,
   RevisionFileTreeItem,
   WorkingTreeCompareFileTreeItem
-} from '../providers/commitFilesTreeProvider';
-import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../providers/graphTreeProvider';
-import { StashTreeItem } from '../providers/stashTreeProvider';
-import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
-import { SubmoduleTreeItem } from '../providers/submoduleTreeProvider';
-import { GitService } from '../services/gitService';
-import { SubmoduleLogSink } from '../services/submoduleLogSink';
-import { resolveWorktreeTargetPath } from '../services/worktreeTargetPath';
-import { expandTemplate, loadTemplates } from '../state/commitTemplates';
-import { StateStore } from '../state/stateStore';
-import { BranchSearchView } from '../views/branchSearchView';
-import { CommitListView } from '../views/commitListView';
-import { GraphFilterView } from '../views/graphFilterView';
-import { GraphFilterSession } from '../views/graphFilterSession';
-import { pickRevisionToCompare, RevisionSelection } from '../views/revisionPicker';
+} from '../../providers/commitFilesTreeProvider';
+import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../../providers/graphTreeProvider';
+import { StashTreeItem } from '../../providers/stashTreeProvider';
+import { SubmoduleTreeItem } from '../../providers/submoduleTreeProvider';
+import { WorktreeTreeItem } from '../../providers/worktreeTreeProvider';
+import { GitService } from '../../services/gitService';
+import { expandTemplate, loadTemplates } from '../../state/commitTemplates';
+import { StateStore } from '../../state/stateStore';
+import { BranchSearchView } from '../../views/branchSearchView';
+import { GraphFilterSession } from '../../views/graphFilterSession';
+import { GraphFilterView } from '../../views/graphFilterView';
+import { pickRevisionToCompare, RevisionSelection } from '../../views/revisionPicker';
+import { applyPatchToWorkingTree } from './applyPatchToWorkingTree';
+import { normalizeBranchActionHubArg, resolveBranchNameForActionHub } from './branchNameHelpers';
+import { classifyCherryPickIssue, classifyMergeIssue, classifyRebaseIssue } from './classifyIssues';
+import { getActiveFilePath } from './getActiveFilePath';
+import { getBuiltInGitRepository } from './getBuiltInGitRepository';
+import { getErrorSummary } from './getErrorSummary';
+import { openBranchActionHub } from './openBranchActionHub';
+import { openCommitDetails } from './openCommitDetails';
+import { openCompareWorkflow } from './openCompareWorkflow';
+import { openDiffWorkflow } from './openDiffWorkflow';
+import { openDirectoryTimeline } from './openDirectoryTimeline';
+import { openQuickActions } from './openQuickActions';
+import { openBranchCommits, openRefCommits } from './openRefCommits';
+import { openCommitActionContextDiffs, openSelectedFileDiffs } from './openSelectedFileDiffs';
+import {
+  handleOperationConflict,
+  handleRebaseConflict,
+  openOperationConflictEditors,
+  showRebaseProgressFeedback,
+  startMergeOperation,
+  startRebaseOperation
+} from './operationHandlers';
+import { pickPatchOutputTarget, pickPatchSource, readPatchFromFile } from './patchHelpers';
+import { pickBranchName } from './pickBranchName';
+import { pickCommitSha } from './pickCommitSha';
+import { pickConflictPath, pickConflictPathArg } from './pickConflictPath';
+import { pickFileFromWorkspace } from './pickFileFromWorkspace';
+import { pickStashRef } from './pickStashRef';
+import { pickWorktreeRevision, pickWorktreeTargetPath } from './pickWorktree';
+import { resolveSelectedCommitFiles, toSelectedChangeTarget } from './selectedChangeTarget';
+import { extractSelectableItem, toSelectedItems } from './selectedItems';
+import type { CommandControllerShape } from './shape';
+import type {
+  CherryPickIssueKind,
+  CommitFilesViewShape,
+  GitScmRepository,
+  MergeIssueKind,
+  RebaseIssueKind,
+  SelectableChangeTreeItem,
+  SelectedChangeTarget
+} from './types';
+import { withSubmoduleProgress } from './withSubmoduleProgress';
 
-interface QuickAction {
-  label: string;
-  description?: string;
-  run: () => Promise<void>;
-}
-
-type CherryPickIssueKind = 'conflict' | 'nothingToCherryPick' | 'failed';
-type MergeIssueKind = 'conflict' | 'failed';
-type RebaseIssueKind = 'conflict' | 'failed';
-
-type GitScmRepository = {
-  rootUri: vscode.Uri;
-  inputBox: {
-    value: string;
-  };
-};
-
-type GitScmApi = {
-  repositories: GitScmRepository[];
-  getRepository(uri: vscode.Uri): GitScmRepository | null;
-};
-
-type GitScmExtensionExports = {
-  getAPI(version: 1): GitScmApi;
-};
-
-type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem;
-type SelectedChangeTarget =
-  | {
-    kind: 'commit';
-    sha: string;
-    subject: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  }
-  | {
-    kind: 'range';
-    fromRef: string;
-    toRef: string;
-    fromLabel: string;
-    toLabel: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  }
-  | {
-    kind: 'workingTreeCompare';
-    ref: string;
-    refLabel: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  };
-
-interface WithSubmoduleProgressOptions {
-  title: string;
-  autoShow: boolean;
-  command: string;          // human-readable name for the warning toast, e.g. "Submodule update"
-}
-
-async function withSubmoduleProgress(
-  logger: Logger,
-  options: WithSubmoduleProgressOptions,
-  run: (args: { sink: SubmoduleLogSink; signal: AbortSignal }) => Promise<{ exitCode: number | null }>
-): Promise<{ exitCode: number | null; cancelled: boolean }> {
-  if (options.autoShow) {
-    logger.show(true);
-  }
-  let cancelled = false;
-  const controller = new AbortController();
-
-  const result = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: options.title,
-      cancellable: true
-    },
-    async (progress, token) => {
-      token.onCancellationRequested(() => {
-        cancelled = true;
-        controller.abort();
-      });
-
-      const sink: SubmoduleLogSink = {
-        header(line) { logger.appendRaw(line); },
-        stdout(line) { logger.appendRaw(line); },
-        stderr(line) {
-          logger.appendRaw(line);
-          progress.report({ message: line });
-        },
-        done(exitCode, durationMs) {
-          const secs = (durationMs / 1000).toFixed(1);
-          if (cancelled) {
-            logger.appendRaw(`[cancelled after ${secs}s]`);
-          } else {
-            logger.appendRaw(`[done in ${secs}s, exit ${exitCode}]`);
-          }
-        },
-        error(err) {
-          logger.appendRaw(`[error] ${err.message}`);
-        }
-      };
-
-      return run({ sink, signal: controller.signal });
-    }
-  );
-
-  if (!cancelled && result.exitCode !== 0) {
-    const action = await vscode.window.showWarningMessage(
-      `${options.command} failed; see Output for details.`,
-      'Show Output'
-    );
-    if (action === 'Show Output') {
-      logger.show(true);
-    }
-  }
-
-  return { exitCode: result.exitCode, cancelled };
-}
+export type { CommandControllerShape };
 
 export class CommandController {
   constructor(
@@ -165,13 +73,7 @@ export class CommandController {
     private readonly state: StateStore,
     private readonly editor: EditorOrchestrator,
     private readonly logger: Logger,
-    private readonly commitFilesView: {
-      getCommitActionContext(selectedItems: readonly CommitSelectableFileTreeItem[]): CommitActionContext | undefined;
-      getAllFileItems(): CommitFileTreeItem[];
-      showCommit(sha: string, subject: string): Promise<void>;
-      clear(): Promise<void>;
-      isShowingCommit(sha: string): boolean;
-    }
+    private readonly commitFilesView: CommitFilesViewShape
   ) { }
 
   register(context: vscode.ExtensionContext): void {
@@ -2560,612 +2462,133 @@ export class CommandController {
     });
   }
 
-  private async openBranchCommits(branchName: string): Promise<void> {
-    await this.openRefCommits(`branch:${branchName}`, `Branch: ${branchName}`, branchName);
+
+
+  // ── Delegation wrappers ────────────────────────────────────────────────
+  // Each method delegates to an extracted function; the class remains the
+  // public API surface and TypeScript resolves `this` through the shape cast.
+
+  private getErrorSummary(error: unknown): string {
+    return getErrorSummary(error);
   }
 
-  private async openRefCommits(id: string, title: string, ref: string): Promise<void> {
-    const maxCommits = Math.max(1, getConfigValue<number>('maxGraphCommits', 200));
-    const view = CommitListView.open(
-      {
-        id,
-        title,
-        hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
-        branches: this.state.branches,
-        commits: this.state.graph
-      },
-      {
-        openCommitDetails: async (sha, subject) => this.openCommitDetails(sha, subject, { allowToggle: true }),
-        getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
-        openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
-      }
-    );
-
-    view.setLoading(true);
-    try {
-      await this.state.refreshBranches();
-      const commits = await this.git.getGraph(maxCommits, 0, { branch: ref });
-      view.update({
-        id,
-        title,
-        hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
-        branches: this.state.branches,
-        commits
-      });
-    } finally {
-      view.setLoading(false);
-    }
+  private classifyCherryPickIssue(error: unknown): { kind: CherryPickIssueKind; message?: string } {
+    return classifyCherryPickIssue(error);
   }
 
-  private async openDirectoryTimeline(repoRelativePath: string): Promise<void> {
-    const displayPath = repoRelativePath || '.';
-    const title = `Directory Timeline: ${displayPath}`;
-    const id = `directoryTimeline:${repoRelativePath || '<root>'}`;
-    const hint = `Showing commits that changed files under ${displayPath}. Filters update the table locally.`;
-    const isInDirectory = (filePath: string): boolean =>
-      repoRelativePath === '' || filePath === repoRelativePath || filePath.startsWith(`${repoRelativePath}/`);
-    const view = CommitListView.open(
-      {
-        id,
-        title,
-        hint,
-        branches: this.state.branches,
-        commits: []
-      },
-      {
-        openCommitDetails: async (sha, subject) => this.openCommitDetails(sha, subject, { allowToggle: true }),
-        getCommitFiles: async (sha) => (await this.git.getFilesInCommit(sha)).filter(isInDirectory),
-        openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
-      }
-    );
-
-    view.setLoading(true);
-
-    // Refresh branches in the background — the view already shows the cached
-    // list from state.branches, and we don't want to block the slow path-filtered
-    // git log on it.
-    void this.state.refreshBranches().catch((error) => {
-      this.logger.info(
-        `directoryTimeline: refreshBranches failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-    });
-
-    try {
-      await this.git.directoryHistory(repoRelativePath, (batch) => {
-        view.appendCommits(batch, false, { streaming: true });
-      });
-      // Sentinel final message: flips the header out of streaming mode so the
-      // user sees the exact total count and clears the loading placeholder
-      // when no commits were produced at all.
-      view.appendCommits([], false, { streaming: false });
-    } catch (error) {
-      view.setLoading(false);
-      throw error;
-    }
+  private classifyMergeIssue(error: unknown): { kind: MergeIssueKind; message?: string } {
+    return classifyMergeIssue(error);
   }
 
-  private async openQuickActions(): Promise<void> {
-    const actions: QuickAction[] = [
-      { label: 'Refresh', run: () => this.state.refreshAll() },
-      { label: 'Search branches', run: async () => vscode.commands.executeCommand('vscodeGitClient.branch.search') },
-      { label: 'Create branch', run: async () => vscode.commands.executeCommand('vscodeGitClient.branch.create') },
-      { label: 'Checkout branch', run: async () => vscode.commands.executeCommand('vscodeGitClient.branch.checkout') },
-      { label: 'Create stash', run: async () => vscode.commands.executeCommand('vscodeGitClient.stash.create') },
-      { label: 'Open stash patch preview', run: async () => vscode.commands.executeCommand('vscodeGitClient.stash.previewPatch') },
-      { label: 'Open compare branches', run: async () => vscode.commands.executeCommand('vscodeGitClient.compare.open') },
-      { label: 'Open diff workflow', run: async () => vscode.commands.executeCommand('vscodeGitClient.diff.open') },
-      { label: 'Apply patch to working tree', run: async () => vscode.commands.executeCommand('vscodeGitClient.commit.applyPatch') },
-      { label: 'Open merge conflict', run: async () => vscode.commands.executeCommand('vscodeGitClient.merge.openConflict') },
-      { label: 'Filter graph', run: async () => vscode.commands.executeCommand('vscodeGitClient.graph.filter') },
-      { label: 'Clear graph filters', run: async () => vscode.commands.executeCommand('vscodeGitClient.graph.clearFilter') },
-      { label: 'Fetch --prune', run: async () => vscode.commands.executeCommand('vscodeGitClient.git.fetchPrune') },
-      { label: 'Push with preview', run: async () => vscode.commands.executeCommand('vscodeGitClient.git.pushWithPreview') },
-      { label: 'Pull with preview', run: async () => vscode.commands.executeCommand('vscodeGitClient.git.pullWithPreview') },
-      { label: 'Stage selected hunks', run: async () => vscode.commands.executeCommand('vscodeGitClient.stage.patch') },
-      { label: 'Stage file', run: async () => vscode.commands.executeCommand('vscodeGitClient.stage.file') },
-      { label: 'Unstage file', run: async () => vscode.commands.executeCommand('vscodeGitClient.unstage.file') },
-      { label: 'Amend last commit', run: async () => vscode.commands.executeCommand('vscodeGitClient.commit.amend') },
-      { label: 'Open file blame', run: async () => vscode.commands.executeCommand('vscodeGitClient.fileBlame.open') },
-      { label: 'Worktree: Add from branch', run: async () => vscode.commands.executeCommand('vscodeGitClient.worktree.addFromBranch') },
-      { label: 'Worktree: Add new branch', run: async () => vscode.commands.executeCommand('vscodeGitClient.worktree.addNewBranch') },
-      { label: 'Worktree: Prune stale (preview)', run: async () => vscode.commands.executeCommand('vscodeGitClient.worktree.prunePreview') },
-      { label: 'Submodule: Init all', run: async () => vscode.commands.executeCommand('vscodeGitClient.submodule.initAll') },
-      { label: 'Submodule: Update all', run: async () => vscode.commands.executeCommand('vscodeGitClient.submodule.updateAll') },
-      { label: 'Submodule: Sync all', run: async () => vscode.commands.executeCommand('vscodeGitClient.submodule.syncAll') }
-    ];
-
-    const picked = await vscode.window.showQuickPick(
-      actions.map((action) => ({
-        label: action.label,
-        description: action.description
-      })),
-      {
-        title: 'VS Code Git Client Quick Actions',
-        placeHolder: 'Pick a Git action'
-      }
-    );
-
-    if (!picked) {
-      return;
-    }
-
-    const action = actions.find((item) => item.label === picked.label);
-    if (!action) {
-      return;
-    }
-
-    await action.run();
-  }
-
-  private async openBranchActionHub(arg?: unknown): Promise<void> {
-    const explicitBranchArg = this.normalizeBranchActionHubArg(arg);
-    const branchName =
-      (explicitBranchArg ? this.resolveBranchNameForActionHub(explicitBranchArg) ?? explicitBranchArg : undefined)
-      ?? (await this.pickBranchName('Pick branch for VS Code Git Client actions'));
-
-    if (!branchName) {
-      return;
-    }
-
-    const currentBranch = await this.git.getCurrentBranch();
-    const branch = this.state.branches.find((item) => item.name === branchName || item.shortName === branchName);
-    const isCurrentBranch = branch ? branch.current : branchName === currentBranch;
-    const canRenameOrDelete = branch ? branch.type !== 'remote' : false;
-
-    type BranchHubAction = {
-      id: string;
-      label: string;
-      description?: string;
-      run: () => Promise<void>;
-    };
-
-    const actions: BranchHubAction[] = [];
-
-    if (!isCurrentBranch) {
-      actions.push({
-        id: 'checkout',
-        label: 'Checkout branch',
-        run: async () => {
-          await this.git.checkoutBranch(branchName);
-          await this.state.refreshAll();
-        }
-      });
-    }
-
-    actions.push({
-      id: 'compare',
-      label: 'Compare with current',
-      description: `${currentBranch} ↔ ${branchName}`,
-      run: async () => {
-        await this.editor.openBranchCompare(currentBranch, branchName);
-      }
-    });
-
-    if (canRenameOrDelete) {
-      actions.push({
-        id: 'rename',
-        label: 'Rename branch',
-        run: async () => {
-          const renamedTo = await vscode.window.showInputBox({
-            title: `Rename branch ${branchName}`,
-            value: branchName,
-            validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
-          });
-
-          if (!renamedTo || renamedTo.trim() === branchName) {
-            return;
-          }
-
-          await this.git.renameBranch(branchName, renamedTo.trim());
-          await this.state.refreshAll();
-        }
-      });
-
-      actions.push({
-        id: 'delete',
-        label: 'Delete branch',
-        run: async () => {
-          const confirmed = await confirmDangerousAction({
-            title: 'Delete branch',
-            detail: `Branch: ${branchName}`,
-            acceptLabel: 'Delete'
-          });
-
-          if (!confirmed) {
-            return;
-          }
-
-          await this.git.deleteBranch(branchName);
-          await this.state.refreshAll();
-        }
-      });
-    }
-
-    if (!isCurrentBranch) {
-      actions.push({
-        id: 'merge',
-        label: 'Merge into current branch',
-        description: `${branchName} → ${currentBranch}`,
-        run: async () => {
-          const confirmed = await confirmDangerousAction({
-            title: 'Merge into current branch',
-            detail: `Source branch: ${branchName}`,
-            acceptLabel: 'Merge'
-          });
-
-          if (!confirmed) {
-            return;
-          }
-
-          await this.startMergeOperation(() => this.git.mergeIntoCurrent(branchName));
-        }
-      });
-
-      actions.push({
-        id: 'rebase',
-        label: 'Rebase current onto this branch',
-        description: `${currentBranch} onto ${branchName}`,
-        run: async () => {
-          const confirmed = await confirmDangerousAction({
-            title: 'Rebase current branch',
-            detail: `Rebase onto: ${branchName}`,
-            acceptLabel: 'Rebase'
-          });
-
-          if (!confirmed) {
-            return;
-          }
-
-          await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(branchName));
-        }
-      });
-    }
-
-    const picked = await vscode.window.showQuickPick(
-      actions.map((action) => ({
-        label: action.label,
-        description: action.description,
-        id: action.id
-      })),
-      {
-        title: `Branch actions: ${branchName}`,
-        placeHolder: 'Choose an action'
-      }
-    );
-
-    if (!picked) {
-      return;
-    }
-
-    const action = actions.find((item) => item.id === picked.id);
-    if (!action) {
-      return;
-    }
-
-    await action.run();
-  }
-
-  private async openDiffWorkflow(): Promise<void> {
-    const mode = await vscode.window.showQuickPick(
-      [
-        'Working tree vs HEAD',
-        'Index vs HEAD',
-        'Commit vs parent',
-        'Any two refs for one file'
-      ],
-      { title: 'Open side-by-side diff' }
-    );
-
-    if (!mode) {
-      return;
-    }
-
-    if (mode === 'Commit vs parent') {
-      const sha = await this.pickCommitSha('Pick commit');
-      if (!sha) {
-        return;
-      }
-      await this.editor.openCommitFilesDiff(sha);
-      return;
-    }
-
-    let leftRef = 'HEAD';
-    let rightRef = 'WORKTREE';
-
-    if (mode === 'Index vs HEAD') {
-      leftRef = 'HEAD';
-      rightRef = 'INDEX';
-    }
-
-    if (mode === 'Any two refs for one file') {
-      leftRef =
-        (await vscode.window.showInputBox({ title: 'Left ref', placeHolder: 'e.g. main, HEAD~1, abc1234' }))?.trim() ?? '';
-      rightRef =
-        (await vscode.window.showInputBox({ title: 'Right ref', placeHolder: 'e.g. feature/x, HEAD, def5678' }))?.trim() ?? '';
-
-      if (!leftRef || !rightRef) {
-        return;
-      }
-    }
-
-    const filePath = await this.pickFileFromWorkspace('Pick file to diff');
-    if (!filePath) {
-      return;
-    }
-
-    await this.editor.openDiffForFile({
-      path: filePath,
-      leftRef,
-      rightRef,
-      title: `${mode} · ${filePath}`
-    });
-  }
-
-  private async openCompareWorkflow(): Promise<void> {
-    const left =
-      (await vscode.window.showInputBox({
-        title: 'Compare branches',
-        placeHolder: 'Left ref (default: current branch)'
-      }))?.trim() || (await this.git.getCurrentBranch());
-
-    const right =
-      (await vscode.window.showInputBox({
-        title: `Compare against ${left}`,
-        placeHolder: 'Right ref'
-      }))?.trim() ?? '';
-
-    if (!right) {
-      return;
-    }
-
-    await this.editor.openBranchCompare(left, right);
-
-    const followUp = await vscode.window.showQuickPick(
-      ['Open changed file diff', 'Cherry-pick commit range', 'No more actions'],
-      { title: 'Branch comparison action' }
-    );
-
-    if (followUp === 'Open changed file diff') {
-      await this.editor.openBranchComparisonFileDiff(left, right);
-    } else if (followUp === 'Cherry-pick commit range') {
-      await vscode.commands.executeCommand('vscodeGitClient.graph.cherryPickRange');
-    }
-  }
-
-  private pickConflictPathArg(arg: unknown): string | undefined {
-    if (typeof arg === 'string' && arg.trim()) { return arg.trim(); }
-    return undefined;
-  }
-
-  private async pickConflictPath(title: string): Promise<string | undefined> {
-    const conflicts = this.state.conflicts.length > 0
-      ? this.state.conflicts
-      : await this.git.getMergeConflicts();
-    if (conflicts.length === 0) {
-      void vscode.window.showInformationMessage('No conflicted files.');
-      return undefined;
-    }
-    const picked = await vscode.window.showQuickPick(
-      conflicts.map((c) => ({ label: c.path, description: c.status })),
-      { title }
-    );
-    return picked?.label;
-  }
-
-  private normalizeBranchActionHubArg(arg: unknown): string | undefined {
-    if (arg instanceof BranchTreeItem) {
-      return arg.branch.name;
-    }
-    if (typeof arg !== 'string') {
-      return undefined;
-    }
-    const raw = arg.trim();
-    return raw || undefined;
-  }
-
-  private resolveBranchNameForActionHub(rawBranchName: string): string | undefined {
-    const exactMatch = this.state.branches.find((branch) => branch.name === rawBranchName);
-    if (exactMatch) {
-      return exactMatch.name;
-    }
-
-    const uniqueLocalShortMatch = this.state.branches.filter(
-      (branch) => branch.type === 'local' && branch.shortName === rawBranchName
-    );
-    if (uniqueLocalShortMatch.length === 1) {
-      return uniqueLocalShortMatch[0].name;
-    }
-
-    const uniqueShortMatch = this.state.branches.filter((branch) => branch.shortName === rawBranchName);
-    if (uniqueShortMatch.length === 1) {
-      return uniqueShortMatch[0].name;
-    }
-
-    return undefined;
-  }
-
-  private async pickBranchName(title = 'Pick branch', remoteOnly = false): Promise<string | undefined> {
-    type BranchPickItem = vscode.QuickPickItem & { value: string };
-    const qp = vscode.window.createQuickPick<BranchPickItem>();
-    qp.title = title;
-    qp.placeholder = 'Pick branch';
-    qp.busy = false;
-
-    const toItems = (): BranchPickItem[] =>
-      this.state.branches
-        .filter((branch) => (remoteOnly ? branch.type === 'remote' : true))
-        .map((branch) => ({
-          label: branch.name,
-          description: branch.current ? 'current' : branch.type,
-          detail: `${branch.upstream ? `upstream ${branch.upstream}` : 'no upstream'} · ▲${branch.ahead} ▼${branch.behind}`,
-          value: branch.name
-        }));
-
-    const setItems = (): void => {
-      const items = toItems();
-      qp.items = items;
-      qp.placeholder = items.length > 0 ? 'Pick branch' : 'No branches found';
-    };
-
-    setItems();
-
-    const selectionPromise = new Promise<string | undefined>((resolve) => {
-      const disposables: vscode.Disposable[] = [];
-      const finish = (value: string | undefined) => {
-        while (disposables.length > 0) {
-          disposables.pop()?.dispose();
-        }
-        qp.dispose();
-        resolve(value);
-      };
-
-      disposables.push(
-        qp.onDidAccept(() => finish(qp.selectedItems[0]?.value)),
-        qp.onDidHide(() => finish(undefined))
-      );
-    });
-
-    qp.show();
-
-    if (qp.items.length === 0) {
-      qp.busy = true;
-      qp.placeholder = 'Loading branches...';
-      void this.state
-        .refreshBranches()
-        .then(() => {
-          setItems();
-        })
-        .catch(() => {
-          qp.placeholder = 'Failed to load branches';
-        })
-        .finally(() => {
-          qp.busy = false;
-        });
-    }
-
-    return selectionPromise;
-  }
-
-  private async pickWorktreeRevision(title: string): Promise<RevisionSelection | undefined> {
-    return pickRevisionToCompare(
-      this.git,
-      () => this.state.branches,
-      () => this.state.tags,
-      () => this.state.refreshBranches(),
-      {
-        title,
-        placeholder: 'Select a local branch, remote branch, tag, or type a revision',
-        emptyPlaceholder: 'No branches or tags found - type a revision',
-        loadingPlaceholder: 'Loading branches and tags...',
-        refreshingPlaceholder: 'Refreshing branches and tags...',
-        allowTypedRevision: true
-      }
-    );
-  }
-
-  private async pickWorktreeTargetPath(title: string, refName: string): Promise<string | undefined> {
-    const gitRoot = await this.git.getGitRoot();
-    const picked = await vscode.window.showOpenDialog({
-      title,
-      openLabel: 'Use Folder',
-      canSelectFiles: false,
-      canSelectFolders: true,
-      canSelectMany: false,
-      defaultUri: vscode.Uri.file(path.dirname(gitRoot))
-    });
-
-    const selectedFolderPath = picked?.[0]?.fsPath;
-    if (!selectedFolderPath) {
-      return undefined;
-    }
-
-    const resolved = await resolveWorktreeTargetPath(selectedFolderPath, gitRoot, refName);
-    if (!resolved.ok) {
-      void vscode.window.showErrorMessage(resolved.message);
-      return undefined;
-    }
-
-    return resolved.targetPath;
-  }
-
-  private async pickStashRef(title: string): Promise<string | undefined> {
-    await this.state.refreshStashes();
-    const picked = await vscode.window.showQuickPick(
-      this.state.stashes.map((stash) => ({
-        label: stash.ref,
-        description: stash.message,
-        detail: stash.fileCount === undefined ? 'files not loaded' : `${stash.fileCount} files`
-      })),
-      { title }
-    );
-
-    return picked?.label;
-  }
-
-  private async pickCommitSha(title: string): Promise<string | undefined> {
-    await this.state.refreshGraph();
-    const picked = await vscode.window.showQuickPick(
-      this.state.graph.map((commit) => ({
-        label: commit.shortSha,
-        description: commit.subject,
-        detail: `${commit.author} · ${new Date(commit.date).toLocaleString()}`,
-        sha: commit.sha
-      })),
-      { title }
-    );
-
-    return picked?.sha;
-  }
-
-  private async pickFileFromWorkspace(title: string): Promise<string | undefined> {
-    const files = await vscode.workspace.findFiles('**/*', '**/.git/**', 500);
-    const picked = await vscode.window.showQuickPick(
-      files
-        .map((uri) => this.git.toRepoRelative(uri.fsPath))
-        .filter((rel): rel is string => Boolean(rel))
-        .map((label) => ({ label })),
-      {
-        title,
-        matchOnDescription: true
-      }
-    );
-
-    return picked?.label;
-  }
-
-  private async getBuiltInGitRepository(): Promise<GitScmRepository | undefined> {
-    const gitExtension = vscode.extensions.getExtension<GitScmExtensionExports>('vscode.git');
-    if (!gitExtension) {
-      return undefined;
-    }
-
-    const gitExports = gitExtension.isActive
-      ? gitExtension.exports
-      : await gitExtension.activate();
-    const gitApi = gitExports?.getAPI(1);
-    if (!gitApi) {
-      return undefined;
-    }
-
-    const rootUri = vscode.Uri.file(this.git.gitRoot);
-    const direct = gitApi.getRepository(rootUri);
-    if (direct) {
-      return direct;
-    }
-
-    const normalizedRoot = this.git.gitRoot.replace(/\\/g, '/');
-    return gitApi.repositories.find((repo) => repo.rootUri.fsPath.replace(/\\/g, '/') === normalizedRoot)
-      ?? gitApi.repositories[0];
+  private classifyRebaseIssue(error: unknown): { kind: RebaseIssueKind; message?: string } {
+    return classifyRebaseIssue(error);
   }
 
   private getActiveFilePath(): string | undefined {
-    const editor = vscode.window.activeTextEditor;
-    const uri = editor?.document.uri;
-    if (!uri || uri.scheme !== 'file') {
-      return undefined;
-    }
+    return getActiveFilePath.call(this as unknown as CommandControllerShape);
+  }
 
-    return this.git.toRepoRelative(uri.fsPath);
+  private async getBuiltInGitRepository(): Promise<GitScmRepository | undefined> {
+    return getBuiltInGitRepository.call(this as unknown as CommandControllerShape);
+  }
+
+  private normalizeBranchActionHubArg(arg: unknown): string | undefined {
+    return normalizeBranchActionHubArg(arg);
+  }
+
+  private resolveBranchNameForActionHub(rawBranchName: string): string | undefined {
+    return resolveBranchNameForActionHub.call(this as unknown as CommandControllerShape, rawBranchName);
+  }
+
+  private async pickBranchName(title = 'Pick branch', remoteOnly = false): Promise<string | undefined> {
+    return pickBranchName.call(this as unknown as CommandControllerShape, title, remoteOnly);
+  }
+
+  private async pickCommitSha(title: string): Promise<string | undefined> {
+    return pickCommitSha.call(this as unknown as CommandControllerShape, title);
+  }
+
+  private async pickStashRef(title: string): Promise<string | undefined> {
+    return pickStashRef.call(this as unknown as CommandControllerShape, title);
+  }
+
+  private pickConflictPathArg(arg: unknown): string | undefined {
+    return pickConflictPathArg(arg);
+  }
+
+  private async pickConflictPath(title: string): Promise<string | undefined> {
+    return pickConflictPath.call(this as unknown as CommandControllerShape, title);
+  }
+
+  private async pickWorktreeRevision(title: string): Promise<RevisionSelection | undefined> {
+    return pickWorktreeRevision.call(this as unknown as CommandControllerShape, title);
+  }
+
+  private async pickWorktreeTargetPath(title: string, refName: string): Promise<string | undefined> {
+    return pickWorktreeTargetPath.call(this as unknown as CommandControllerShape, title, refName);
+  }
+
+  private async pickFileFromWorkspace(title: string): Promise<string | undefined> {
+    return pickFileFromWorkspace.call(this as unknown as CommandControllerShape, title);
+  }
+
+  private async pickPatchOutputTarget(title: string): Promise<'clipboard' | 'file' | undefined> {
+    return pickPatchOutputTarget(title);
+  }
+
+  private async pickPatchSource(): Promise<{ kind: 'clipboard' | 'file' } | undefined> {
+    return pickPatchSource();
+  }
+
+  private async readPatchFromFile(): Promise<string | undefined> {
+    return readPatchFromFile();
+  }
+
+  private async applyPatchToWorkingTree(patch: string, context: { source: string }): Promise<void> {
+    return applyPatchToWorkingTree.call(this as unknown as CommandControllerShape, patch, context);
+  }
+
+  private extractSelectableItem(value: unknown): SelectableChangeTreeItem | undefined {
+    return extractSelectableItem(value);
+  }
+
+  private toSelectedItems(arg: unknown, selectedArg: unknown): SelectableChangeTreeItem[] {
+    return toSelectedItems(arg, selectedArg);
+  }
+
+  private toSelectedChangeTarget(context: CommitActionContext): SelectedChangeTarget {
+    return toSelectedChangeTarget(context);
+  }
+
+  private async resolveSelectedCommitFiles(arg: unknown, selectedArg: unknown): Promise<SelectedChangeTarget | undefined> {
+    return resolveSelectedCommitFiles.call(this as unknown as CommandControllerShape, arg, selectedArg);
+  }
+
+  private async openOperationConflictEditors(operation: 'cherry-pick' | 'merge' | 'rebase'): Promise<void> {
+    return openOperationConflictEditors.call(this as unknown as CommandControllerShape, operation);
+  }
+
+  private async handleRebaseConflict(): Promise<void> {
+    return handleRebaseConflict.call(this as unknown as CommandControllerShape);
+  }
+
+  private async handleOperationConflict(
+    operation: 'cherry-pick' | 'merge' | 'rebase',
+    refreshPromise: Promise<void> = Promise.resolve()
+  ): Promise<void> {
+    return handleOperationConflict.call(this as unknown as CommandControllerShape, operation, refreshPromise);
+  }
+
+  private async showRebaseProgressFeedback(): Promise<void> {
+    return showRebaseProgressFeedback.call(this as unknown as CommandControllerShape);
+  }
+
+  private async startMergeOperation(run: () => Promise<void>): Promise<void> {
+    return startMergeOperation.call(this as unknown as CommandControllerShape, run);
+  }
+
+  private async startRebaseOperation(run: () => Promise<void>): Promise<void> {
+    return startRebaseOperation.call(this as unknown as CommandControllerShape, run);
   }
 
   private async openCommitDetails(
@@ -3173,526 +2596,42 @@ export class CommandController {
     subject: string,
     options: { openFirstDiff?: boolean; allowToggle?: boolean } = {}
   ): Promise<void> {
-    if (options.allowToggle && this.commitFilesView.isShowingCommit(sha)) {
-      await this.commitFilesView.clear();
-      return;
-    }
-
-    await this.commitFilesView.showCommit(sha, subject);
-    if (!options.openFirstDiff) {
-      return;
-    }
-
-    const firstFile = this.commitFilesView.getAllFileItems()[0];
-    if (!firstFile) {
-      return;
-    }
-
-    await this.editor.openCommitFileDiffWithStatus(sha, firstFile.filePath, firstFile.status, { oldPath: firstFile.oldPath });
-  }
-
-  private async openSelectedFileDiffs(arg: unknown, selectedArg: unknown): Promise<boolean> {
-    const selectedItems = this.toSelectedItems(arg, selectedArg);
-    const commitSelectableItems = selectedItems.filter(
-      (item): item is CommitSelectableFileTreeItem =>
-        item instanceof CommitFileTreeItem ||
-        item instanceof CommitRangeFileTreeItem ||
-        item instanceof WorkingTreeCompareFileTreeItem ||
-        item instanceof CommitFolderTreeItem
-    );
-    if (commitSelectableItems.some((item) => item instanceof CommitFolderTreeItem)) {
-      const context = this.commitFilesView.getCommitActionContext(commitSelectableItems);
-      if (context && context.filePaths.length > 0) {
-        await this.openCommitActionContextDiffs(context);
-        return true;
-      }
-    }
-
-    const commitViewItems = selectedItems.filter((item): item is CommitFileTreeItem => item instanceof CommitFileTreeItem);
-    if (commitViewItems.length > 0) {
-      const ordered = [...new Map(
-        commitViewItems.map((item) => [`${item.sha}:${item.filePath}:${item.status}`, item] as const)
-      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
-      for (const item of ordered) {
-        await this.editor.openCommitFileDiffWithStatus(item.sha, item.filePath, item.status, { oldPath: item.oldPath });
-      }
-      return true;
-    }
-
-    const rangeItems = selectedItems.filter((item): item is CommitRangeFileTreeItem => item instanceof CommitRangeFileTreeItem);
-    if (rangeItems.length > 0) {
-      const ordered = [...new Map(
-        rangeItems.map((item) => [`${item.fromRef}:${item.toRef}:${item.filePath}:${item.status}`, item] as const)
-      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
-      for (const item of ordered) {
-        await this.editor.openCommitRangeFileDiff(
-          item.fromRef,
-          item.toRef,
-          item.filePath,
-          { fromLabel: item.fromLabel, toLabel: item.toLabel }
-        );
-      }
-      return true;
-    }
-
-    const workingTreeCompareItems = selectedItems.filter(
-      (item): item is WorkingTreeCompareFileTreeItem => item instanceof WorkingTreeCompareFileTreeItem
-    );
-    if (workingTreeCompareItems.length > 0) {
-      const ordered = [...new Map(
-        workingTreeCompareItems.map((item) => [`${item.ref}:${item.filePath}:${item.status}`, item] as const)
-      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
-      for (const item of ordered) {
-        await this.editor.openWorkingTreeFileDiff(item.filePath, item.ref, item.refLabel, {
-          preview: true,
-          status: item.status
-        });
-      }
-      return true;
-    }
-
-    const graphItems = selectedItems.filter((item): item is GraphCommitFileTreeItem => item instanceof GraphCommitFileTreeItem);
-    if (graphItems.length > 0) {
-      const ordered = [...new Map(
-        graphItems.map((item) => [`${item.commit.sha}:${item.filePath}`, item] as const)
-      ).values()].sort((a, b) => a.filePath.localeCompare(b.filePath));
-      for (const item of ordered) {
-        await this.editor.openCommitFileDiff(item.commit.sha, item.filePath);
-      }
-      return true;
-    }
-
-    return false;
+    return openCommitDetails.call(this as unknown as CommandControllerShape, sha, subject, options);
   }
 
   private async openCommitActionContextDiffs(context: CommitActionContext): Promise<void> {
-    const orderedPaths = [...new Set(context.filePaths)].sort((a, b) => a.localeCompare(b));
-    if (context.kind === 'commit') {
-      for (const filePath of orderedPaths) {
-        await this.editor.openCommitFileDiffWithStatus(context.sha, filePath, context.fileStatuses?.[filePath]);
-      }
-      return;
-    }
-
-    if (context.kind === 'range') {
-      for (const filePath of orderedPaths) {
-        await this.editor.openCommitRangeFileDiff(context.fromRef, context.toRef, filePath, {
-          fromLabel: context.fromLabel,
-          toLabel: context.toLabel
-        });
-      }
-      return;
-    }
-
-    for (const filePath of orderedPaths) {
-      await this.editor.openWorkingTreeFileDiff(filePath, context.ref, context.refLabel, {
-        preview: true,
-        status: context.fileStatuses?.[filePath]
-      });
-    }
+    return openCommitActionContextDiffs.call(this as unknown as CommandControllerShape, context);
   }
 
-  private async pickPatchOutputTarget(title: string): Promise<'clipboard' | 'file' | undefined> {
-    const picked = await vscode.window.showQuickPick(
-      [
-        {
-          label: 'Save to patch file',
-          description: 'Write patch text to a .patch/.diff file',
-          target: 'file' as const
-        },
-        {
-          label: 'Copy patch to clipboard',
-          description: 'Copy patch text so you can paste it anywhere',
-          target: 'clipboard' as const
-        }
-      ],
-      {
-        title
-      }
-    );
-    return picked?.target;
+  private async openSelectedFileDiffs(arg: unknown, selectedArg: unknown): Promise<boolean> {
+    return openSelectedFileDiffs.call(this as unknown as CommandControllerShape, arg, selectedArg);
   }
 
-  private async pickPatchSource(): Promise<{ kind: 'clipboard' | 'file' } | undefined> {
-    const picked = await vscode.window.showQuickPick(
-      [
-        {
-          label: 'Apply patch from clipboard',
-          description: 'Use patch text currently in clipboard',
-          source: 'clipboard' as const
-        },
-        {
-          label: 'Apply patch from file',
-          description: 'Pick a .patch/.diff file from disk',
-          source: 'file' as const
-        }
-      ],
-      {
-        title: 'Apply Patch'
-      }
-    );
-    return picked ? { kind: picked.source } : undefined;
+  private async openBranchCommits(branchName: string): Promise<void> {
+    return openBranchCommits.call(this as unknown as CommandControllerShape, branchName);
   }
 
-  private async readPatchFromFile(): Promise<string | undefined> {
-    const picked = await vscode.window.showOpenDialog({
-      title: 'Select Patch File',
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      filters: {
-        Patch: ['patch', 'diff'],
-        Text: ['txt']
-      }
-    });
-    const uri = picked?.[0];
-    if (!uri) {
-      return undefined;
-    }
-
-    const bytes = await vscode.workspace.fs.readFile(uri);
-    return Buffer.from(bytes).toString('utf8');
+  private async openRefCommits(id: string, title: string, ref: string): Promise<void> {
+    return openRefCommits.call(this as unknown as CommandControllerShape, id, title, ref);
   }
 
-  private async applyPatchToWorkingTree(
-    patch: string,
-    context: { source: string }
-  ): Promise<void> {
-    const changes = await this.git.getChangedFiles();
-    const isClean = changes.length === 0;
-    const canApply = await this.git.canApplyPatchToWorkingTree(patch);
-
-    if (!canApply) {
-      const alreadyApplied = await this.git.isPatchAlreadyApplied(patch);
-      if (alreadyApplied) {
-        void vscode.window.showInformationMessage('Nothing to cherry pick.');
-        return;
-      }
-      if (isClean) {
-        void vscode.window.showWarningMessage(
-          'Cannot apply this patch on the current HEAD. Rebase/cherry-pick the base commit first or use a compatible branch.'
-        );
-      } else {
-        void vscode.window.showWarningMessage(
-          'Cannot apply patch cleanly on the current working tree. Stash/commit your changes or resolve conflicts first.'
-        );
-      }
-      return;
-    }
-
-    try {
-      await this.git.applyPatchToWorkingTree(patch);
-    } catch (error) {
-      const alreadyApplied = await this.git.isPatchAlreadyApplied(patch);
-      if (alreadyApplied) {
-        void vscode.window.showInformationMessage('Nothing to cherry pick.');
-        return;
-      }
-      throw error;
-    }
-
-    await this.state.refreshAll();
-    void vscode.window.showInformationMessage(`Applied patch from ${context.source} to the current working tree.`);
+  private async openDirectoryTimeline(repoRelativePath: string): Promise<void> {
+    return openDirectoryTimeline.call(this as unknown as CommandControllerShape, repoRelativePath);
   }
 
-  private async resolveSelectedCommitFiles(
-    arg: unknown,
-    selectedArg: unknown
-  ): Promise<SelectedChangeTarget | undefined> {
-    const selectedItems = this.toSelectedItems(arg, selectedArg);
-    if (
-      selectedItems.length > 0 &&
-      (
-        selectedItems[0] instanceof CommitFileTreeItem ||
-        selectedItems[0] instanceof CommitRangeFileTreeItem ||
-        selectedItems[0] instanceof WorkingTreeCompareFileTreeItem ||
-        selectedItems[0] instanceof CommitFolderTreeItem
-      )
-    ) {
-      const context = this.commitFilesView.getCommitActionContext(selectedItems as CommitSelectableFileTreeItem[]);
-      if (!context || context.filePaths.length === 0) {
-        return undefined;
-      }
-      return this.toSelectedChangeTarget(context);
-    }
-
-    const graphItems = selectedItems.filter((item): item is GraphCommitFileTreeItem => item instanceof GraphCommitFileTreeItem);
-    if (graphItems.length === 0) {
-      return undefined;
-    }
-
-    const commitShas = [...new Set(graphItems.map((item) => item.commit.sha))];
-    if (commitShas.length !== 1) {
-      void vscode.window.showWarningMessage('Select files from a single commit only.');
-      return undefined;
-    }
-
-    const sha = commitShas[0];
-    const commit = graphItems[0].commit;
-    const filePaths = [...new Set(graphItems.map((item) => item.filePath))].sort((a, b) => a.localeCompare(b));
-    if (filePaths.length === 0) {
-      return undefined;
-    }
-
-    const canRevert = await this.git.isCommitInCurrentBranch(sha);
-    return {
-      kind: 'commit',
-      sha,
-      subject: commit.subject,
-      filePaths,
-      canRevert,
-      canCherryPick: !canRevert,
-      canCreatePatch: !canRevert,
-      detailLabel: `Commit: ${sha}`,
-      shortLabel: sha.slice(0, 8)
-    };
+  private async openQuickActions(): Promise<void> {
+    return openQuickActions.call(this as unknown as CommandControllerShape);
   }
 
-  private toSelectedChangeTarget(context: CommitActionContext): SelectedChangeTarget {
-    if (context.kind === 'commit') {
-      return {
-        kind: 'commit',
-        sha: context.sha,
-        subject: context.subject,
-        filePaths: context.filePaths,
-        canRevert: context.canRevertSelected,
-        canCherryPick: context.canCherryPickSelected,
-        canCreatePatch: context.canCreatePatchSelected,
-        detailLabel: `Commit: ${context.sha}`,
-        shortLabel: context.sha.slice(0, 8)
-      };
-    }
-
-    if (context.kind === 'workingTreeCompare') {
-      return {
-        kind: 'workingTreeCompare',
-        ref: context.ref,
-        refLabel: context.refLabel,
-        filePaths: context.filePaths,
-        canRevert: context.canRevertSelected,
-        canCherryPick: context.canCherryPickSelected,
-        canCreatePatch: context.canCreatePatchSelected,
-        detailLabel: `Compare with revision: ${context.refLabel}`,
-        shortLabel: context.refLabel
-      };
-    }
-
-    return {
-      kind: 'range',
-      fromRef: context.fromRef,
-      toRef: context.toRef,
-      fromLabel: context.fromLabel,
-      toLabel: context.toLabel,
-      filePaths: context.filePaths,
-      canRevert: context.canRevertSelected,
-      canCherryPick: context.canCherryPickSelected,
-      canCreatePatch: context.canCreatePatchSelected,
-      detailLabel: `Range: ${context.fromLabel}..${context.toLabel}`,
-      shortLabel: `${context.fromLabel}..${context.toLabel}`
-    };
+  private async openBranchActionHub(arg?: unknown): Promise<void> {
+    return openBranchActionHub.call(this as unknown as CommandControllerShape, arg);
   }
 
-  private toSelectedItems(arg: unknown, selectedArg: unknown): SelectableChangeTreeItem[] {
-    const selectedList = Array.isArray(selectedArg) ? selectedArg : [];
-    const first = this.extractSelectableItem(arg);
-    const fromSelected = selectedList
-      .map((item) => this.extractSelectableItem(item))
-      .filter((item): item is SelectableChangeTreeItem => Boolean(item));
-
-    const all = [...fromSelected];
-    if (first) {
-      all.unshift(first);
-    }
-
-    return [...new Set(all)];
+  private async openDiffWorkflow(): Promise<void> {
+    return openDiffWorkflow.call(this as unknown as CommandControllerShape);
   }
 
-  private extractSelectableItem(value: unknown): SelectableChangeTreeItem | undefined {
-    if (value instanceof GraphCommitFileTreeItem) {
-      return value;
-    }
-    if (value instanceof CommitFileTreeItem) {
-      return value;
-    }
-    if (value instanceof CommitRangeFileTreeItem) {
-      return value;
-    }
-    if (value instanceof WorkingTreeCompareFileTreeItem) {
-      return value;
-    }
-    if (value instanceof CommitFolderTreeItem) {
-      return value;
-    }
-    return undefined;
+  private async openCompareWorkflow(): Promise<void> {
+    return openCompareWorkflow.call(this as unknown as CommandControllerShape);
   }
-
-  private classifyCherryPickIssue(error: unknown): { kind: CherryPickIssueKind; message?: string } {
-    const message = this.getErrorSummary(error);
-    const normalized = message.toLowerCase();
-
-    const emptyMarkers = [
-      'nothing to cherry-pick',
-      'the previous cherry-pick is now empty',
-      'nothing to commit, working tree clean',
-      'the patch is empty'
-    ];
-    if (emptyMarkers.some((marker) => normalized.includes(marker))) {
-      return { kind: 'nothingToCherryPick', message };
-    }
-
-    const conflictMarkers = [
-      'conflict',
-      'could not apply',
-      'unmerged files',
-      'cannot cherry-pick',
-      'can not cherry pick',
-      'after resolving the conflicts',
-      'fix conflicts and then commit the result',
-      'cherry-pick failed'
-    ];
-    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
-      return { kind: 'conflict', message };
-    }
-
-    return { kind: 'failed', message };
-  }
-
-  private classifyMergeIssue(error: unknown): { kind: MergeIssueKind; message?: string } {
-    const message = this.getErrorSummary(error);
-    const normalized = message.toLowerCase();
-
-    const conflictMarkers = [
-      'conflict',
-      'automatic merge failed',
-      'unmerged files',
-      'fix conflicts and then commit the result',
-      'merge failed'
-    ];
-    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
-      return { kind: 'conflict', message };
-    }
-
-    return { kind: 'failed', message };
-  }
-
-  private classifyRebaseIssue(error: unknown): { kind: RebaseIssueKind; message?: string } {
-    const message = this.getErrorSummary(error);
-    const normalized = message.toLowerCase();
-
-    const conflictMarkers = [
-      'conflict',
-      'could not apply',
-      'unmerged files',
-      'resolve all conflicts manually',
-      'after resolving the conflicts',
-      'fix conflicts and then run'
-    ];
-    if (conflictMarkers.some((marker) => normalized.includes(marker))) {
-      return { kind: 'conflict', message };
-    }
-
-    return { kind: 'failed', message };
-  }
-
-  private getErrorSummary(error: unknown): string {
-    const raw = error instanceof Error ? error.message : String(error);
-    const firstLine = raw
-      .split('\n')
-      .map((line) => line.trim())
-      .find(Boolean);
-    return firstLine ?? 'Unknown git error.';
-  }
-
-  private async startMergeOperation(run: () => Promise<void>): Promise<void> {
-    try {
-      await run();
-    } catch (error) {
-      const issue = this.classifyMergeIssue(error);
-      if (issue.kind === 'conflict') {
-        await this.handleOperationConflict('merge', this.state.refreshAll());
-        return;
-      }
-      throw error;
-    }
-
-    await this.state.refreshAll();
-  }
-
-  private async startRebaseOperation(run: () => Promise<void>): Promise<void> {
-    try {
-      await run();
-    } catch (error) {
-      const issue = this.classifyRebaseIssue(error);
-      if (issue.kind === 'conflict') {
-        await this.handleOperationConflict('rebase', this.state.refreshAll());
-        return;
-      }
-      throw error;
-    }
-
-    await this.state.refreshAll();
-    await this.showRebaseProgressFeedback();
-  }
-
-  private async handleRebaseConflict(): Promise<void> {
-    void vscode.window.showWarningMessage('There are some conflicts. You have to resolve them first.');
-    await this.openOperationConflictEditors('rebase');
-  }
-
-  private async handleOperationConflict(
-    operation: 'cherry-pick' | 'merge' | 'rebase',
-    refreshPromise: Promise<void> = Promise.resolve()
-  ): Promise<void> {
-    void vscode.window.showWarningMessage('There are some conflicts. You have to resolve them first.');
-    await refreshPromise;
-    await this.openOperationConflictEditors(operation);
-  }
-
-  private async showRebaseProgressFeedback(): Promise<void> {
-    const state = this.state.operationState;
-    if (state.kind !== 'rebase') {
-      void vscode.window.showInformationMessage('Rebase completed successfully.');
-      return;
-    }
-
-    const progress = state.stepCurrent && state.stepTotal
-      ? ` (${state.stepCurrent}/${state.stepTotal})`
-      : '';
-    const conflicts = this.state.conflicts.length > 0
-      ? this.state.conflicts
-      : await this.git.getMergeConflicts();
-    if (conflicts.length > 0) {
-      await this.handleRebaseConflict();
-      return;
-    }
-
-    void vscode.window.showInformationMessage(
-      `Rebase is still in progress${progress}. Continue to process remaining commits or Abort.`
-    );
-  }
-
-  private async openOperationConflictEditors(operation: 'cherry-pick' | 'merge' | 'rebase'): Promise<void> {
-    const conflicts = this.state.conflicts.length > 0
-      ? this.state.conflicts
-      : await this.git.getMergeConflicts();
-    if (conflicts.length === 0) {
-      await vscode.commands.executeCommand('workbench.view.scm');
-      return;
-    }
-
-    let openedCount = 0;
-    for (const conflict of conflicts) {
-      try {
-        await this.editor.openMergeConflict(conflict.path);
-        openedCount += 1;
-      } catch (error) {
-        this.logger.warn(`Failed to open merge editor for ${operation} conflict file ${conflict.path}: ${String(error)}`);
-      }
-    }
-
-    if (openedCount < conflicts.length) {
-      await vscode.commands.executeCommand('workbench.view.scm');
-    }
-  }
-
 }

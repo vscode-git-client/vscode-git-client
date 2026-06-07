@@ -1,0 +1,44 @@
+import * as vscode from 'vscode';
+import type { CommandControllerShape } from './shape';
+
+export async function applyPatchToWorkingTree(
+  this: CommandControllerShape,
+  patch: string,
+  context: { source: string }
+): Promise<void> {
+  const changes = await this.git.getChangedFiles();
+  const isClean = changes.length === 0;
+  const canApply = await this.git.canApplyPatchToWorkingTree(patch);
+
+  if (!canApply) {
+    const alreadyApplied = await this.git.isPatchAlreadyApplied(patch);
+    if (alreadyApplied) {
+      void vscode.window.showInformationMessage('Nothing to cherry pick.');
+      return;
+    }
+    if (isClean) {
+      void vscode.window.showWarningMessage(
+        'Cannot apply this patch on the current HEAD. Rebase/cherry-pick the base commit first or use a compatible branch.'
+      );
+    } else {
+      void vscode.window.showWarningMessage(
+        'Cannot apply patch cleanly on the current working tree. Stash/commit your changes or resolve conflicts first.'
+      );
+    }
+    return;
+  }
+
+  try {
+    await this.git.applyPatchToWorkingTree(patch);
+  } catch (error) {
+    const alreadyApplied = await this.git.isPatchAlreadyApplied(patch);
+    if (alreadyApplied) {
+      void vscode.window.showInformationMessage('Nothing to cherry pick.');
+      return;
+    }
+    throw error;
+  }
+
+  await this.state.refreshAll();
+  void vscode.window.showInformationMessage(`Applied patch from ${context.source} to the current working tree.`);
+}

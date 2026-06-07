@@ -1,0 +1,25 @@
+import type { CommandControllerShape } from './shape';
+
+export async function openCommitDetails(
+  this: CommandControllerShape,
+  sha: string,
+  subject: string,
+  options: { openFirstDiff?: boolean; allowToggle?: boolean } = {}
+): Promise<void> {
+  if (options.allowToggle && this.commitFilesView.isShowingCommit(sha)) {
+    await this.commitFilesView.clear();
+    return;
+  }
+
+  await this.commitFilesView.showCommit(sha, subject);
+  if (!options.openFirstDiff) {
+    return;
+  }
+
+  const firstFile = this.commitFilesView.getAllFileItems()[0];
+  if (!firstFile) {
+    return;
+  }
+
+  await this.editor.openCommitFileDiffWithStatus(sha, firstFile.filePath, firstFile.status, { oldPath: firstFile.oldPath });
+}

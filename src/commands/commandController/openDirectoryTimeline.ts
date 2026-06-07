@@ -1,0 +1,53 @@
+import { CommitListView } from '../../views/commitListView';
+import type { CommandControllerShape } from './shape';
+import { openCommitDetails } from './openCommitDetails';
+
+export async function openDirectoryTimeline(
+  this: CommandControllerShape,
+  repoRelativePath: string
+): Promise<void> {
+  const displayPath = repoRelativePath || '.';
+  const title = `Directory Timeline: ${displayPath}`;
+  const id = `directoryTimeline:${repoRelativePath || '<root>'}`;
+  const hint = `Showing commits that changed files under ${displayPath}. Filters update the table locally.`;
+  const isInDirectory = (filePath: string): boolean =>
+    repoRelativePath === '' || filePath === repoRelativePath || filePath.startsWith(`${repoRelativePath}/`);
+  const view = CommitListView.open(
+    {
+      id,
+      title,
+      hint,
+      branches: this.state.branches,
+      commits: []
+    },
+    {
+      openCommitDetails: async (sha, subject) => openCommitDetails.call(this, sha, subject, { allowToggle: true }),
+      getCommitFiles: async (sha) => (await this.git.getFilesInCommit(sha)).filter(isInDirectory),
+      openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
+    }
+  );
+
+  view.setLoading(true);
+
+  // Refresh branches in the background — the view already shows the cached
+  // list from state.branches, and we don't want to block the slow path-filtered
+  // git log on it.
+  void this.state.refreshBranches().catch((error) => {
+    this.logger.info(
+      `directoryTimeline: refreshBranches failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  });
+
+  try {
+    await this.git.directoryHistory(repoRelativePath, (batch) => {
+      view.appendCommits(batch, false, { streaming: true });
+    });
+    // Sentinel final message: flips the header out of streaming mode so the
+    // user sees the exact total count and clears the loading placeholder
+    // when no commits were produced at all.
+    view.appendCommits([], false, { streaming: false });
+  } catch (error) {
+    view.setLoading(false);
+    throw error;
+  }
+}
