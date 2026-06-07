@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   build-and-release:
@@ -16,35 +16,32 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Enable Corepack
+        run: corepack enable
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Install vsce
-        run: npm install -g @vscode/vsce
+        run: pnpm install --frozen-lockfile
 
       - name: Build extension
-        run: npm run compile
+        run: pnpm run compile
 
       - name: Package extension
-        run: vsce package --no-dependencies
+        run: pnpm dlx @vscode/vsce package --no-dependencies
 
       - name: Get VSIX filename
         id: vsix
         run: echo "file=$(ls *.vsix)" >> $GITHUB_OUTPUT
 
       - name: Publish to VS Code Marketplace
-        run: vsce publish --no-dependencies --packagePath ${{ steps.vsix.outputs.file }}
+        run: pnpm dlx @vscode/vsce publish --no-dependencies --packagePath ${{ steps.vsix.outputs.file }}
         env:
           VSCE_PAT: ${{ secrets.VSCODE_MARKETPLACE_TOKEN }}
 
-      - name: Install ovsx
-        run: npm install -g ovsx
-
       - name: Publish to Open VSX
-        run: ovsx publish ${{ steps.vsix.outputs.file }}
+        run: pnpm dlx ovsx publish ${{ steps.vsix.outputs.file }}
         env:
           OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
 

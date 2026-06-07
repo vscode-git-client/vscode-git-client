@@ -260,13 +260,13 @@ If a workspace still feels slow, enable `vscodeGitClient.performance.logGitComma
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Compile:
 
 ```bash
-npm run compile
+pnpm run compile
 ```
 
 Open this folder in VS Code and press `F5` to launch the extension host.
