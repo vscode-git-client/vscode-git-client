@@ -65,6 +65,8 @@ import type {
 } from './types';
 import { withSubmoduleProgress } from './withSubmoduleProgress';
 
+import { CommandId } from './commandIds';
+
 export type { CommandControllerShape };
 
 export class CommandController {
@@ -310,24 +312,24 @@ export class CommandController {
       );
     };
 
-    register('vscodeGitClient.refresh', async () => {
+    register(CommandId.Refresh, async () => {
       await this.state.refreshVisible();
       void vscode.window.setStatusBarMessage('VS Code Git Client refreshed', 1500);
     });
 
-    register('vscodeGitClient.commitView.close', async () => {
+    register(CommandId.CommitViewClose, async () => {
       await this.commitFilesView.clear();
     });
 
-    register('vscodeGitClient.quickActions', async () => {
+    register(CommandId.QuickActions, async () => {
       await this.openQuickActions();
     });
 
-    register('vscodeGitClient.branch.actionHub', async (arg?: unknown) => {
+    register(CommandId.BranchActionHub, async (arg?: unknown) => {
       await this.openBranchActionHub(arg);
     });
 
-    register('vscodeGitClient.branch.openCommits', async (arg?: unknown) => {
+    register(CommandId.BranchOpenCommits, async (arg?: unknown) => {
       const branchName = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to open commits'));
       if (!branchName) {
         return;
@@ -336,7 +338,7 @@ export class CommandController {
       await this.openBranchCommits(branchName);
     });
 
-    register('vscodeGitClient.branch.search', async () => {
+    register(CommandId.BranchSearch, async () => {
       const searchView = BranchSearchView.open(
         {
           checkout: async (name: string) => {
@@ -344,11 +346,11 @@ export class CommandController {
             await this.state.refreshAll();
           },
           checkoutTag: async (name: string) => {
-            await vscode.commands.executeCommand('vscodeGitClient.tag.checkoutNewBranch', name);
+            await vscode.commands.executeCommand(CommandId.TagCheckoutNewBranch, name);
             await this.state.refreshAll();
           },
           openActions: async (name: string) => {
-            await vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', name);
+            await vscode.commands.executeCommand(CommandId.BranchActionHub, name);
           },
           refresh: async () => {
             await this.state.refreshBranches();
@@ -364,11 +366,11 @@ export class CommandController {
       await searchView.refresh();
     });
 
-    register('vscodeGitClient.branch.search.refresh', async () => {
+    register(CommandId.BranchSearchRefresh, async () => {
       await BranchSearchView.refreshCurrent();
     });
 
-    register('vscodeGitClient.branch.checkout', async (arg?: unknown) => {
+    register(CommandId.BranchCheckout, async (arg?: unknown) => {
       const branchName = toBranchName(arg) ?? (await this.pickBranchName());
       if (!branchName) {
         return;
@@ -378,7 +380,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.tag.openCommits', async (arg?: unknown) => {
+    register(CommandId.TagOpenCommits, async (arg?: unknown) => {
       const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick tag or revision for details'));
       if (!revision) {
         return;
@@ -388,7 +390,7 @@ export class CommandController {
       await this.openRefCommits(`tag:${revision}`, `Tag: ${tagRef}`, revision);
     });
 
-    register('vscodeGitClient.branch.create', async () => {
+    register(CommandId.BranchCreate, async () => {
       const baseBranch = await this.pickBranchName('Pick base branch for new branch');
       if (!baseBranch) {
         return;
@@ -409,7 +411,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.tag.checkoutNewBranch', async (arg?: unknown) => {
+    register(CommandId.TagCheckoutNewBranch, async (arg?: unknown) => {
       const baseRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
       if (!baseRef) {
         return;
@@ -430,7 +432,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.tag.checkout', async (arg?: unknown) => {
+    register(CommandId.TagCheckout, async (arg?: unknown) => {
       const tagRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
       if (!tagRef) {
         return;
@@ -449,7 +451,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.tag.copyRevisionNumber', async (arg?: unknown) => {
+    register(CommandId.TagCopyRevisionNumber, async (arg?: unknown) => {
       const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
       if (!revision) {
         return;
@@ -459,7 +461,7 @@ export class CommandController {
       void vscode.window.setStatusBarMessage(`Copied ${revision}`, 1500);
     });
 
-    register('vscodeGitClient.tag.showRepositoryAtRevision', async (arg?: unknown) => {
+    register(CommandId.TagShowRepositoryAtRevision, async (arg?: unknown) => {
       const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
       if (!revision) {
         return;
@@ -468,7 +470,7 @@ export class CommandController {
       await this.editor.showRepositoryAtRevision(revision);
     });
 
-    register('vscodeGitClient.tag.compareWithCurrent', async (arg?: unknown) => {
+    register(CommandId.TagCompareWithCurrent, async (arg?: unknown) => {
       const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
       if (!revision) {
         return;
@@ -477,7 +479,7 @@ export class CommandController {
       await this.editor.openCompareFromCommit(revision);
     });
 
-    register('vscodeGitClient.tag.createPatch', async (arg?: unknown) => {
+    register(CommandId.TagCreatePatch, async (arg?: unknown) => {
       const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
       if (!revision) {
         return;
@@ -491,7 +493,7 @@ export class CommandController {
       await vscode.window.showTextDocument(doc, { preview: false });
     });
 
-    register('vscodeGitClient.tag.createCurrent', async () => {
+    register(CommandId.TagCreateCurrent, async () => {
       const sha = await this.git.getCurrentHeadSha();
       if (!sha) {
         return;
@@ -535,11 +537,11 @@ export class CommandController {
       await refreshPromise;
     };
 
-    register('vscodeGitClient.remote.setUrl', setRemoteUrlFromItem);
-    register('vscodeGitClient.remote.changeUrl', setRemoteUrlFromItem);
-    register('vscodeGitClient.remote.setUrlMissing', setRemoteUrlFromItem);
+    register(CommandId.RemoteSetUrl, setRemoteUrlFromItem);
+    register(CommandId.RemoteChangeUrl, setRemoteUrlFromItem);
+    register(CommandId.RemoteSetUrlMissing, setRemoteUrlFromItem);
 
-    register('vscodeGitClient.remote.add', async () => {
+    register(CommandId.RemoteAdd, async () => {
       const remoteUrl = await vscode.window.showInputBox({
         title: 'Add Git remote',
         placeHolder: 'https://github.com/org/repo.git',
@@ -563,7 +565,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Added remote ${remoteName.trim()}.`);
     });
 
-    register('vscodeGitClient.remote.delete', async (arg?: unknown) => {
+    register(CommandId.RemoteDelete, async (arg?: unknown) => {
       const remoteName = asBranchRemoteItem(arg)?.remoteName;
       if (!remoteName) {
         return;
@@ -583,7 +585,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Deleted remote ${remoteName}.`);
     });
 
-    register('vscodeGitClient.branch.rename', async (arg?: unknown) => {
+    register(CommandId.BranchRename, async (arg?: unknown) => {
       const from = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
       if (!from) {
         return;
@@ -603,7 +605,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.branch.delete', async (arg?: unknown) => {
+    register(CommandId.BranchDelete, async (arg?: unknown) => {
       const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
       if (!branch) {
         return;
@@ -622,7 +624,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.branch.track', async (arg?: unknown) => {
+    register(CommandId.BranchTrack, async (arg?: unknown) => {
       const local = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
       if (!local) {
         return;
@@ -637,7 +639,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.branch.untrack', async (arg?: unknown) => {
+    register(CommandId.BranchUntrack, async (arg?: unknown) => {
       const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
       if (!branch) {
         return;
@@ -647,7 +649,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.branch.mergeIntoCurrent', async (arg?: unknown) => {
+    register(CommandId.BranchMergeIntoCurrent, async (arg?: unknown) => {
       const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
       if (!branch) {
         return;
@@ -665,7 +667,7 @@ export class CommandController {
       await this.startMergeOperation(() => this.git.mergeIntoCurrent(branch));
     });
 
-    register('vscodeGitClient.branch.rebaseOnto', async (arg?: unknown) => {
+    register(CommandId.BranchRebaseOnto, async (arg?: unknown) => {
       const onto = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
       if (!onto) {
         return;
@@ -683,7 +685,7 @@ export class CommandController {
       await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(onto));
     });
 
-    register('vscodeGitClient.branch.resetCurrentToCommit', async (arg?: unknown) => {
+    register(CommandId.BranchResetCurrentToCommit, async (arg?: unknown) => {
       const target = toCommitSha(arg) ?? (await this.pickCommitSha('Pick target commit for reset'));
       if (!target) {
         return;
@@ -711,7 +713,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.branch.compareWithCurrent', async (arg?: unknown) => {
+    register(CommandId.BranchCompareWithCurrent, async (arg?: unknown) => {
       const current = await this.git.getCurrentBranch();
       const target = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
       if (!target) {
@@ -721,7 +723,7 @@ export class CommandController {
       await this.editor.openBranchCompare(current, target);
     });
 
-    register('vscodeGitClient.stash.create', async () => {
+    register(CommandId.StashCreate, async () => {
       const message = (await vscode.window.showInputBox({
         title: 'Create stash',
         placeHolder: 'WIP: short message'
@@ -745,7 +747,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stash.unshelve', async (arg?: unknown) => {
+    register(CommandId.StashUnshelve, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to unshelve'));
       if (!ref) {
@@ -757,7 +759,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Unshelved ${ref}.`);
     });
 
-    register('vscodeGitClient.stash.apply', async (arg?: unknown) => {
+    register(CommandId.StashApply, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to apply'));
       if (!ref) {
@@ -768,7 +770,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stash.pop', async (arg?: unknown) => {
+    register(CommandId.StashPop, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to pop'));
       if (!ref) {
@@ -779,7 +781,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stash.drop', async (arg?: unknown) => {
+    register(CommandId.StashDrop, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to drop'));
       if (!ref) {
@@ -799,7 +801,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stash.rename', async (arg?: unknown) => {
+    register(CommandId.StashRename, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to rename'));
       if (!ref) {
@@ -818,7 +820,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stash.previewPatch', async (arg?: unknown) => {
+    register(CommandId.StashPreviewPatch, async (arg?: unknown) => {
       const item = asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to preview patch'));
       if (!ref) {
@@ -833,7 +835,7 @@ export class CommandController {
       await vscode.window.showTextDocument(doc, { preview: false });
     });
 
-    register('vscodeGitClient.graph.openDetails', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphOpenDetails, async (arg?: unknown, selected?: unknown) => {
       const selectedShas = toGraphCommitShas(arg, selected);
       const shouldOpenFirstDiff =
         asGraphItem(arg) !== undefined ||
@@ -853,7 +855,7 @@ export class CommandController {
       await this.openCommitDetails(sha, subject, { openFirstDiff: shouldOpenFirstDiff, allowToggle: true });
     });
 
-    register('vscodeGitClient.graph.copyCommitId', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphCopyCommitId, async (arg?: unknown, selected?: unknown) => {
       const shas = toGraphCommitShas(arg, selected);
       if (shas.length === 0) {
         return;
@@ -865,7 +867,7 @@ export class CommandController {
       );
     });
 
-    register('vscodeGitClient.graph.copyCommitMessage', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphCopyCommitMessage, async (arg?: unknown, selected?: unknown) => {
       const shas = toGraphCommitShas(arg, selected);
       if (shas.length === 0) {
         return;
@@ -883,7 +885,7 @@ export class CommandController {
       );
     });
 
-    register('vscodeGitClient.graph.openFileDiff', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphOpenFileDiff, async (arg?: unknown, selected?: unknown) => {
       if (await this.openSelectedFileDiffs(arg, selected)) {
         return;
       }
@@ -913,7 +915,7 @@ export class CommandController {
       await this.editor.openCommitFileDiffWithStatus(commitItem.sha, commitItem.filePath, commitItem.status);
     });
 
-    register('vscodeGitClient.workingTreeCompare.openFileDiff', async (arg?: unknown) => {
+    register(CommandId.WorkingTreeCompareOpenFileDiff, async (arg?: unknown) => {
       const item = asWorkingTreeCompareFileItem(arg);
       if (!item) {
         return;
@@ -925,11 +927,11 @@ export class CommandController {
       });
     });
 
-    register('vscodeGitClient.compareWithRevision.swapDirection', async () => {
+    register(CommandId.CompareWithRevisionSwapDirection, async () => {
       await this.editor.swapActiveCompareDirection();
     });
 
-    register('vscodeGitClient.graph.openRepositoryFileAtRevision', async (arg?: unknown) => {
+    register(CommandId.GraphOpenRepositoryFileAtRevision, async (arg?: unknown) => {
       const item = asRevisionViewFileItem(arg);
       if (!item) {
         return;
@@ -938,7 +940,7 @@ export class CommandController {
       await this.editor.openFileAtRevision(item.sha, item.filePath);
     });
 
-    register('vscodeGitClient.graph.checkoutCommit', async (arg?: unknown) => {
+    register(CommandId.GraphCheckoutCommit, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to checkout'));
       if (!sha) {
         return;
@@ -957,7 +959,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.graph.createBranchHere', async (arg?: unknown) => {
+    register(CommandId.GraphCreateBranchHere, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new branch'));
       if (!sha) {
         return;
@@ -977,7 +979,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.graph.createTagHere', async (arg?: unknown) => {
+    register(CommandId.GraphCreateTagHere, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new tag'));
       if (!sha) {
         return;
@@ -998,7 +1000,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
     });
 
-    register('vscodeGitClient.graph.cherryPick', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphCherryPick, async (arg?: unknown, selected?: unknown) => {
       const selectedShas = toGraphCommitShas(arg, selected);
       if (selectedShas.length === 0) {
         const picked = await this.pickCommitSha('Pick commit to cherry-pick');
@@ -1077,7 +1079,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.graph.cherryPickRange', async () => {
+    register(CommandId.GraphCherryPickRange, async () => {
       const fromExclusive = await this.pickCommitSha('Pick starting point (exclusive)');
       if (!fromExclusive) {
         return;
@@ -1100,7 +1102,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.graph.revert', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.GraphRevert, async (arg?: unknown, selected?: unknown) => {
       const selectedShas = toGraphCommitShas(arg, selected);
       if (selectedShas.length === 0) {
         const picked = await this.pickCommitSha('Pick commit to revert');
@@ -1116,7 +1118,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.commit.revertSelectedChanges', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.CommitRevertSelectedChanges, async (arg?: unknown, selected?: unknown) => {
       const target = await this.resolveSelectedCommitFiles(arg, selected);
       if (!target) {
         void vscode.window.showInformationMessage('Select one or more files from a commit first.');
@@ -1150,7 +1152,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Reverted selected changes from ${target.shortLabel} in the current checkout.`);
     });
 
-    register('vscodeGitClient.commit.cherryPickSelectedChanges', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.CommitCherryPickSelectedChanges, async (arg?: unknown, selected?: unknown) => {
       const target = await this.resolveSelectedCommitFiles(arg, selected);
       if (!target) {
         void vscode.window.showInformationMessage('Select one or more files from a commit first.');
@@ -1188,7 +1190,7 @@ export class CommandController {
       await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
     });
 
-    register('vscodeGitClient.commit.createPatchSelectedChanges', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.CommitCreatePatchSelectedChanges, async (arg?: unknown, selected?: unknown) => {
       const target = await this.resolveSelectedCommitFiles(arg, selected);
       if (!target) {
         void vscode.window.showInformationMessage('Select one or more files from a commit first.');
@@ -1240,7 +1242,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.commit.applyPatch', async () => {
+    register(CommandId.CommitApplyPatch, async () => {
       const source = await this.pickPatchSource();
       if (!source) {
         return;
@@ -1263,7 +1265,7 @@ export class CommandController {
       });
     });
 
-    register('vscodeGitClient.graph.compareWithCurrent', async (arg?: unknown) => {
+    register(CommandId.GraphCompareWithCurrent, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
       if (!sha) {
         return;
@@ -1272,7 +1274,7 @@ export class CommandController {
       await this.editor.openCompareFromCommit(sha);
     });
 
-    register('vscodeGitClient.graph.rebaseInteractiveFromHere', async (arg?: unknown) => {
+    register(CommandId.GraphRebaseInteractiveFromHere, async (arg?: unknown) => {
       const base = toCommitSha(arg) ?? (await this.pickCommitSha('Pick base commit for interactive rebase'));
       if (!base) {
         return;
@@ -1290,7 +1292,7 @@ export class CommandController {
       await this.startRebaseOperation(() => this.git.rebaseInteractive(base));
     });
 
-    register('vscodeGitClient.graph.editCommitMessage', async (arg?: unknown) => {
+    register(CommandId.GraphEditCommitMessage, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to edit message'));
       if (!sha) {
         return;
@@ -1341,7 +1343,7 @@ export class CommandController {
       });
     });
 
-    register('vscodeGitClient.graph.goToParentCommit', async (arg?: unknown) => {
+    register(CommandId.GraphGoToParentCommit, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
       if (!sha) {
         return;
@@ -1355,14 +1357,14 @@ export class CommandController {
 
       const graphCommit = this.state.graph.find((commit) => commit.sha === parent);
       if (graphCommit) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.openDetails', new GraphCommitTreeItem(graphCommit));
+        await vscode.commands.executeCommand(CommandId.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
       } else {
         const subject = (await this.git.getCommitDetails(parent)).commit.subject;
         await this.openCommitDetails(parent, subject, { openFirstDiff: true });
       }
     });
 
-    register('vscodeGitClient.graph.goToChildCommit', async (arg?: unknown) => {
+    register(CommandId.GraphGoToChildCommit, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
       if (!sha) {
         return;
@@ -1390,14 +1392,14 @@ export class CommandController {
 
       const graphCommit = this.state.graph.find((commit) => commit.sha === child);
       if (graphCommit) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.openDetails', new GraphCommitTreeItem(graphCommit));
+        await vscode.commands.executeCommand(CommandId.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
       } else {
         const subject = (await this.git.getCommitDetails(child)).commit.subject;
         await this.openCommitDetails(child, subject, { openFirstDiff: true });
       }
     });
 
-    register('vscodeGitClient.graph.pushAllUpToHere', async (arg?: unknown) => {
+    register(CommandId.GraphPushAllUpToHere, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to push up to'));
       if (!sha) {
         return;
@@ -1405,7 +1407,7 @@ export class CommandController {
 
       const current = (await this.git.runGit(['rev-parse', 'HEAD'])).stdout.trim();
       if (current === sha) {
-        await vscode.commands.executeCommand('vscodeGitClient.git.pushWithPreview');
+        await vscode.commands.executeCommand(CommandId.GitPushWithPreview);
         return;
       }
 
@@ -1437,7 +1439,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.graph.createPatch', async (arg?: unknown) => {
+    register(CommandId.GraphCreatePatch, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to export patch'));
       if (!sha) {
         return;
@@ -1451,7 +1453,7 @@ export class CommandController {
       await vscode.window.showTextDocument(doc, { preview: false });
     });
 
-    register('vscodeGitClient.graph.showRepositoryAtRevision', async (arg?: unknown) => {
+    register(CommandId.GraphShowRepositoryAtRevision, async (arg?: unknown) => {
       const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));
       if (!sha) {
         return;
@@ -1460,7 +1462,7 @@ export class CommandController {
       await this.editor.showRepositoryAtRevision(sha);
     });
 
-    register('vscodeGitClient.graph.filter', async () => {
+    register(CommandId.GraphFilter, async () => {
       const filterSession = new GraphFilterSession(
         (maxCount, skip, filters) => this.git.getGraph(maxCount, skip, filters),
         () => getConfigValue<number>('maxGraphCommits', 200)
@@ -1498,24 +1500,24 @@ export class CommandController {
       );
     });
 
-    register('vscodeGitClient.graph.clearFilter', async () => {
+    register(CommandId.GraphClearFilter, async () => {
       await GraphFilterView.clearCurrentFilters();
       await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
     });
 
-    register('vscodeGitClient.graph.loadMore', async () => {
+    register(CommandId.GraphLoadMore, async () => {
       await this.state.loadMoreGraph();
     });
 
-    register('vscodeGitClient.diff.open', async () => {
+    register(CommandId.DiffOpen, async () => {
       await this.openDiffWorkflow();
     });
 
-    register('vscodeGitClient.compare.open', async () => {
+    register(CommandId.CompareOpen, async () => {
       await this.openCompareWorkflow();
     });
 
-    register('vscodeGitClient.merge.openConflict', async () => {
+    register(CommandId.MergeOpenConflict, async () => {
       const conflicts = await this.git.getMergeConflicts();
       if (conflicts.length === 0) {
         void vscode.window.showInformationMessage('No conflicted files found.');
@@ -1534,15 +1536,15 @@ export class CommandController {
       await this.editor.openMergeConflict(picked.label);
     });
 
-    register('vscodeGitClient.merge.next', async () => {
+    register(CommandId.MergeNext, async () => {
       await vscode.commands.executeCommand('merge-conflict.next');
     });
 
-    register('vscodeGitClient.merge.previous', async () => {
+    register(CommandId.MergePrevious, async () => {
       await vscode.commands.executeCommand('merge-conflict.previous');
     });
 
-    register('vscodeGitClient.merge.finalize', async () => {
+    register(CommandId.MergeFinalize, async () => {
       const conflicts = await this.git.getMergeConflicts();
       if (conflicts.length > 0) {
         void vscode.window.showWarningMessage(`Resolve all conflicts before finalizing (${conflicts.length} remaining).`);
@@ -1558,7 +1560,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.conflict.acceptOurs', async (arg?: unknown) => {
+    register(CommandId.ConflictAcceptOurs, async (arg?: unknown) => {
       const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Yours (ours) for which file?'));
       if (!path) { return; }
       await this.git.resolveConflictOurs(path);
@@ -1566,7 +1568,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Accepted yours: ${path}`);
     });
 
-    register('vscodeGitClient.conflict.acceptTheirs', async (arg?: unknown) => {
+    register(CommandId.ConflictAcceptTheirs, async (arg?: unknown) => {
       const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Theirs for which file?'));
       if (!path) { return; }
       await this.git.resolveConflictTheirs(path);
@@ -1574,13 +1576,13 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Accepted theirs: ${path}`);
     });
 
-    register('vscodeGitClient.conflict.acceptBoth', async (arg?: unknown) => {
+    register(CommandId.ConflictAcceptBoth, async (arg?: unknown) => {
       const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Both: open merge editor for which file?'));
       if (!path) { return; }
       await this.editor.openMergeConflict(path);
     });
 
-    register('vscodeGitClient.operation.abort', async () => {
+    register(CommandId.OperationAbort, async () => {
       const state = await this.git.getOperationState();
       if (state.kind === 'none') {
         void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
@@ -1602,7 +1604,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.operation.continue', async () => {
+    register(CommandId.OperationContinue, async () => {
       const state = await this.git.getOperationState();
       if (state.kind === 'none') {
         void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
@@ -1619,7 +1621,7 @@ export class CommandController {
       }
       try {
         if (state.kind === 'merge') {
-          await vscode.commands.executeCommand('vscodeGitClient.merge.finalize');
+          await vscode.commands.executeCommand(CommandId.MergeFinalize);
           return;
         }
         if (state.kind === 'rebase') {
@@ -1649,7 +1651,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.operation.skip', async () => {
+    register(CommandId.OperationSkip, async () => {
       const state = await this.git.getOperationState();
       if (state.kind === 'rebase') {
         await this.git.rebaseSkip();
@@ -1662,7 +1664,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.git.pushWithPreview', async () => {
+    register(CommandId.GitPushWithPreview, async () => {
       const preview = await this.git.getOutgoingIncomingPreview();
       const confirmed = await confirmDangerousAction({
         title: 'Push current branch',
@@ -1677,7 +1679,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.git.pullWithPreview', async () => {
+    register(CommandId.GitPullWithPreview, async () => {
       const preview = await this.git.getOutgoingIncomingPreview();
       const confirmed = await confirmDangerousAction({
         title: 'Pull current branch',
@@ -1692,13 +1694,13 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.git.fetchPrune', async () => {
+    register(CommandId.GitFetchPrune, async () => {
       await this.git.fetchPrune();
       await this.state.refreshAll();
       void vscode.window.showInformationMessage('Fetch --prune completed.');
     });
 
-    register('vscodeGitClient.stage.patch', async () => {
+    register(CommandId.StagePatch, async () => {
       const changed = await this.git.getChangedFiles();
       if (changed.length === 0) {
         void vscode.window.showInformationMessage('No local changes found.');
@@ -1718,7 +1720,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.stage.file', async () => {
+    register(CommandId.StageFile, async () => {
       const changed = await this.git.getChangedFiles();
       const candidates = changed.filter((entry) => entry.status.length > 0 && entry.status[1] !== ' ');
       if (candidates.length === 0) {
@@ -1738,7 +1740,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.scm.shelveResource', async (arg?: unknown) => {
+    register(CommandId.ScmShelveResource, async (arg?: unknown) => {
       const filePath = toRepoFilePath(arg);
       if (!filePath) {
         void vscode.window.showWarningMessage('Select a Source Control file to shelve.');
@@ -1768,7 +1770,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Shelved ${filePath}.`);
     });
 
-    register('vscodeGitClient.unstage.file', async () => {
+    register(CommandId.UnstageFile, async () => {
       const changed = await this.git.getChangedFiles();
       const candidates = changed.filter((entry) => entry.status.length > 1 && entry.status[0] !== ' ' && entry.status[0] !== '?');
       if (candidates.length === 0) {
@@ -1788,7 +1790,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.commit.amend', async () => {
+    register(CommandId.CommitAmend, async () => {
       const defaultMessage = await this.git.getHeadCommitMessage();
       const message = await vscode.window.showInputBox({
         title: 'Amend last commit message',
@@ -1808,7 +1810,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.scm.commitTemplate', async () => {
+    register(CommandId.ScmCommitTemplate, async () => {
       const repository = await this.getBuiltInGitRepository();
       if (!repository) {
         void vscode.window.showWarningMessage('Git repository context not available.');
@@ -1847,7 +1849,7 @@ export class CommandController {
       repository.inputBox.value = expanded;
     });
 
-    register('vscodeGitClient.scm.generateCommitMessage', async () => {
+    register(CommandId.ScmGenerateCommitMessage, async () => {
       const repository = await this.getBuiltInGitRepository();
       if (!repository) {
         void vscode.window.showWarningMessage('Git repository context not available.');
@@ -1872,7 +1874,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.scm.amendFromInput', async () => {
+    register(CommandId.ScmAmendFromInput, async () => {
       const repository = await this.getBuiltInGitRepository();
       if (!repository) {
         void vscode.window.showWarningMessage('Git repository context not available.');
@@ -1896,7 +1898,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.compareWithRevision', async (arg?: unknown, selected?: unknown) => {
+    register(CommandId.CompareWithRevision, async (arg?: unknown, selected?: unknown) => {
       const targetUris = toExplorerResourceUris(arg, selected);
       if (targetUris.length === 0) {
         void vscode.window.showWarningMessage('Right-click a file or folder in the Explorer to compare.');
@@ -1953,7 +1955,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.directoryTimeline.open', async (arg?: unknown) => {
+    register(CommandId.DirectoryTimelineOpen, async (arg?: unknown) => {
       const targetUri = asFileResourceUri(arg);
       if (!targetUri) {
         void vscode.window.showWarningMessage('Right-click a folder in the Explorer to view its timeline.');
@@ -1992,7 +1994,7 @@ export class CommandController {
       await this.openDirectoryTimeline(repoRelative);
     });
 
-    register('vscodeGitClient.fileBlame.open', async () => {
+    register(CommandId.FileBlameOpen, async () => {
       const file = this.getActiveFilePath();
       if (!file) {
         void vscode.window.showWarningMessage('Open a file to view blame.');
@@ -2006,25 +2008,25 @@ export class CommandController {
 
     // ── Worktree commands ──────────────────────────────────────────────────
 
-    register('vscodeGitClient.worktree.refresh', async () => {
+    register(CommandId.WorktreeRefresh, async () => {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.open', async (arg?: unknown) => {
+    register(CommandId.WorktreeOpen, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       const worktreePath = item?.worktree.worktreePath;
       if (!worktreePath) { return; }
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceReuseWindow: true });
     });
 
-    register('vscodeGitClient.worktree.openInNewWindow', async (arg?: unknown) => {
+    register(CommandId.WorktreeOpenInNewWindow, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       const worktreePath = item?.worktree.worktreePath;
       if (!worktreePath) { return; }
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceNewWindow: true });
     });
 
-    register('vscodeGitClient.worktree.addFromBranch', async () => {
+    register(CommandId.WorktreeAddFromBranch, async () => {
       const selection = await this.pickWorktreeRevision('Add worktree from branch, tag, or revision');
       if (!selection) { return; }
 
@@ -2035,7 +2037,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.addNewBranch', async () => {
+    register(CommandId.WorktreeAddNewBranch, async () => {
       const branchName = await vscode.window.showInputBox({
         title: 'New branch name',
         placeHolder: 'feature/my-branch',
@@ -2052,7 +2054,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.addDetached', async () => {
+    register(CommandId.WorktreeAddDetached, async () => {
       const selection = await this.pickWorktreeRevision('Detached worktree at branch, tag, or revision');
       if (!selection) { return; }
 
@@ -2070,7 +2072,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.remove', async (arg?: unknown) => {
+    register(CommandId.WorktreeRemove, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
       const { worktree } = item;
@@ -2103,7 +2105,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.removeForce', async (arg?: unknown) => {
+    register(CommandId.WorktreeRemoveForce, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
       const { worktree } = item;
@@ -2124,7 +2126,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.lock', async (arg?: unknown) => {
+    register(CommandId.WorktreeLock, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
 
@@ -2137,7 +2139,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.unlock', async (arg?: unknown) => {
+    register(CommandId.WorktreeUnlock, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
 
@@ -2145,7 +2147,7 @@ export class CommandController {
       await this.state.refreshWorktrees();
     });
 
-    register('vscodeGitClient.worktree.prunePreview', async () => {
+    register(CommandId.WorktreePrunePreview, async () => {
       const prunable = await this.git.getPrunableWorktrees();
       if (prunable.length === 0) {
         void vscode.window.showInformationMessage('No prunable worktrees found.');
@@ -2160,7 +2162,7 @@ export class CommandController {
       });
     });
 
-    register('vscodeGitClient.worktree.prune', async () => {
+    register(CommandId.WorktreePrune, async () => {
       const prunable = await this.git.getPrunableWorktrees();
       if (prunable.length === 0) {
         void vscode.window.showInformationMessage('No prunable worktrees found.');
@@ -2180,13 +2182,13 @@ export class CommandController {
       void vscode.window.showInformationMessage('Stale worktrees pruned.');
     });
 
-    register('vscodeGitClient.worktree.revealInFinder', async (arg?: unknown) => {
+    register(CommandId.WorktreeRevealInFinder, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
       await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(item.worktree.worktreePath));
     });
 
-    register('vscodeGitClient.worktree.openTerminal', async (arg?: unknown) => {
+    register(CommandId.WorktreeOpenTerminal, async (arg?: unknown) => {
       const item = arg instanceof WorktreeTreeItem ? arg : undefined;
       if (!item) { return; }
       const terminal = vscode.window.createTerminal({ cwd: item.worktree.worktreePath, name: `Worktree: ${item.label}` });
@@ -2195,11 +2197,11 @@ export class CommandController {
 
     // ── Submodule commands ─────────────────────────────────────────────────
 
-    register('vscodeGitClient.submodule.refresh', async () => {
+    register(CommandId.SubmoduleRefresh, async () => {
       await this.state.refreshSubmodules();
     });
 
-    register('vscodeGitClient.submodule.init', async (arg?: unknown) => {
+    register(CommandId.SubmoduleInit, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       try {
@@ -2217,7 +2219,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.initAll', async () => {
+    register(CommandId.SubmoduleInitAll, async () => {
       const count = this.state.submodules.length;
       try {
         await withSubmoduleProgress(
@@ -2234,7 +2236,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.update', async (arg?: unknown) => {
+    register(CommandId.SubmoduleUpdate, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
 
@@ -2262,7 +2264,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.updateAll', async () => {
+    register(CommandId.SubmoduleUpdateAll, async () => {
       const submodules = this.state.submodules;
       const dirtyCount = submodules.filter((s) => s.isDirty).length;
       if (dirtyCount > 0) {
@@ -2288,7 +2290,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.updateRecursive', async () => {
+    register(CommandId.SubmoduleUpdateRecursive, async () => {
       const submodules = this.state.submodules;
       const dirtyCount = submodules.filter((s) => s.isDirty).length;
       const confirmed = await confirmDangerousAction({
@@ -2314,7 +2316,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.sync', async (arg?: unknown) => {
+    register(CommandId.SubmoduleSync, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       try {
@@ -2332,7 +2334,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.syncAll', async () => {
+    register(CommandId.SubmoduleSyncAll, async () => {
       const count = this.state.submodules.length;
       try {
         await withSubmoduleProgress(
@@ -2349,21 +2351,21 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.open', async (arg?: unknown) => {
+    register(CommandId.SubmoduleOpen, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceReuseWindow: true });
     });
 
-    register('vscodeGitClient.submodule.openInNewWindow', async (arg?: unknown) => {
+    register(CommandId.SubmoduleOpenInNewWindow, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
       await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceNewWindow: true });
     });
 
-    register('vscodeGitClient.submodule.openTerminal', async (arg?: unknown) => {
+    register(CommandId.SubmoduleOpenTerminal, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
@@ -2371,7 +2373,7 @@ export class CommandController {
       terminal.show();
     });
 
-    register('vscodeGitClient.submodule.checkoutRecorded', async (arg?: unknown) => {
+    register(CommandId.SubmoduleCheckoutRecorded, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       try {
@@ -2389,7 +2391,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.pullTrackedBranch', async (arg?: unknown) => {
+    register(CommandId.SubmodulePullTrackedBranch, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       try {
@@ -2407,7 +2409,7 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.submodule.diffPointer', async (arg?: unknown) => {
+    register(CommandId.SubmoduleDiffPointer, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       const diff = await this.git.getSubmodulePointerDiff(item.submodule.path);
@@ -2419,14 +2421,14 @@ export class CommandController {
       await vscode.window.showTextDocument(doc);
     });
 
-    register('vscodeGitClient.submodule.stagePointerChange', async (arg?: unknown) => {
+    register(CommandId.SubmoduleStagePointerChange, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
       await this.git.stageSubmodulePointer(item.submodule.path);
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.submodule.deinit', async (arg?: unknown) => {
+    register(CommandId.SubmoduleDeinit, async (arg?: unknown) => {
       const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
       if (!item) { return; }
 
