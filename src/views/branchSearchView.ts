@@ -8,6 +8,7 @@ import {
 } from './branchContextMenu';
 import { renderTemplate } from './templateRenderer';
 import { BranchRef, TagRef } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 export interface BranchSearchHandlers {
   checkout(name: string): Promise<void>;
@@ -141,7 +142,7 @@ export class BranchSearchView {
         await this.handlers.openActions(message.name);
         return;
       case 'tagActions':
-        await this.handlers.runCommand('vscodeGitClient.tag.openCommits', message.name);
+        await this.handlers.runCommand(CommandId.TagOpenCommits, message.name);
         return;
       case 'refresh':
         await this.refresh();

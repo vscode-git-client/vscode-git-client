@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { GitService } from '../services/gitService';
 import { StateStore } from '../state/stateStore';
 import { CommitFileChange, GraphCommit } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 export class GraphCommitTreeItem extends vscode.TreeItem {
   constructor(public readonly commit: GraphCommit) {
@@ -59,7 +60,7 @@ export class GraphCommitFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${fileLabel}\n${commit.shortSha} ${commit.subject}\nOpen Commit File Diff`;
     this.command = {
       title: 'Open Diff',
-      command: 'vscodeGitClient.graph.openFileDiff',
+      command: CommandId.GraphOpenFileDiff,
       arguments: [this]
     };
   }
@@ -70,7 +71,7 @@ export class LoadMoreTreeItem extends vscode.TreeItem {
     super('Load More...', vscode.TreeItemCollapsibleState.None);
     this.command = {
       title: 'Load More',
-      command: 'vscodeGitClient.graph.loadMore',
+      command: CommandId.GraphLoadMore,
       arguments: []
     };
     this.contextValue = 'graphLoadMore';

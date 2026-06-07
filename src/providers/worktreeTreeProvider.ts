@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { StateStore } from '../state/stateStore';
 import { WorktreeEntry } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 export class WorktreeTreeItem extends vscode.TreeItem {
   constructor(public readonly worktree: WorktreeEntry) {
@@ -29,7 +30,7 @@ export class WorktreeTreeItem extends vscode.TreeItem {
 
     this.resourceUri = vscode.Uri.file(worktree.worktreePath);
     this.command = {
-      command: 'vscodeGitClient.worktree.open',
+      command: CommandId.WorktreeOpen,
       title: 'Open Worktree',
       arguments: [this]
     };

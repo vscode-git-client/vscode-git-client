@@ -5,6 +5,7 @@ import { GraphTreeProvider, LoadMoreTreeItem } from '../providers/graphTreeProvi
 import { StateStore } from '../state/stateStore';
 import { CommitFilters, GraphCommit } from '../types';
 import { GraphFilterSession } from '../views/graphFilterSession';
+import { CommandId } from '../commands/commandController/commandIds';
 
 function makeCommit(sha: string): GraphCommit {
   return { graph: '-', sha, shortSha: sha.slice(0, 7), parents: [], refs: [], author: 'A', date: '2024-01-01T00:00:00Z', subject: 'msg' };
@@ -133,7 +134,7 @@ describe('GraphTreeProvider pagination', () => {
     const last = children[children.length - 1];
     assert.ok(last instanceof LoadMoreTreeItem, 'last item should be LoadMoreTreeItem');
     assert.strictEqual(last.contextValue, 'graphLoadMore');
-    assert.strictEqual(last.command?.command, 'vscodeGitClient.graph.loadMore');
+    assert.strictEqual(last.command?.command, CommandId.GraphLoadMore);
   });
 
   it('getChildren omits LoadMoreTreeItem when graphHasMore is false', async () => {

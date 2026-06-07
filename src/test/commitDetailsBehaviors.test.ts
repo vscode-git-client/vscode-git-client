@@ -3,6 +3,7 @@ import { afterEach, describe, it } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
 import { GraphCommit } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 function createGraphCommit(sha: string, subject: string): GraphCommit {
   return {
@@ -86,7 +87,7 @@ describe('commit details behaviors', () => {
       }
     });
 
-    const openDetails = commands.get('vscodeGitClient.graph.openDetails');
+    const openDetails = commands.get(CommandId.GraphOpenDetails);
     assert.ok(openDetails, 'expected open details command');
 
     await openDetails(sha);

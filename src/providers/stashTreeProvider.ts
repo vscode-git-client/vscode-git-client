@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { StateStore } from '../state/stateStore';
 import { StashEntry } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 export class StashTreeItem extends vscode.TreeItem {
   constructor(public readonly stash: StashEntry) {
@@ -15,7 +16,7 @@ export class StashTreeItem extends vscode.TreeItem {
 
     this.command = {
       title: 'Preview Stash Patch',
-      command: 'vscodeGitClient.stash.previewPatch',
+      command: CommandId.StashPreviewPatch,
       arguments: [this]
     };
   }

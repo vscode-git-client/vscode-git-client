@@ -15,6 +15,7 @@ import {
 import { GraphCommitFileTreeItem } from '../providers/graphTreeProvider';
 import { GitService } from '../services/gitService';
 import { GraphCommit } from '../types';
+import { CommandId } from '../commands/commandController/commandIds';
 
 function execGit(cwd: string, args: string[]): string {
   return cp.execFileSync('git', args, { cwd, encoding: 'utf8' });
@@ -115,7 +116,7 @@ describe('selected commit file changes', () => {
       }
     );
 
-    const cherryPick = commands.get('vscodeGitClient.commit.cherryPickSelectedChanges');
+    const cherryPick = commands.get(CommandId.CommitCherryPickSelectedChanges);
     assert.ok(cherryPick, 'expected selected-changes cherry-pick command to be registered');
 
     await cherryPick(first, [first, second]);
@@ -223,7 +224,7 @@ describe('selected commit file changes', () => {
       } as never
     );
 
-    const cherryPick = commands.get('vscodeGitClient.commit.cherryPickSelectedChanges');
+    const cherryPick = commands.get(CommandId.CommitCherryPickSelectedChanges);
     assert.ok(cherryPick, 'expected selected-changes cherry-pick command to be registered');
 
     await cherryPick(first, [first, second]);
@@ -261,7 +262,7 @@ describe('selected commit file changes', () => {
       }
     );
 
-    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    const openDiffs = commands.get(CommandId.GraphOpenFileDiff);
     assert.ok(openDiffs, 'expected open diffs command to be registered');
 
     await openDiffs(second, [first, second]);
@@ -329,7 +330,7 @@ describe('selected commit file changes', () => {
       provider as never
     );
 
-    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    const openDiffs = commands.get(CommandId.GraphOpenFileDiff);
     assert.ok(openDiffs, 'expected open diffs command to be registered');
 
     await openDiffs(folder, [folder]);
@@ -395,7 +396,7 @@ describe('selected commit file changes', () => {
       } as never
     );
 
-    const revert = commands.get('vscodeGitClient.commit.revertSelectedChanges');
+    const revert = commands.get(CommandId.CommitRevertSelectedChanges);
     assert.ok(revert, 'expected selected-changes revert command to be registered');
 
     await revert(second, [first, second]);

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import type { CommandControllerShape } from './shape';
+import { CommandId } from './commandIds';
 
 export async function openCompareWorkflow(this: CommandControllerShape): Promise<void> {
   const left =
@@ -28,6 +29,6 @@ export async function openCompareWorkflow(this: CommandControllerShape): Promise
   if (followUp === 'Open changed file diff') {
     await this.editor.openBranchComparisonFileDiff(left, right);
   } else if (followUp === 'Cherry-pick commit range') {
-    await vscode.commands.executeCommand('vscodeGitClient.graph.cherryPickRange');
+    await vscode.commands.executeCommand(CommandId.GraphCherryPickRange);
   }
 }

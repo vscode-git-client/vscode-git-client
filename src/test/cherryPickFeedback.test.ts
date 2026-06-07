@@ -3,6 +3,7 @@ import { afterEach, describe, it } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
 import { BranchRemoteNode } from '../providers/branchTreeProvider';
+import { CommandId } from '../commands/commandController/commandIds';
 
 const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const conflictMessage = 'There are some conflicts. You have to resolve them first.';
@@ -130,7 +131,7 @@ describe('cherry-pick and operation feedback', () => {
       return undefined;
     };
 
-    const cherryPick = commands.get('vscodeGitClient.graph.cherryPick');
+    const cherryPick = commands.get(CommandId.GraphCherryPick);
     assert.ok(cherryPick, 'expected cherry-pick command to be registered');
 
     const run = cherryPick('abcdef123456');
@@ -162,7 +163,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
       }
     }, true);
-    const cherryPick = commands.get('vscodeGitClient.graph.cherryPick');
+    const cherryPick = commands.get(CommandId.GraphCherryPick);
     assert.ok(cherryPick, 'expected cherry-pick command to be registered');
 
     const run = cherryPick('abcdef123456');
@@ -195,7 +196,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('Automatic merge failed; fix conflicts and then commit the result.');
       }
     }, true);
-    const merge = commands.get('vscodeGitClient.branch.mergeIntoCurrent');
+    const merge = commands.get(CommandId.BranchMergeIntoCurrent);
     assert.ok(merge, 'expected merge command to be registered');
 
     const run = merge('feature/conflict');
@@ -221,7 +222,7 @@ describe('cherry-pick and operation feedback', () => {
         throw new Error('CONFLICT (content): Merge conflict in src/conflict.ts');
       }
     }, true);
-    const rebase = commands.get('vscodeGitClient.branch.rebaseOnto');
+    const rebase = commands.get(CommandId.BranchRebaseOnto);
     assert.ok(rebase, 'expected rebase command to be registered');
 
     const run = rebase('main');
@@ -254,7 +255,7 @@ describe('cherry-pick and operation feedback', () => {
       return undefined;
     };
 
-    const changeUrl = commands.get('vscodeGitClient.remote.changeUrl');
+    const changeUrl = commands.get(CommandId.RemoteChangeUrl);
     assert.ok(changeUrl, 'expected remote URL command to be registered');
 
     const remote = new BranchRemoteNode('origin', [{
@@ -301,7 +302,7 @@ describe('cherry-pick and operation feedback', () => {
       return undefined;
     };
 
-    const deleteRemote = commands.get('vscodeGitClient.remote.delete');
+    const deleteRemote = commands.get(CommandId.RemoteDelete);
     assert.ok(deleteRemote, 'expected remote delete command to be registered');
 
     const remote = new BranchRemoteNode('origin', [{
