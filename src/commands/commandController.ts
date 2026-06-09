@@ -2698,7 +2698,7 @@ export class CommandController {
       if (!input) {
         return;
       }
-      host = input;
+      host = input.trim();
     } else {
       host = targetHost;
     }

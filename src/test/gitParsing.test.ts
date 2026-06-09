@@ -235,4 +235,11 @@ describe('convertToSshUrl', () => {
       'git@bitbucket.org:team/repo.git'
     );
   });
+
+  it('rewrites SSH URL to a different SSH host', () => {
+    assert.strictEqual(
+      convertToSshUrl('git@gitlab.com:org/repo.git', 'github.com'),
+      'git@github.com:org/repo.git'
+    );
+  });
 });

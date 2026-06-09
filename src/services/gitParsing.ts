@@ -80,7 +80,9 @@ export function convertToSshUrl(currentUrl: string, targetHost: string): string 
   if (currentUrl.startsWith(`git@${targetHost}:`)) {
     return null;
   }
-  const match = currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/);
+  const match =
+    currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/) ??
+    currentUrl.match(/^git@[^:]+:(.+)$/);
   if (!match) {
     return null;
   }
