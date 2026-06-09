@@ -1,0 +1,26 @@
+{
+  "planPath": "docs/superpowers/plans/2026-06-09-force-ssh-pull.md",
+  "tasks": [
+    {
+      "id": 8,
+      "subject": "Task 1: Add convertToSshUrl to gitParsing.ts with tests",
+      "status": "pending",
+      "description": "**Goal:** A tested, pure function that converts an HTTPS remote URL to SSH format for a given target host, returning null when no rewrite is needed or the URL is unrecognised.\n\n**Files:**\n- Modify: `src/services/gitParsing.ts`\n- Modify: `src/test/gitParsing.test.ts`\n\n**Acceptance Criteria:**\n- [ ] `convertToSshUrl('https://github.com/org/repo.git', 'github.com')` returns `'git@github.com:org/repo.git'`\n- [ ] `convertToSshUrl('git@github.com:org/repo.git', 'github.com')` returns `null`\n- [ ] `convertToSshUrl('https://github.com/org/repo.git', 'git.company.com')` returns `'git@git.company.com:org/repo.git'`\n- [ ] `convertToSshUrl('ssh://git@github.com/org/repo.git', 'github.com')` returns `null`\n- [ ] All tests pass: `npm run test`\n\n**Verify:** `npm run test` → output includes convertToSshUrl tests with no failures\n\n```json:metadata\n{\"files\": [\"src/services/gitParsing.ts\", \"src/test/gitParsing.test.ts\"], \"verifyCommand\": \"npm run test\", \"acceptanceCriteria\": [\"convertToSshUrl converts HTTPS to SSH\", \"convertToSshUrl returns null for already-SSH URLs\", \"convertToSshUrl returns null for unrecognised formats\", \"all tests pass\"]}\n```"
+    },
+    {
+      "id": 9,
+      "subject": "Task 2: Add sshPull method and register four commands",
+      "status": "pending",
+      "blockedBy": [8],
+      "description": "**Goal:** A shared `sshPull` private method in `CommandController` that drives the remote-picker → optional hostname-input → URL-rewrite → pull flow; plus four registered VS Code commands that call it.\n\n**Files:**\n- Modify: `src/commands/commandController.ts`\n\n**Acceptance Criteria:**\n- [ ] Import `convertToSshUrl` from `../services/gitParsing` added\n- [ ] `private async sshPull(targetHost: string | 'prompt'): Promise<void>` method exists\n- [ ] Four commands registered: `vscodeGitClient.git.sshPull.github`, `.gitlab`, `.bitbucket`, `.custom`\n- [ ] `npm run compile` passes with no errors\n\n**Verify:** `npm run compile` → exits 0, no TypeScript errors\n\n```json:metadata\n{\"files\": [\"src/commands/commandController.ts\"], \"verifyCommand\": \"npm run compile\", \"acceptanceCriteria\": [\"convertToSshUrl imported\", \"sshPull method implemented\", \"four register() calls added\", \"no TypeScript errors\"]}\n```"
+    },
+    {
+      "id": 10,
+      "subject": "Task 3: Wire up quick actions and declare commands in package.json",
+      "status": "pending",
+      "blockedBy": [9],
+      "description": "**Goal:** The four SSH pull commands appear in the Quick Actions picker and in the VS Code command palette.\n\n**Files:**\n- Modify: `src/commands/commandController.ts` (quick actions entries)\n- Modify: `package.json` (command declarations)\n\n**Acceptance Criteria:**\n- [ ] Four new entries in `openQuickActions()` after 'Pull with preview'\n- [ ] Four command declarations in `package.json` under `contributes.commands`\n- [ ] `npm run test` passes with no failures\n\n**Verify:** `npm run test` → exits 0, all tests pass\n\n```json:metadata\n{\"files\": [\"src/commands/commandController.ts\", \"package.json\"], \"verifyCommand\": \"npm run test\", \"acceptanceCriteria\": [\"four quick action entries added\", \"four package.json command declarations added\", \"all tests pass\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-06-09"
+}
