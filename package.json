@@ -405,6 +405,22 @@
         "title": "Fetch --prune"
       },
       {
+        "command": "vscodeGitClient.git.sshPull.github",
+        "title": "Force SSH Pull (GitHub)"
+      },
+      {
+        "command": "vscodeGitClient.git.sshPull.gitlab",
+        "title": "Force SSH Pull (GitLab)"
+      },
+      {
+        "command": "vscodeGitClient.git.sshPull.bitbucket",
+        "title": "Force SSH Pull (Bitbucket)"
+      },
+      {
+        "command": "vscodeGitClient.git.sshPull.custom",
+        "title": "Force SSH Pull (Custom Server)"
+      },
+      {
         "command": "vscodeGitClient.stage.patch",
         "title": "Stage Selected Hunks"
       },
