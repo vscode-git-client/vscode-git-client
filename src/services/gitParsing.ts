@@ -72,6 +72,21 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
   return entries;
 }
 
+/**
+ * Converts a remote URL to SSH format for the given target host.
+ * Returns null if the URL is already SSH for that host, or cannot be parsed.
+ */
+export function convertToSshUrl(currentUrl: string, targetHost: string): string | null {
+  if (currentUrl.startsWith(`git@${targetHost}:`)) {
+    return null;
+  }
+  const match = currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/);
+  if (!match) {
+    return null;
+  }
+  return `git@${targetHost}:${match[1]}`;
+}
+
 export function parsePorcelainStatusZ(stdout: string): PorcelainStatusEntry[] {
   if (!stdout) {
     return [];

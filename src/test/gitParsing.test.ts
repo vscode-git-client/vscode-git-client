@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
-import { formatComparisonSummary, parsePorcelainStatusZ, parseRevListComparison, parseTrack } from '../services/gitParsing';
+import { convertToSshUrl, formatComparisonSummary, parsePorcelainStatusZ, parseRevListComparison, parseTrack } from '../services/gitParsing';
 import { parseSubmoduleConfig, parseSubmoduleStatus } from '../services/submoduleParsing';
 import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from '../services/worktreeParsing';
 
@@ -190,5 +190,49 @@ submodule.tools/util.url https://github.com/example/util.git
     assert.strictEqual(entries[1].sha, 'def67890');
     assert.strictEqual(entries[1].path, 'vendor/lib/nested/sub');
     assert.strictEqual(entries[1].isNested, true);
+  });
+});
+
+describe('convertToSshUrl', () => {
+  it('converts GitHub HTTPS to SSH', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://github.com/org/repo.git', 'github.com'),
+      'git@github.com:org/repo.git'
+    );
+  });
+
+  it('returns null when already SSH for the same host', () => {
+    assert.strictEqual(
+      convertToSshUrl('git@github.com:org/repo.git', 'github.com'),
+      null
+    );
+  });
+
+  it('converts HTTPS to SSH substituting a custom target host', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://github.com/org/repo.git', 'git.company.com'),
+      'git@git.company.com:org/repo.git'
+    );
+  });
+
+  it('returns null for ssh:// URL (unrecognised format)', () => {
+    assert.strictEqual(
+      convertToSshUrl('ssh://git@github.com/org/repo.git', 'github.com'),
+      null
+    );
+  });
+
+  it('converts GitLab HTTPS to SSH', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://gitlab.com/group/project.git', 'gitlab.com'),
+      'git@gitlab.com:group/project.git'
+    );
+  });
+
+  it('converts Bitbucket HTTPS to SSH', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://bitbucket.org/team/repo.git', 'bitbucket.org'),
+      'git@bitbucket.org:team/repo.git'
+    );
   });
 });
