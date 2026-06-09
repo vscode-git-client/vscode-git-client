@@ -2682,13 +2682,18 @@ export class CommandController {
     }
 
     const remoteName = picked.label;
-    const currentUrl = remoteUrls.get(remoteName)!;
+    const currentUrl = remoteUrls.get(remoteName);
+    if (currentUrl === undefined) {
+      return;
+    }
 
     let host: string;
     if (targetHost === 'prompt') {
       const input = await vscode.window.showInputBox({
+        title: 'Force SSH Pull (Custom Server)',
         prompt: 'Enter SSH hostname',
-        placeHolder: 'git.mycompany.com'
+        placeHolder: 'git.mycompany.com',
+        validateInput: (v) => (v.trim() ? undefined : 'SSH hostname is required')
       });
       if (!input) {
         return;
