@@ -18,6 +18,7 @@ import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../providers/graph
 import { StashTreeItem } from '../providers/stashTreeProvider';
 import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
 import { SubmoduleTreeItem } from '../providers/submoduleTreeProvider';
+import { convertToSshUrl } from '../services/gitParsing';
 import { GitService } from '../services/gitService';
 import { SubmoduleLogSink } from '../services/submoduleLogSink';
 import { resolveWorktreeTargetPath } from '../services/worktreeTargetPath';
@@ -1796,6 +1797,22 @@ export class CommandController {
       void vscode.window.showInformationMessage('Fetch --prune completed.');
     });
 
+    register('vscodeGitClient.git.sshPull.github', async () => {
+      await this.sshPull('github.com');
+    });
+
+    register('vscodeGitClient.git.sshPull.gitlab', async () => {
+      await this.sshPull('gitlab.com');
+    });
+
+    register('vscodeGitClient.git.sshPull.bitbucket', async () => {
+      await this.sshPull('bitbucket.org');
+    });
+
+    register('vscodeGitClient.git.sshPull.custom', async () => {
+      await this.sshPull('prompt');
+    });
+
     register('vscodeGitClient.stage.patch', async () => {
       const changed = await this.git.getChangedFiles();
       if (changed.length === 0) {
@@ -2642,6 +2659,52 @@ export class CommandController {
       view.setLoading(false);
       throw error;
     }
+  }
+
+  private async sshPull(targetHost: string | 'prompt'): Promise<void> {
+    const remoteUrls = await this.git.getRemoteFetchUrls();
+    if (remoteUrls.size === 0) {
+      void vscode.window.showErrorMessage('No remotes found in this repository.');
+      return;
+    }
+
+    const remoteItems = [...remoteUrls.entries()].map(([name, url]) => ({
+      label: name,
+      description: url
+    }));
+
+    const picked = await vscode.window.showQuickPick(remoteItems, {
+      title: 'Select remote to switch to SSH',
+      placeHolder: 'Pick a remote'
+    });
+    if (!picked) {
+      return;
+    }
+
+    const remoteName = picked.label;
+    const currentUrl = remoteUrls.get(remoteName)!;
+
+    let host: string;
+    if (targetHost === 'prompt') {
+      const input = await vscode.window.showInputBox({
+        prompt: 'Enter SSH hostname',
+        placeHolder: 'git.mycompany.com'
+      });
+      if (!input) {
+        return;
+      }
+      host = input;
+    } else {
+      host = targetHost;
+    }
+
+    const sshUrl = convertToSshUrl(currentUrl, host);
+    if (sshUrl !== null) {
+      await this.git.setRemoteUrl(remoteName, sshUrl);
+    }
+
+    await this.git.pull();
+    await this.state.refreshAll();
   }
 
   private async openQuickActions(): Promise<void> {
