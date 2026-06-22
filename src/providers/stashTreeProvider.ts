@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { StateStore } from '../state/stateStore';
-import { StashEntry } from '../types';
+import { StashEntry, WorkingTreeChange } from '../types';
+import { GitService } from '../services/gitService';
 
 export class StashTreeItem extends vscode.TreeItem {
   constructor(public readonly stash: StashEntry) {
@@ -19,6 +20,104 @@ export class StashTreeItem extends vscode.TreeItem {
       arguments: [this]
     };
   }
+}
+
+
+export class StashTreeDragAndDropController implements vscode.TreeDragAndDropController<StashTreeItem> {
+  dropMimeTypes: string[] = [
+    'text/uri-list',
+    'application/vnd.code.tree.scmgit.scm',
+    'application/vnd.code.tree.scmResourceState',
+    'application/vnd.code.tree.git.scmgit.scm',
+    'application/vnd.code.tree.gitResource'
+  ];
+  dragMimeTypes: string[] = [];
+
+  constructor(private readonly git: GitService, private readonly state: StateStore) {}
+
+  async handleDrop(target: StashTreeItem | undefined, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+    const paths: string[] = [];
+
+    const uriList = dataTransfer.get('text/uri-list');
+    if (uriList) {
+      const uris = (await uriList.asString()).split(/\r?\n/).filter(line => line.trim().length > 0 && !line.startsWith('#'));
+      for (const uriString of uris) {
+        try {
+          const uri = vscode.Uri.parse(uriString);
+          if (uri.scheme === 'file') {
+            paths.push(uri.fsPath);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+    
+    if (paths.length === 0) {
+      // Try parsing JSON payloads from other SCM mimetypes
+      for (const [mime, item] of dataTransfer) {
+        if (mime === 'text/uri-list') continue;
+        const str = await item.asString();
+        try {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed)) {
+            for (const el of parsed) {
+              if (el && typeof el === 'object' && el.resourceUri) {
+                const uri = vscode.Uri.parse(el.resourceUri.external || el.resourceUri.path);
+                if (uri.scheme === 'file') {
+                  paths.push(uri.fsPath);
+                } else if (el.resourceUri.fsPath) {
+                  paths.push(el.resourceUri.fsPath);
+                }
+              } else if (el && typeof el === 'string') {
+                  const uri = vscode.Uri.parse(el);
+                  if (uri.scheme === 'file') paths.push(uri.fsPath);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    if (paths.length === 0) {
+      vscode.window.showInformationMessage('No valid files were dropped to stash.');
+      return;
+    }
+
+    const message = await vscode.window.showInputBox({
+      prompt: `Enter stash message for ${paths.length} file(s)`,
+      placeHolder: 'Stash message (optional)'
+    });
+
+    if (message === undefined) {
+      return; // Canceled
+    }
+
+    try {
+      const changes = await this.git.getChangedFiles();
+      let includeUntracked = false;
+      
+      for (const p of paths) {
+        const match = changes.find((c: WorkingTreeChange) => c.path === p || p.endsWith(c.path));
+        if (match && match.status.trim() === '??') {
+          includeUntracked = true;
+          break;
+        }
+      }
+
+      await this.git.stashFiles(paths, message, {
+        keepIndex: true,
+        includeUntracked
+      });
+      await this.state.refreshAll();
+    } catch (error) {
+      vscode.window.showErrorMessage(`Failed to stash files: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async handleDrag(source: readonly StashTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {}
 }
 
 export class StashTreeProvider implements vscode.TreeDataProvider<StashTreeItem> {

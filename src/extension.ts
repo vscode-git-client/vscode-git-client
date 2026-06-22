@@ -9,7 +9,7 @@ import { BranchRemoteNode } from './providers/branchTreeProvider';
 import { CommitFileDecorationProvider } from './providers/commitFileDecorationProvider';
 import { CommitFilesTreeProvider } from './providers/commitFilesTreeProvider';
 import { GraphCommitTreeItem, GraphTreeProvider } from './providers/graphTreeProvider';
-import { StashTreeProvider } from './providers/stashTreeProvider';
+import { StashTreeProvider, StashTreeDragAndDropController } from './providers/stashTreeProvider';
 import { WorktreeTreeProvider } from './providers/worktreeTreeProvider';
 import { SubmoduleTreeProvider } from './providers/submoduleTreeProvider';
 import { GitService } from './services/gitService';
@@ -93,6 +93,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }, logger);
   const stashView = createTreeViewSafely('vscodeGitClient.stashes', {
     treeDataProvider: stashProvider,
+    dragAndDropController: new StashTreeDragAndDropController(gitService, stateStore),
     showCollapseAll: true
   }, logger);
   const graphView = createTreeViewSafely('vscodeGitClient.graph', {
