@@ -12,6 +12,7 @@ import { GraphCommitTreeItem, GraphTreeProvider } from './providers/graphTreePro
 import { StashTreeProvider, StashTreeDragAndDropController } from './providers/stashTreeProvider';
 import { WorktreeTreeProvider } from './providers/worktreeTreeProvider';
 import { SubmoduleTreeProvider } from './providers/submoduleTreeProvider';
+import { StashDocumentDropEditProvider } from './providers/stashDocumentDropProvider';
 import { GitService } from './services/gitService';
 import { getRepositoryContext } from './services/repositoryContext';
 import { RefreshScope, StateStore } from './state/stateStore';
@@ -80,6 +81,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const gitService = new GitService(repositoryContext, logger, configuration);
   const stateStore = new StateStore(gitService, logger, configuration, context.workspaceState);
+
+  context.subscriptions.push(vscode.languages.registerDocumentDropEditProvider('*', new StashDocumentDropEditProvider(gitService, stateStore)));
 
   const branchProvider = new BranchTreeProvider(stateStore);
   const stashProvider = new StashTreeProvider(stateStore);

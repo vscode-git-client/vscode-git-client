@@ -39,7 +39,10 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
   async handleDrop(target: StashTreeItem | undefined, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
     const stashItem = dataTransfer.get('application/vnd.code.tree.vscodegitclient.stashes');
     if (stashItem) {
-      const item = stashItem.value as StashTreeItem;
+      // Log the type of the value to debug what VS Code passes
+      console.log('stashItem.value:', stashItem.value);
+      const items = Array.isArray(stashItem.value) ? stashItem.value : [stashItem.value];
+      const item = items[0] as StashTreeItem;
       if (item && item.stash) {
         try {
           await this.git.applyStash(item.stash.ref, false);
@@ -135,7 +138,7 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
   async handleDrag(source: readonly StashTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
     if (source.length > 0) {
       dataTransfer.set('text/plain', new vscode.DataTransferItem(`git stash apply ${source[0].stash.ref}`));
-      dataTransfer.set('application/vnd.code.tree.vscodegitclient.stashes', new vscode.DataTransferItem(source[0]));
+      dataTransfer.set('application/vnd.code.tree.vscodegitclient.stashes', new vscode.DataTransferItem(source));
     }
   }
 }
