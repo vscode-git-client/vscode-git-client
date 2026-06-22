@@ -25,17 +25,32 @@ export class StashTreeItem extends vscode.TreeItem {
 
 export class StashTreeDragAndDropController implements vscode.TreeDragAndDropController<StashTreeItem> {
   dropMimeTypes: string[] = [
+    'application/vnd.code.tree.vscodegitclient.stashes',
     'text/uri-list',
     'application/vnd.code.tree.scmgit.scm',
     'application/vnd.code.tree.scmResourceState',
     'application/vnd.code.tree.git.scmgit.scm',
     'application/vnd.code.tree.gitResource'
   ];
-  dragMimeTypes: string[] = [];
+  dragMimeTypes: string[] = ['text/plain', 'application/vnd.code.tree.vscodegitclient.stashes'];
 
   constructor(private readonly git: GitService, private readonly state: StateStore) {}
 
   async handleDrop(target: StashTreeItem | undefined, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+    const stashItem = dataTransfer.get('application/vnd.code.tree.vscodegitclient.stashes');
+    if (stashItem) {
+      const item = stashItem.value as StashTreeItem;
+      if (item && item.stash) {
+        try {
+          await this.git.applyStash(item.stash.ref, false);
+          await this.state.refreshAll();
+        } catch (error) {
+          vscode.window.showErrorMessage(`Failed to unstash: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        return;
+      }
+    }
+
     const paths: string[] = [];
 
     const uriList = dataTransfer.get('text/uri-list');
@@ -117,7 +132,12 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
     }
   }
 
-  async handleDrag(source: readonly StashTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {}
+  async handleDrag(source: readonly StashTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+    if (source.length > 0) {
+      dataTransfer.set('text/plain', new vscode.DataTransferItem(`git stash apply ${source[0].stash.ref}`));
+      dataTransfer.set('application/vnd.code.tree.vscodegitclient.stashes', new vscode.DataTransferItem(source[0]));
+    }
+  }
 }
 
 export class StashTreeProvider implements vscode.TreeDataProvider<StashTreeItem> {
