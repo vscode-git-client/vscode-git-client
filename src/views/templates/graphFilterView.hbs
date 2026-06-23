@@ -78,7 +78,17 @@
   </style>
 </head>
 <body>
-  {{> partials/molecules/viewHeading title=title hint=hint}}
+  <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+    <div>
+      {{> partials/molecules/viewHeading title=title hint=hint}}
+    </div>
+    {{#unless showApply}}
+      <div class="actions" style="border-top: none; padding-top: 0; margin-top: 0;">
+        <button type="button" class="secondary" id="cancel">Close</button>
+        <button type="button" class="secondary" id="clear">Clear Filters</button>
+      </div>
+    {{/unless}}
+  </header>
 
   <form id="form">
     <section class="filters-inline">
@@ -138,12 +148,6 @@
       </div>
     </section>
 
-    {{#unless showApply}}
-      <div class="actions">
-        <button type="button" class="secondary" id="cancel">Close</button>
-        <button type="button" class="secondary" id="clear">Clear Filters</button>
-      </div>
-    {{/unless}}
   </form>
 
   {{> partials/graphContextMenu}}
