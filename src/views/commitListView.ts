@@ -24,6 +24,7 @@ type IncomingMessage =
   | { type: 'openCommitDetails'; sha: string; subject: string }
   | { type: 'loadCommitFiles'; sha: string }
   | { type: 'openCommitFile'; sha: string; filePath: string }
+  | { type: 'selectionChange'; count: number }
   | CommitActionMessage;
 
 export class CommitListView {
@@ -139,6 +140,14 @@ export class CommitListView {
           return;
         }
         await this.handlers.openCommitDetails(sha, subject);
+        return;
+      }
+      case 'selectionChange': {
+        if (message.count > 1) {
+          void vscode.window.setStatusBarMessage(`${message.count} commits selected`);
+        } else {
+          void vscode.window.setStatusBarMessage('');
+        }
         return;
       }
       case 'loadCommitFiles': {

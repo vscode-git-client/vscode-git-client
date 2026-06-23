@@ -27,6 +27,7 @@ export interface CommitActionMessage {
   readonly shas?: readonly string[];
   readonly subject?: string;
   readonly subjects?: readonly string[];
+  readonly isContinuous?: boolean;
 }
 
 export async function handleCommitAction(message: CommitActionMessage): Promise<void> {
@@ -57,6 +58,10 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
 
   switch (message.action) {
     case 'openDetails':
+      if (message.isContinuous && normalizedShas.length > 1) {
+        await vscode.commands.executeCommand('vscodeGitClient.graph.openCommitRangeDetails', undefined, normalizedShas);
+        return;
+      }
       if (normalizedShas.length === 1) {
         await vscode.commands.executeCommand('vscodeGitClient.graph.openDetails', {
           sha,
@@ -91,9 +96,17 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       );
       return;
     case 'createPatch':
+      if (message.isContinuous && normalizedShas.length > 1) {
+        await vscode.commands.executeCommand('vscodeGitClient.graph.createPatchForRange', undefined, normalizedShas);
+        return;
+      }
       await runForEachSha('vscodeGitClient.graph.createPatch');
       return;
     case 'cherryPick':
+      if (message.isContinuous && normalizedShas.length > 1) {
+        await vscode.commands.executeCommand('vscodeGitClient.graph.cherryPick', undefined, normalizedShas);
+        return;
+      }
       await runForEachSha('vscodeGitClient.graph.cherryPick');
       return;
     case 'checkoutRevision':
@@ -109,6 +122,10 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       await vscode.commands.executeCommand('vscodeGitClient.branch.resetCurrentToCommit', sha);
       return;
     case 'revertCommit':
+      if (message.isContinuous && normalizedShas.length > 1) {
+        await vscode.commands.executeCommand('vscodeGitClient.graph.revert', undefined, normalizedShas);
+        return;
+      }
       await runForEachSha('vscodeGitClient.graph.revert');
       return;
     case 'interactiveRebaseFromHere':
@@ -153,6 +170,7 @@ export function isCommitActionMessage(value: unknown): value is CommitActionMess
     && typeof candidate.action === 'string'
     && typeof candidate.sha === 'string'
     && (candidate.subject === undefined || typeof candidate.subject === 'string')
+    && (candidate.isContinuous === undefined || typeof candidate.isContinuous === 'boolean')
     && hasValidShas
     && hasValidSubjects;
 }

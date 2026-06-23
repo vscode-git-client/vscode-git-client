@@ -1105,6 +1105,14 @@ export class GitService {
     return result.stdout;
   }
 
+  async getPatchForCommitRange(shas: string[]): Promise<string> {
+    if (shas.length === 0) {
+      return '';
+    }
+    const result = await this.runGit(['format-patch', '--stdout', `${shas[0]}^..${shas[shas.length - 1]}`]);
+    return result.stdout;
+  }
+
   async getPatchForCommitFiles(sha: string, filePaths: string[]): Promise<string> {
     if (filePaths.length === 0) {
       return '';

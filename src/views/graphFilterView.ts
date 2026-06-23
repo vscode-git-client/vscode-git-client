@@ -25,6 +25,7 @@ type IncomingMessage =
   | { type: 'openCommitRangeDetails'; shas: string[] }
   | { type: 'loadCommitFiles'; sha: string }
   | { type: 'openCommitFile'; sha: string; filePath: string }
+  | { type: 'selectionChange'; count: number; isContinuous: boolean }
   | CommitActionMessage;
 
 export class GraphFilterView {
@@ -193,6 +194,14 @@ export class GraphFilterView {
           return;
         }
         await this.handlers.openFileDiff(sha, filePath);
+        return;
+      }
+      case 'selectionChange': {
+        if (message.count > 1) {
+          void vscode.window.setStatusBarMessage(`${message.count} commits selected`);
+        } else {
+          void vscode.window.setStatusBarMessage('');
+        }
         return;
       }
     }

@@ -952,6 +952,14 @@ export class CommandController {
       await this.openCommitDetails(sha, subject, { openFirstDiff: shouldOpenFirstDiff, allowToggle: true });
     });
 
+    register('vscodeGitClient.graph.openCommitRangeDetails', async (arg?: unknown, selected?: unknown) => {
+      const selectedShas = toGraphCommitShas(arg, selected);
+      if (selectedShas.length < 2) {
+        return;
+      }
+      await this.editor.openCommitRangeDetails(selectedShas);
+    });
+
     register('vscodeGitClient.graph.copyCommitId', async (arg?: unknown, selected?: unknown) => {
       const shas = toGraphCommitShas(arg, selected);
       if (shas.length === 0) {
@@ -1543,6 +1551,20 @@ export class CommandController {
       }
 
       const patch = await this.git.getPatchForCommit(sha);
+      const doc = await vscode.workspace.openTextDocument({
+        language: 'diff',
+        content: patch
+      });
+      await vscode.window.showTextDocument(doc, { preview: false });
+    });
+
+    register('vscodeGitClient.graph.createPatchForRange', async (arg?: unknown, selected?: unknown) => {
+      const shas = toGraphCommitShas(arg, selected);
+      if (shas.length < 2) {
+        return;
+      }
+
+      const patch = await this.git.getPatchForCommitRange(shas);
       const doc = await vscode.workspace.openTextDocument({
         language: 'diff',
         content: patch

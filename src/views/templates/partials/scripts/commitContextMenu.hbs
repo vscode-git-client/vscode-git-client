@@ -30,6 +30,16 @@
 
       const applyActionAvailability = () => {
         const isMulti = selectedShas.length > 1;
+        let continuous = false;
+        if (isMulti) {
+          try {
+            continuous = typeof isContinuousSelection === 'function' ? isContinuousSelection() : false;
+          } catch (e) {
+            // Ignore if not defined or in TDZ
+          }
+        }
+        const nonChangeActions = new Set(['copyCommitId', 'copyCommitMessage', 'copyRevisionNumber']);
+
         menuItems.forEach((item) => {
           const action = item.getAttribute('data-action') || '';
           if (!action) {
@@ -39,7 +49,16 @@
             item.disabled = true;
             return;
           }
-          item.disabled = isMulti && !multiSelectActions.has(action);
+          
+          if (isMulti) {
+            if (continuous) {
+              item.disabled = !multiSelectActions.has(action);
+            } else {
+              item.disabled = !nonChangeActions.has(action);
+            }
+          } else {
+            item.disabled = false;
+          }
         });
       };
 
@@ -114,7 +133,8 @@
           sha: selectedShas[0],
           shas: selectedShas,
           subject: selectedSubjects[0] || '',
-          subjects: selectedSubjects
+          subjects: selectedSubjects,
+          isContinuous: typeof isContinuousSelection === 'function' ? isContinuousSelection() : false
         });
         close();
       });

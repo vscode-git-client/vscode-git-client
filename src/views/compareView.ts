@@ -60,6 +60,21 @@ interface SetCompareModeMessage {
   readonly mode: CompareViewMode;
 }
 
+interface SelectionChangeMessage {
+  readonly type: 'selectionChange';
+  readonly count: number;
+  readonly isContinuous: boolean;
+}
+
+type IncomingMessage =
+  | CommitClickMessage
+  | CommitRangeClickMessage
+  | ExportCompareMessage
+  | RefreshMessage
+  | RefreshCompleteMessage
+  | SetCompareModeMessage
+  | SelectionChangeMessage;
+
 export class CompareView {
   private readonly panel: vscode.WebviewPanel;
   private disposeCallback: (() => void) | undefined;
@@ -145,6 +160,15 @@ export class CompareView {
     if (isSetCompareModeMessage(message)) {
       await this.modeStore.setCompareViewMode(message.mode);
       this.rerender();
+      return;
+    }
+
+    if (isSelectionChangeMessage(message)) {
+      if (message.count > 1) {
+        void vscode.window.setStatusBarMessage(`${message.count} commits selected`);
+      } else {
+        void vscode.window.setStatusBarMessage('');
+      }
       return;
     }
 
@@ -544,6 +568,10 @@ function isSetCompareModeMessage(value: unknown): value is SetCompareModeMessage
   }
   const candidate = value as Record<string, unknown>;
   return candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph');
+}
+
+function isSelectionChangeMessage(value: unknown): value is SelectionChangeMessage {
+  return typeof value === 'object' && value !== null && (value as Record<string, unknown>).type === 'selectionChange';
 }
 
 function isRefreshMessage(value: unknown): value is RefreshMessage {
