@@ -116,6 +116,10 @@ Right-click a file or folder in Explorer and choose `Compare with Revision`.
 - For a folder, `Commit Details` lists changed files and opens the first file in preview diff mode.
 - Right-click an open diff tab or editor and choose `Swap Compare Direction` to reopen the same comparison with left and right revisions reversed.
 
+### Compare Any Two Text Sources
+
+Use **Text Compare: Compare Files...** from the Command Palette to open two editable temporary files in VS Code's diff editor. Each side can be a workspace file, the current clipboard contents, or an empty buffer. Right-click a file in the Explorer and choose **Text Compare** to seed one side automatically.
+
 ### Stash And Shelve Work
 
 Open `Stashes` in the Source Control panel to manage saved work:
