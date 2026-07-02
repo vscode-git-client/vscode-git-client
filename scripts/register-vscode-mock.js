@@ -102,6 +102,11 @@ const vscodeMock = {
     showInputBox: async () => undefined,
     setStatusBarMessage: () => ({ dispose() {} })
   },
+  env: {
+    clipboard: {
+      readText: async () => ''
+    }
+  },
   commands: {
     executeCommand: async () => undefined,
     registerCommand: () => ({ dispose() {} })

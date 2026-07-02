@@ -9,7 +9,12 @@ describe('buildSourcePickerItems', () => {
     assert.strictEqual(items.length, 3);
     assert.strictEqual(items[0].label, '$(file) Open file...');
     assert.strictEqual(items[1].label, '$(clippy) Paste from Clipboard');
-    assert.strictEqual(items[2].label, '$(empty) Empty text');
+    assert.strictEqual(items[2].label, '$(circle-outline) Empty text');
+  });
+
+  it('assigns stable kind identifiers', () => {
+    const items = buildSourcePickerItems();
+    assert.deepStrictEqual(items.map((item) => item.sourceKind), ['file', 'clipboard', 'empty']);
   });
 });
 
@@ -21,6 +26,66 @@ describe('pickTextCompareSource', () => {
     try {
       const result = await pickTextCompareSource('left');
       assert.strictEqual(result, undefined);
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+    }
+  });
+
+  it('returns file source when a file is selected', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+    const originalShowOpenDialog = vscode.window.showOpenDialog;
+    const originalReadFile = vscode.workspace.fs.readFile;
+
+    const uri = vscode.Uri.file('/workspace/foo.ts');
+    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showOpenDialog = async () => [uri];
+    vscode.workspace.fs.readFile = async () => Buffer.from('hello');
+
+    try {
+      const result = await pickTextCompareSource('left');
+      assert.ok(result);
+      assert.strictEqual(result!.kind, 'file');
+      assert.strictEqual(result!.content, 'hello');
+      assert.strictEqual(result!.label, 'foo.ts');
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+      vscode.window.showOpenDialog = originalShowOpenDialog;
+      vscode.workspace.fs.readFile = originalReadFile;
+    }
+  });
+
+  it('returns clipboard source', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+    const originalReadClipboard = vscode.env.clipboard.readText;
+
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'clipboard', label: '$(clippy) Paste from Clipboard' } as any);
+    vscode.env.clipboard.readText = async () => 'clipboard text';
+
+    try {
+      const result = await pickTextCompareSource('left');
+      assert.ok(result);
+      assert.strictEqual(result!.kind, 'clipboard');
+      assert.strictEqual(result!.content, 'clipboard text');
+      assert.strictEqual(result!.label, 'Clipboard');
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+      vscode.env.clipboard.readText = originalReadClipboard;
+    }
+  });
+
+  it('returns empty source', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'empty', label: '$(circle-outline) Empty text' } as any);
+
+    try {
+      const result = await pickTextCompareSource('left');
+      assert.ok(result);
+      assert.strictEqual(result!.kind, 'empty');
+      assert.strictEqual(result!.content, '');
+      assert.strictEqual(result!.label, 'Empty');
     } finally {
       vscode.window.showQuickPick = originalShowQuickPick;
     }

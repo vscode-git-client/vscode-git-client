@@ -1,16 +1,21 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { TextSource } from './textCompareSource';
 
-export function buildSourcePickerItems(): vscode.QuickPickItem[] {
+export interface SourceQuickPickItem extends vscode.QuickPickItem {
+  sourceKind: 'file' | 'clipboard' | 'empty';
+}
+
+export function buildSourcePickerItems(): SourceQuickPickItem[] {
   return [
-    { label: '$(file) Open file...', description: 'Choose a workspace file' },
-    { label: '$(clippy) Paste from Clipboard', description: 'Use current clipboard text' },
-    { label: '$(empty) Empty text', description: 'Start with an empty buffer' }
+    { sourceKind: 'file', label: '$(file) Open file...', description: 'Choose a workspace file' },
+    { sourceKind: 'clipboard', label: '$(clippy) Paste from Clipboard', description: 'Use current clipboard text' },
+    { sourceKind: 'empty', label: '$(circle-outline) Empty text', description: 'Start with an empty buffer' }
   ];
 }
 
 export async function pickTextCompareSource(sideLabel: string): Promise<TextSource | undefined> {
-  const choice = await vscode.window.showQuickPick(buildSourcePickerItems(), {
+  const choice = await vscode.window.showQuickPick<SourceQuickPickItem>(buildSourcePickerItems(), {
     title: `Select ${sideLabel} source`,
     placeHolder: 'Choose a source for the comparison'
   });
@@ -19,7 +24,7 @@ export async function pickTextCompareSource(sideLabel: string): Promise<TextSour
     return undefined;
   }
 
-  if (choice.label === '$(file) Open file...') {
+  if (choice.sourceKind === 'file') {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
     const defaultUri = workspaceRoot;
     const files = await vscode.window.showOpenDialog({
@@ -44,11 +49,11 @@ export async function pickTextCompareSource(sideLabel: string): Promise<TextSour
       throw new Error(`Failed to read file: ${message}`);
     }
 
-    const fileName = uri.path.split('/').pop() || uri.fsPath;
+    const fileName = path.basename(uri.fsPath);
     return { kind: 'file', uri, content, label: fileName };
   }
 
-  if (choice.label === '$(clippy) Paste from Clipboard') {
+  if (choice.sourceKind === 'clipboard') {
     const content = await vscode.env.clipboard.readText();
     return { kind: 'clipboard', content, label: 'Clipboard' };
   }
