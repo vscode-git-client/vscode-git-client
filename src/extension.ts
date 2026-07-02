@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { CommandController } from './commands/commandController';
 import { EditorOrchestrator } from './editor/editorOrchestrator';
+import { TextCompareOrchestrator } from './editor/textCompareOrchestrator';
 import { GutterDecorationController } from './editor/gutterDecorationController';
 import { VirtualGitContentProvider } from './editor/virtualGitContentProvider';
 import { Logger } from './logger';
@@ -166,12 +167,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.registerFileDecorationProvider(commitDecorationProvider)
     ].filter((item): item is vscode.Disposable => Boolean(item))
   );
+  const textCompare = new TextCompareOrchestrator();
+  context.subscriptions.push(textCompare);
   const commandController = new CommandController(
     gitService,
     stateStore,
     editor,
     logger,
-    commitFilesProvider
+    commitFilesProvider,
+    textCompare
   );
   commandController.register(context);
   await registerBranchActionHubInGitCheckout(context, logger);

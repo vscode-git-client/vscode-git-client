@@ -30,7 +30,8 @@
     "onCommand:vscodeGitClient.scm.shelveResource",
     "onCommand:vscodeGitClient.scm.commitTemplate",
     "onCommand:vscodeGitClient.scm.generateCommitMessage",
-    "onCommand:vscodeGitClient.scm.amendFromInput"
+    "onCommand:vscodeGitClient.scm.amendFromInput",
+    "onCommand:vscodeGitClient.textCompare.open"
   ],
   "scripts": {
     "clean": "node scripts/clean-dist.js",
@@ -630,6 +631,11 @@
       {
         "command": "vscodeGitClient.submodule.deinit",
         "title": "Deinit Submodule"
+      },
+      {
+        "command": "vscodeGitClient.textCompare.open",
+        "title": "Compare Files...",
+        "category": "Text Compare"
       }
     ],
     "keybindings": [
@@ -1097,6 +1103,11 @@
           "command": "vscodeGitClient.directoryTimeline.open",
           "when": "resourceScheme == file && explorerResourceIsFolder",
           "group": "z_vscodeGitClient@2"
+        },
+        {
+          "command": "vscodeGitClient.textCompare.open",
+          "when": "resourceScheme == file",
+          "group": "z_vscodeGitClient@3"
         }
       ],
       "editor/title/context": [
