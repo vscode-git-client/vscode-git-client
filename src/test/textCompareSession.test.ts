@@ -7,7 +7,7 @@ describe('formatTextCompareTitle', () => {
     assert.strictEqual(formatTextCompareTitle('foo.txt', 'bar.txt'), 'foo.txt ↔ bar.txt · Text Compare');
   });
 
-  it('escapes undefined labels to empty strings', () => {
+  it('treats empty labels as empty strings', () => {
     assert.strictEqual(formatTextCompareTitle('', 'Clipboard'), ' ↔ Clipboard · Text Compare');
   });
 });
