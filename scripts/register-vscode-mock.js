@@ -83,7 +83,23 @@ const vscodeMock = {
       onDidChange: () => ({ dispose() {} }),
       onDidDelete: () => ({ dispose() {} }),
       dispose() {}
-    })
+    }),
+    openTextDocument: async (uriOrOptions) => {
+      if (uriOrOptions && typeof uriOrOptions === 'object' && 'content' in uriOrOptions) {
+        return {
+          uri: {
+            scheme: 'untitled',
+            toString: () => 'untitled:///mock'
+          }
+        };
+      }
+      return {
+        uri: {
+          scheme: 'file',
+          toString: () => ''
+        }
+      };
+    }
   },
   window: {
     createOutputChannel: () => ({
