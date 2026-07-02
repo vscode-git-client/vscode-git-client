@@ -34,23 +34,91 @@ describe('pickTextCompareSource', () => {
   it('returns file source when a file is selected', async () => {
     const originalShowQuickPick = vscode.window.showQuickPick;
     const originalShowOpenDialog = vscode.window.showOpenDialog;
-    const originalReadFile = vscode.workspace.fs.readFile;
+    const originalOpenTextDocument = vscode.workspace.openTextDocument;
 
     const uri = vscode.Uri.file('/workspace/foo.ts');
     vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
     vscode.window.showOpenDialog = async () => [uri];
-    vscode.workspace.fs.readFile = async () => Buffer.from('hello');
+    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' } as any);
 
     try {
       const result = await pickTextCompareSource('left');
       assert.ok(result);
       assert.strictEqual(result!.kind, 'file');
+      assert.strictEqual(result!.uri.toString(), uri.toString());
       assert.strictEqual(result!.content, 'hello');
       assert.strictEqual(result!.label, 'foo.ts');
     } finally {
       vscode.window.showQuickPick = originalShowQuickPick;
       vscode.window.showOpenDialog = originalShowOpenDialog;
-      vscode.workspace.fs.readFile = originalReadFile;
+      vscode.workspace.openTextDocument = originalOpenTextDocument;
+    }
+  });
+
+  it('returns undefined when the file dialog is cancelled', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+    const originalShowOpenDialog = vscode.window.showOpenDialog;
+
+    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showOpenDialog = async () => undefined;
+
+    try {
+      const result = await pickTextCompareSource('left');
+      assert.strictEqual(result, undefined);
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+      vscode.window.showOpenDialog = originalShowOpenDialog;
+    }
+  });
+
+  it('throws a contextual error when the file cannot be read', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+    const originalShowOpenDialog = vscode.window.showOpenDialog;
+    const originalOpenTextDocument = vscode.workspace.openTextDocument;
+
+    const uri = vscode.Uri.file('/workspace/missing.ts');
+    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showOpenDialog = async () => [uri];
+    vscode.workspace.openTextDocument = async () => { throw new Error('ENOENT'); };
+
+    try {
+      await assert.rejects(
+        async () => pickTextCompareSource('left'),
+        /Failed to read file/
+      );
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+      vscode.window.showOpenDialog = originalShowOpenDialog;
+      vscode.workspace.openTextDocument = originalOpenTextDocument;
+    }
+  });
+
+  it('uses the workspace root as the file dialog default URI', async () => {
+    const originalShowQuickPick = vscode.window.showQuickPick;
+    const originalShowOpenDialog = vscode.window.showOpenDialog;
+    const originalOpenTextDocument = vscode.workspace.openTextDocument;
+    const originalWorkspaceFolders = vscode.workspace.workspaceFolders;
+
+    const workspaceRoot = vscode.Uri.file('/workspace');
+    (vscode.workspace as any).workspaceFolders = [{ uri: workspaceRoot, name: 'workspace', index: 0 } as any];
+    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+
+    let passedDefaultUri: vscode.Uri | undefined;
+    vscode.window.showOpenDialog = async (options) => {
+      passedDefaultUri = options?.defaultUri;
+      return [vscode.Uri.file('/workspace/foo.ts')];
+    };
+    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' } as any);
+
+    try {
+      await pickTextCompareSource('left');
+      assert.ok(passedDefaultUri);
+      assert.strictEqual(passedDefaultUri!.toString(), workspaceRoot.toString());
+    } finally {
+      vscode.window.showQuickPick = originalShowQuickPick;
+      vscode.window.showOpenDialog = originalShowOpenDialog;
+      vscode.workspace.openTextDocument = originalOpenTextDocument;
+      (vscode.workspace as any).workspaceFolders = originalWorkspaceFolders;
     }
   });
 

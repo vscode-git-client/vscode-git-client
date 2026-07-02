@@ -17,7 +17,8 @@ export function buildSourcePickerItems(): SourceQuickPickItem[] {
 export async function pickTextCompareSource(sideLabel: string): Promise<TextSource | undefined> {
   const choice = await vscode.window.showQuickPick<SourceQuickPickItem>(buildSourcePickerItems(), {
     title: `Select ${sideLabel} source`,
-    placeHolder: 'Choose a source for the comparison'
+    placeHolder: 'Choose a source for the comparison',
+    ignoreFocusOut: true
   });
 
   if (!choice) {
@@ -42,8 +43,8 @@ export async function pickTextCompareSource(sideLabel: string): Promise<TextSour
     const uri = files[0];
     let content: string;
     try {
-      const bytes = await vscode.workspace.fs.readFile(uri);
-      content = Buffer.from(bytes).toString('utf8');
+      const document = await vscode.workspace.openTextDocument(uri);
+      content = document.getText();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to read file: ${message}`);
