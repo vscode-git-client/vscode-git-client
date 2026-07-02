@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { TextSource } from './textCompareSource';
 import { pickTextCompareSource } from './textCompareSourcePicker';
 import { TextCompareSession } from './textCompareSession';
@@ -13,16 +13,25 @@ export class TextCompareOrchestrator {
   private activeSession: TextCompareSession | undefined;
 
   async open(options: TextCompareOptions = {}): Promise<void> {
-    const seedSide = options.seedSide ?? 'left';
     const seed = options.seedFile ? await buildFileSource(options.seedFile) : undefined;
+    const seedSide = seed ? (options.seedSide ?? 'left') : undefined;
 
-    const left = seedSide === 'left' && seed ? seed : await pickTextCompareSource('Left');
-    if (!left) {
-      return;
+    const sources: Partial<Record<'left' | 'right', TextSource>> = {};
+    if (seedSide && seed) {
+      sources[seedSide] = seed;
     }
 
-    const right = seedSide === 'right' && seed ? seed : await pickTextCompareSource('Right');
-    if (!right) {
+    for (const side of buildPickOrder(seedSide)) {
+      const picked = await pickTextCompareSource(side === 'left' ? 'Left' : 'Right');
+      if (!picked) {
+        return;
+      }
+      sources[side] = picked;
+    }
+
+    const left = sources.left;
+    const right = sources.right;
+    if (!left || !right) {
       return;
     }
 
