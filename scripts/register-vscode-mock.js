@@ -56,12 +56,29 @@ class TreeItem {
   }
 }
 
+class TabInputText {
+  constructor(uri) {
+    this.uri = uri;
+  }
+}
+
+class TabInputTextDiff {
+  constructor(original, modified) {
+    this.original = original;
+    this.modified = modified;
+  }
+}
+
+const tabGroupsChangeEmitter = new EventEmitter();
+
 const vscodeMock = {
   EventEmitter,
   Uri,
   ThemeIcon,
   ThemeColor,
   TreeItem,
+  TabInputText,
+  TabInputTextDiff,
   QuickPickItemKind: { Separator: -1 },
   TreeItemCollapsibleState: { None: 0, Collapsed: 1, Expanded: 2 },
   OverviewRulerLane: { Left: 1 },
@@ -78,6 +95,7 @@ const vscodeMock = {
       get: (_key, defaultValue) => defaultValue
     }),
     workspaceFolders: [],
+    textDocuments: [],
     createFileSystemWatcher: () => ({
       onDidCreate: () => ({ dispose() {} }),
       onDidChange: () => ({ dispose() {} }),
@@ -111,6 +129,11 @@ const vscodeMock = {
     visibleTextEditors: [],
     onDidChangeActiveTextEditor: () => ({ dispose() {} }),
     onDidChangeWindowState: () => ({ dispose() {} }),
+    tabGroups: {
+      all: [],
+      onDidChangeTabs: (listener) => tabGroupsChangeEmitter.event(listener),
+      close: async () => undefined
+    },
     showInformationMessage: async () => undefined,
     showWarningMessage: async () => undefined,
     showErrorMessage: async () => undefined,

@@ -128,7 +128,7 @@ Command palette / Explorer right-click
 ### Unit tests
 
 - `src/test/textCompareSourcePicker.test.ts` — label formatting and source-kind detection.
-- `src/test/textCompareSession.test.ts` — title formatting and URI scheme detection.
+- `src/test/textCompareSession.test.ts` — title formatting and session lifecycle (creation and disposal when neither side is visible).
 
 ### Manual test plan
 
