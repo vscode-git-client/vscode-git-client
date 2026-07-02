@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getConfigValue } from '../configuration';
 import { EditorOrchestrator } from '../editor/editorOrchestrator';
+import { TextCompareOrchestrator } from '../editor/textCompareOrchestrator';
 import { confirmDangerousAction } from '../guards';
 import { Logger } from '../logger';
 import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../providers/branchTreeProvider';
@@ -172,7 +173,8 @@ export class CommandController {
       showCommit(sha: string, subject: string): Promise<void>;
       clear(): Promise<void>;
       isShowingCommit(sha: string): boolean;
-    }
+    },
+    private readonly textCompare: TextCompareOrchestrator
   ) { }
 
   register(context: vscode.ExtensionContext): void {
@@ -2596,6 +2598,13 @@ export class CommandController {
       } finally {
         await this.state.refreshSubmodules();
       }
+    });
+
+    // ── Text Compare command ───────────────────────────────────────────────
+
+    register('vscodeGitClient.textCompare.open', async (arg?: unknown) => {
+      const seedFile = asFileResourceUri(arg);
+      await this.textCompare.open(seedFile ? { seedFile } : {});
     });
   }
 
