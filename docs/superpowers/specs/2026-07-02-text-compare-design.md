@@ -85,7 +85,7 @@ Add a generic, Git-agnostic text comparison feature to the VS Code Git Client ex
 - Shows a QuickPick with three items:
   - `$(file) Open file...`
   - `$(clippy) Paste from Clipboard`
-  - `$(empty) Empty text`
+  - `$(circle-outline) Empty text`
 - For `Open file...`, opens `vscode.window.showOpenDialog` restricted to the workspace.
 - For `Paste from Clipboard`, reads `vscode.env.clipboard.readText()`.
 - Returns a `TextSource` value carrying content and a display label.

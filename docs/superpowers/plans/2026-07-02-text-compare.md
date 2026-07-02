@@ -206,7 +206,7 @@ export function buildSourcePickerItems(): vscode.QuickPickItem[] {
   return [
     { label: '$(file) Open file...', description: 'Choose a workspace file' },
     { label: '$(clippy) Paste from Clipboard', description: 'Use current clipboard text' },
-    { label: '$(empty) Empty text', description: 'Start with an empty buffer' }
+    { label: '$(circle-outline) Empty text', description: 'Start with an empty buffer' }
   ];
 }
 
