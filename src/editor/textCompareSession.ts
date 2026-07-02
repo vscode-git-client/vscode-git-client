@@ -20,24 +20,24 @@ export class TextCompareSession implements vscode.Disposable {
   }
 
   private async open(left: TextSource, right: TextSource): Promise<void> {
-    let leftDoc: vscode.TextDocument;
-    let rightDoc: vscode.TextDocument;
+    let leftDoc: vscode.TextDocument | undefined;
+    let rightDoc: vscode.TextDocument | undefined;
     try {
       leftDoc = await vscode.workspace.openTextDocument({
         content: left.content,
         language: left.kind === 'file' ? getLanguageForFile(left.uri) : undefined
       });
+      this.leftUri = leftDoc.uri;
+
       rightDoc = await vscode.workspace.openTextDocument({
         content: right.content,
         language: right.kind === 'file' ? getLanguageForFile(right.uri) : undefined
       });
+      this.rightUri = rightDoc.uri;
     } catch (error) {
       await this.dispose();
       throw error;
     }
-
-    this.leftUri = leftDoc.uri;
-    this.rightUri = rightDoc.uri;
 
     const title = formatTextCompareTitle(left.label, right.label);
     await vscode.commands.executeCommand('vscode.diff', this.leftUri, this.rightUri, title, {
@@ -53,7 +53,6 @@ export class TextCompareSession implements vscode.Disposable {
       })
     );
 
-    // If the diff tab was already closed before the listener attached, clean up immediately.
     await this.disposeIfHidden(diffTab);
   }
 
@@ -65,7 +64,7 @@ export class TextCompareSession implements vscode.Disposable {
     const leftStillVisible = this.leftUri ? isUriVisible(this.leftUri) : false;
     const rightStillVisible = this.rightUri ? isUriVisible(this.rightUri) : false;
 
-    if (!leftStillVisible && !rightStillVisible) {
+    if (!leftStillVisible || !rightStillVisible) {
       if (diffTab && diffTab.input instanceof vscode.TabInputTextDiff) {
         await vscode.window.tabGroups.close(diffTab, true);
       }
