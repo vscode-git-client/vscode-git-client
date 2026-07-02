@@ -20,11 +20,14 @@ export class TextCompareSession implements vscode.Disposable {
   }
 
   private async open(left: TextSource, right: TextSource): Promise<void> {
+    let leftDoc: vscode.TextDocument | undefined;
+    let rightDoc: vscode.TextDocument | undefined;
+
     try {
-      const leftDoc = await createUntitledDocument(left);
+      leftDoc = await createUntitledDocument(left);
       this.leftUri = leftDoc.uri;
 
-      const rightDoc = await createUntitledDocument(right);
+      rightDoc = await createUntitledDocument(right);
       this.rightUri = rightDoc.uri;
 
       const title = formatTextCompareTitle(left.label, right.label);
@@ -41,7 +44,7 @@ export class TextCompareSession implements vscode.Disposable {
 
       await this.disposeIfHidden();
     } catch (error) {
-      this.dispose();
+      await this.closeDocuments(leftDoc?.uri, rightDoc?.uri);
       throw error;
     }
   }
@@ -56,6 +59,15 @@ export class TextCompareSession implements vscode.Disposable {
     const rightVisible = this.rightUri ? visibleUris.has(this.rightUri.toString()) : false;
 
     if (!leftVisible && !rightVisible) {
+      this.dispose();
+      return;
+    }
+
+    const standaloneVisibleUris = collectStandaloneVisibleTabUris();
+    const leftStandalone = this.leftUri ? standaloneVisibleUris.has(this.leftUri.toString()) : false;
+    const rightStandalone = this.rightUri ? standaloneVisibleUris.has(this.rightUri.toString()) : false;
+
+    if (leftStandalone !== rightStandalone) {
       this.dispose();
     }
   }
@@ -81,7 +93,35 @@ export class TextCompareSession implements vscode.Disposable {
   }
 
   async close(): Promise<void> {
-    this.dispose();
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+
+    for (const disposable of this.disposables) {
+      disposable.dispose();
+    }
+    this.disposables.length = 0;
+
+    const leftUri = this.leftUri;
+    const rightUri = this.rightUri;
+    this.leftUri = undefined;
+    this.rightUri = undefined;
+
+    await closeDocument(leftUri);
+    await closeDocument(rightUri);
+  }
+
+  private async closeDocuments(left?: vscode.Uri, right?: vscode.Uri): Promise<void> {
+    this.disposed = true;
+
+    for (const disposable of this.disposables) {
+      disposable.dispose();
+    }
+    this.disposables.length = 0;
+
+    await closeDocument(left);
+    await closeDocument(right);
   }
 }
 
@@ -109,11 +149,25 @@ function collectVisibleTabUris(): Set<string> {
   return uris;
 }
 
+function collectStandaloneVisibleTabUris(): Set<string> {
+  const uris = new Set<string>();
+  for (const group of vscode.window.tabGroups.all) {
+    for (const tab of group.tabs) {
+      const input = tab.input;
+      if (input instanceof vscode.TabInputText) {
+        uris.add(input.uri.toString());
+      }
+    }
+  }
+  return uris;
+}
+
 async function closeDocument(uri: vscode.Uri | undefined): Promise<void> {
   if (!uri) {
     return;
   }
 
+  // Try to close via a known standalone tab first.
   const tab = vscode.window.tabGroups.all
     .flatMap((group) => group.tabs)
     .find((t) => {
@@ -129,16 +183,13 @@ async function closeDocument(uri: vscode.Uri | undefined): Promise<void> {
     return;
   }
 
+  // Fall back to showing and closing the document even if it has no editor.
   const document = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === uri.toString());
   if (!document) {
     return;
   }
 
-  const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === uri.toString());
-  if (editor) {
-    if (vscode.window.activeTextEditor?.document.uri.toString() !== uri.toString()) {
-      await vscode.window.showTextDocument(document, { preserveFocus: false });
-    }
-    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-  }
+  // Show the document (even if hidden) so closeActiveEditor targets it.
+  await vscode.window.showTextDocument(document, { preserveFocus: false });
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
