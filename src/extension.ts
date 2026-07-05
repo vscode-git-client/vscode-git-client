@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { CommandController } from './commands/commandController';
+import { registerTextCompareCommands } from './commands/textCompareCommands';
 import { EditorOrchestrator } from './editor/editorOrchestrator';
 import { TextCompareOrchestrator } from './editor/textCompareOrchestrator';
 import { GutterDecorationController } from './editor/gutterDecorationController';
@@ -50,6 +51,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', false);
 
   const configuration = vscode.workspace.getConfiguration('vscodeGitClient');
+
+  // Text Compare is intentionally registered before the repository check: it is
+  // a Git-agnostic feature and must be available even when no workspace folder
+  // is open (e.g. invoked from the Command Palette).
+  const textCompare = new TextCompareOrchestrator();
+  context.subscriptions.push(textCompare);
+  registerTextCompareCommands(context, logger, textCompare);
 
   let repositoryContext;
   try {
@@ -167,15 +175,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       vscode.window.registerFileDecorationProvider(commitDecorationProvider)
     ].filter((item): item is vscode.Disposable => Boolean(item))
   );
-  const textCompare = new TextCompareOrchestrator();
-  context.subscriptions.push(textCompare);
   const commandController = new CommandController(
     gitService,
     stateStore,
     editor,
     logger,
-    commitFilesProvider,
-    textCompare
+    commitFilesProvider
   );
   commandController.register(context);
   await registerBranchActionHubInGitCheckout(context, logger);
@@ -340,3 +345,4 @@ function attachOperationStatusBarActions(
     stateStore.onDidChange(update)
   );
 }
+

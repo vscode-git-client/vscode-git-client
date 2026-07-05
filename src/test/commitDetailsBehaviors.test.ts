@@ -46,8 +46,7 @@ function registerController(params: {
       showCommit: async () => undefined,
       clear: async () => undefined,
       isShowingCommit: () => false
-    }) as never,
-    {} as never
+    }) as never
   );
   controller.register({ subscriptions: [] } as unknown as vscode.ExtensionContext);
   return commands;

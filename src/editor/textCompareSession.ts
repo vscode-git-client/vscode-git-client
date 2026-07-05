@@ -10,6 +10,7 @@ export class TextCompareSession implements vscode.Disposable {
   private leftUri: vscode.Uri | undefined;
   private rightUri: vscode.Uri | undefined;
   private disposed = false;
+  private sessionSettled = false;
 
   private constructor() { }
 
@@ -43,6 +44,7 @@ export class TextCompareSession implements vscode.Disposable {
       );
 
       await this.disposeIfHidden();
+      this.sessionSettled = true;
     } catch (error) {
       await this.closeDocuments(leftDoc?.uri, rightDoc?.uri);
       throw error;
@@ -60,6 +62,10 @@ export class TextCompareSession implements vscode.Disposable {
 
     if (!leftVisible && !rightVisible) {
       this.dispose();
+      return;
+    }
+
+    if (!this.sessionSettled) {
       return;
     }
 

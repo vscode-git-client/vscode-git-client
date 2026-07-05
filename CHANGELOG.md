@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **Text Compare command registration** — `vscodeGitClient.textCompare.open` is now registered before the repository-context check so the Git-agnostic command is available even when no workspace folder is open.
+- **Text Compare premature close** — the session no longer disposes immediately on open when VS Code is still settling tabs between `openTextDocument` and `vscode.diff`. A `sessionSettled` flag defers the standalone-tab balance check until after the diff editor stabilises.
+
 ### Added
 - **Text Compare** — new generic, Git-agnostic comparison command. Open `Text Compare: Compare Files...` from the Command Palette, or right-click a file in the Explorer and choose `Text Compare`. Each side can be a workspace file, the current clipboard contents, or an empty buffer. Both sides open as editable temporary untitled files and are discarded when the comparison tab closes.
 - **Explorer directory timeline** — folder context menus now include `Open Directory Timeline`, listing every commit that changed any nested child file under the selected directory. Commits stream into the view as `git log` produces them rather than waiting for the full path-filtered history, so the first batch is visible almost immediately on large repositories. The header shows `Loading commits... N loaded so far` during streaming and switches to `Matching commits: N (all loaded)` with the exact total when the stream completes. There is no commit cap — git log runs until the last reachable commit.
