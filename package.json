@@ -943,6 +943,11 @@
           "group": "navigation@3"
         },
         {
+          "command": "vscodeGitClient.branch.resetCurrentToCommit",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
+          "group": "navigation@3.5"
+        },
+        {
           "command": "vscodeGitClient.graph.compareWithCurrent",
           "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@4"

@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **Git Graph TreeView missing "Reset Current Branch to Commit"** — the native Git Graph TreeView commit context menu was missing `Reset Current Branch To Commit`, present only in the Filter Graph webview's context menu. Both now expose the action consistently.
 - **Text Compare command registration** — `vscodeGitClient.textCompare.open` is now registered before the repository-context check so the Git-agnostic command is available even when no workspace folder is open.
 - **Text Compare premature close** — the session no longer disposes immediately on open when VS Code is still settling tabs between `openTextDocument` and `vscode.diff`. A `sessionSettled` flag defers the standalone-tab balance check until after the diff editor stabilises.
 
