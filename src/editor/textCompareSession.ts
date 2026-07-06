@@ -11,6 +11,7 @@ export class TextCompareSession implements vscode.Disposable {
   private rightUri: vscode.Uri | undefined;
   private disposed = false;
   private sessionSettled = false;
+  private standaloneCheckArmed = false;
 
   private constructor() { }
 
@@ -43,11 +44,39 @@ export class TextCompareSession implements vscode.Disposable {
         })
       );
 
-      await this.disposeIfHidden();
+      await this.waitForInitialTabRegistration();
       this.sessionSettled = true;
+      await this.disposeIfHidden();
+      this.standaloneCheckArmed = true;
     } catch (error) {
       await this.closeDocuments(leftDoc?.uri, rightDoc?.uri);
       throw error;
+    }
+  }
+
+  private hasRegisteredTabs(): boolean {
+    const visibleUris = collectVisibleTabUris();
+    const leftVisible = this.leftUri ? visibleUris.has(this.leftUri.toString()) : false;
+    const rightVisible = this.rightUri ? visibleUris.has(this.rightUri.toString()) : false;
+    return leftVisible || rightVisible;
+  }
+
+  /**
+   * `vscode.diff` resolving does not guarantee `tabGroups.all` already reflects
+   * the new diff tab — VS Code's tab bookkeeping can lag a tick behind. Poll
+   * briefly so the initial `disposeIfHidden` call below doesn't mistake "not
+   * registered yet" for "already closed" and tear down a session the user is
+   * actively looking at.
+   */
+  private async waitForInitialTabRegistration(): Promise<void> {
+    const maxAttempts = 20;
+    const delayMs = 25;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (this.hasRegisteredTabs()) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 
@@ -65,7 +94,7 @@ export class TextCompareSession implements vscode.Disposable {
       return;
     }
 
-    if (!this.sessionSettled) {
+    if (!this.sessionSettled || !this.standaloneCheckArmed) {
       return;
     }
 
