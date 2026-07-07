@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { StateStore } from '../state/stateStore';
 import { StashEntry, WorkingTreeChange } from '../types';
 import { GitService } from '../services/gitService';
@@ -15,7 +16,7 @@ export class StashTreeItem extends vscode.TreeItem {
 
     this.command = {
       title: 'Preview Stash Patch',
-      command: 'vscodeGitClient.stash.previewPatch',
+      command: GitCommand.StashPreviewPatch,
       arguments: [this]
     };
   }

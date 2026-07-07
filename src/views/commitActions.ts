@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 
 export type CommitAction =
   | 'openDetails'
@@ -60,20 +61,20 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
     case 'openDetails':
       if (message.isContinuous && normalizedShas.length > 1) {
         await vscode.commands.executeCommand(
-          'vscodeGitClient.graph.openCommitRangeDetails',
+          GitCommand.GraphOpenCommitRangeDetails,
           undefined,
           normalizedShas
         );
         return;
       }
       if (normalizedShas.length === 1) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.openDetails', {
+        await vscode.commands.executeCommand(GitCommand.GraphOpenDetails, {
           sha,
           subject: normalizedSubjects[0] ?? message.subject
         });
         return;
       }
-      await runForEachSha('vscodeGitClient.graph.openDetails');
+      await runForEachSha(GitCommand.GraphOpenDetails);
       return;
     case 'copyCommitId':
       await vscode.env.clipboard.writeText(normalizedShas.join('\n'));
@@ -106,68 +107,68 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
     case 'createPatch':
       if (message.isContinuous && normalizedShas.length > 1) {
         await vscode.commands.executeCommand(
-          'vscodeGitClient.graph.createPatchForRange',
+          GitCommand.GraphCreatePatchForRange,
           undefined,
           normalizedShas
         );
         return;
       }
-      await runForEachSha('vscodeGitClient.graph.createPatch');
+      await runForEachSha(GitCommand.GraphCreatePatch);
       return;
     case 'cherryPick':
       if (message.isContinuous && normalizedShas.length > 1) {
         await vscode.commands.executeCommand(
-          'vscodeGitClient.graph.cherryPick',
+          GitCommand.GraphCherryPick,
           undefined,
           normalizedShas
         );
         return;
       }
-      await runForEachSha('vscodeGitClient.graph.cherryPick');
+      await runForEachSha(GitCommand.GraphCherryPick);
       return;
     case 'checkoutRevision':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.checkoutCommit', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphCheckoutCommit, sha);
       return;
     case 'showRepositoryAtRevision':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.showRepositoryAtRevision', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphShowRepositoryAtRevision, sha);
       return;
     case 'compareWithLocal':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.compareWithCurrent', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphCompareWithCurrent, sha);
       return;
     case 'resetCurrentBranchToHere':
-      await vscode.commands.executeCommand('vscodeGitClient.branch.resetCurrentToCommit', sha);
+      await vscode.commands.executeCommand(GitCommand.BranchResetCurrentToCommit, sha);
       return;
     case 'revertCommit':
       if (message.isContinuous && normalizedShas.length > 1) {
         await vscode.commands.executeCommand(
-          'vscodeGitClient.graph.revert',
+          GitCommand.GraphRevert,
           undefined,
           normalizedShas
         );
         return;
       }
-      await runForEachSha('vscodeGitClient.graph.revert');
+      await runForEachSha(GitCommand.GraphRevert);
       return;
     case 'interactiveRebaseFromHere':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.rebaseInteractiveFromHere', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphRebaseInteractiveFromHere, sha);
       return;
     case 'editCommitMessage':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.editCommitMessage', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphEditCommitMessage, sha);
       return;
     case 'pushAllUpToHere':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.pushAllUpToHere', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphPushAllUpToHere, sha);
       return;
     case 'newBranch':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.createBranchHere', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphCreateBranchHere, sha);
       return;
     case 'newTag':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.createTagHere', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphCreateTagHere, sha);
       return;
     case 'goToParentCommit':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.goToParentCommit', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphGoToParentCommit, sha);
       return;
     case 'goToChildCommit':
-      await vscode.commands.executeCommand('vscodeGitClient.graph.goToChildCommit', sha);
+      await vscode.commands.executeCommand(GitCommand.GraphGoToChildCommit, sha);
       return;
     default:
       return;

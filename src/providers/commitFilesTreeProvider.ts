@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { GitService } from '../services/gitService';
 import { CommitFileChange, WorkingTreeFileChange } from '../types';
 
@@ -23,7 +24,7 @@ export class CommitFileTreeItem extends vscode.TreeItem {
       : `${filePath}\n${statusTitle(status)}`;
     this.command = {
       title: 'Open Diffs',
-      command: 'vscodeGitClient.graph.openFileDiff',
+      command: GitCommand.GraphOpenFileDiff,
       arguments: [this]
     };
   }
@@ -48,7 +49,7 @@ export class CommitRangeFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${statusTitle(status)}\n${fromLabel} ↔ ${toLabel}`;
     this.command = {
       title: 'Open Diffs',
-      command: 'vscodeGitClient.graph.openFileDiff',
+      command: GitCommand.GraphOpenFileDiff,
       arguments: [this]
     };
   }
@@ -68,7 +69,7 @@ export class RevisionFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\nRevision ${sha.slice(0, 8)}`;
     this.command = {
       title: 'Open File At Revision',
-      command: 'vscodeGitClient.graph.openRepositoryFileAtRevision',
+      command: GitCommand.GraphOpenRepositoryFileAtRevision,
       arguments: [this]
     };
   }
@@ -92,7 +93,7 @@ export class WorkingTreeCompareFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${untracked ? 'Untracked' : statusTitle(status)}`;
     this.command = {
       title: 'Open Working Tree File Diff',
-      command: 'vscodeGitClient.workingTreeCompare.openFileDiff',
+      command: GitCommand.WorkingTreeCompareOpenFileDiff,
       arguments: [this]
     };
   }

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { Logger } from '../logger';
 import { TextCompareOrchestrator } from '../editor/textCompareOrchestrator';
 
@@ -38,12 +39,12 @@ export function registerTextCompareCommands(
     context.subscriptions.push(vscode.commands.registerCommand(command, run));
   };
 
-  register('vscodeGitClient.textCompare.open', async (arg?: unknown) => {
+  register(GitCommand.TextCompareOpen, async (arg?: unknown) => {
     const seedFile = asFileResourceUri(arg);
     await textCompare.open(seedFile ? { seedFile } : {});
   });
 
   register('intelliGit.textCompare.open', async (...args: unknown[]) => {
-    await vscode.commands.executeCommand('vscodeGitClient.textCompare.open', ...args);
+    await vscode.commands.executeCommand(GitCommand.TextCompareOpen, ...args);
   });
 }

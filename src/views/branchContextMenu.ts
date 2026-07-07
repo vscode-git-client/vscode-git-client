@@ -1,24 +1,26 @@
+import { GitCommand } from '../config/commands';
+
 const branchContextMenuItems = [
-  { command: 'vscodeGitClient.branch.checkout', label: 'Checkout Branch' },
-  { command: 'vscodeGitClient.branch.compareWithCurrent', label: 'Compare With Current Branch' },
-  { command: 'vscodeGitClient.branch.rename', label: 'Rename Branch' },
-  { command: 'vscodeGitClient.branch.delete', label: 'Delete Branch' },
+  { command: GitCommand.BranchCheckout, label: 'Checkout Branch' },
+  { command: GitCommand.BranchCompareWithCurrent, label: 'Compare With Current Branch' },
+  { command: GitCommand.BranchRename, label: 'Rename Branch' },
+  { command: GitCommand.BranchDelete, label: 'Delete Branch' },
   { separator: true },
-  { command: 'vscodeGitClient.branch.track', label: 'Track Remote Branch' },
-  { command: 'vscodeGitClient.branch.untrack', label: 'Untrack Branch' },
-  { command: 'vscodeGitClient.branch.mergeIntoCurrent', label: 'Merge Into Current' },
-  { command: 'vscodeGitClient.branch.rebaseOnto', label: 'Rebase Current Onto Branch' }
+  { command: GitCommand.BranchTrack, label: 'Track Remote Branch' },
+  { command: GitCommand.BranchUntrack, label: 'Untrack Branch' },
+  { command: GitCommand.BranchMergeIntoCurrent, label: 'Merge Into Current' },
+  { command: GitCommand.BranchRebaseOnto, label: 'Rebase Current Onto Branch' }
 ] as const;
 
 const tagContextMenuItems = [
-  { command: 'vscodeGitClient.tag.openCommits', label: 'Open Tag Commits' },
-  { command: 'vscodeGitClient.tag.checkout', label: 'Checkout Tag' },
-  { command: 'vscodeGitClient.tag.checkoutNewBranch', label: 'Checkout New Branch' },
+  { command: GitCommand.TagOpenCommits, label: 'Open Tag Commits' },
+  { command: GitCommand.TagCheckout, label: 'Checkout Tag' },
+  { command: GitCommand.TagCheckoutNewBranch, label: 'Checkout New Branch' },
   { separator: true },
-  { command: 'vscodeGitClient.tag.copyRevisionNumber', label: 'Copy Revision Number' },
-  { command: 'vscodeGitClient.tag.showRepositoryAtRevision', label: 'View Repository At Revision' },
-  { command: 'vscodeGitClient.tag.compareWithCurrent', label: 'Compare With Current' },
-  { command: 'vscodeGitClient.tag.createPatch', label: 'Create Patch' }
+  { command: GitCommand.TagCopyRevisionNumber, label: 'Copy Revision Number' },
+  { command: GitCommand.TagShowRepositoryAtRevision, label: 'View Repository At Revision' },
+  { command: GitCommand.TagCompareWithCurrent, label: 'Compare With Current' },
+  { command: GitCommand.TagCreatePatch, label: 'Create Patch' }
 ] as const;
 
 export type BranchContextMenuCommand = Extract<

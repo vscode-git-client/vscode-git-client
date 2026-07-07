@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { GitCommand } from '../config/commands';
+import { GIT_COMMAND_PREFIX, GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import { EditorOrchestrator } from '../editor/editorOrchestrator';
 import { confirmDangerousAction } from '../guards';
@@ -889,7 +889,7 @@ export class CommandController {
     if (followUp === 'Open changed file diff') {
       await this.editor.openBranchComparisonFileDiff(left, right);
     } else if (followUp === 'Cherry-pick commit range') {
-      await vscode.commands.executeCommand('vscodeGitClient.graph.cherryPickRange');
+      await vscode.commands.executeCommand(GitCommand.GraphCherryPickRange);
     }
   }
 
@@ -1737,8 +1737,8 @@ export class CommandController {
   }
 
   private legacyCommandId(command: string): string | undefined {
-    return command.startsWith('vscodeGitClient.')
-      ? `intelliGit.${command.slice('vscodeGitClient.'.length)}`
+    return command.startsWith(GIT_COMMAND_PREFIX)
+      ? `intelliGit.${command.slice(GIT_COMMAND_PREFIX.length)}`
       : undefined;
   }
 
@@ -2334,7 +2334,7 @@ export class CommandController {
 
     const current = (await this.git.runGit(['rev-parse', 'HEAD'])).stdout.trim();
     if (current === sha) {
-      await vscode.commands.executeCommand('vscodeGitClient.git.pushWithPreview');
+      await vscode.commands.executeCommand(GitCommand.GitPushWithPreview);
       return;
     }
 
@@ -2417,7 +2417,7 @@ export class CommandController {
     }
     try {
       if (state.kind === 'merge') {
-        await vscode.commands.executeCommand('vscodeGitClient.merge.finalize');
+        await vscode.commands.executeCommand(GitCommand.MergeFinalize);
         return;
       }
       if (state.kind === 'rebase') {
@@ -2738,11 +2738,11 @@ export class CommandController {
           await this.state.refreshAll();
         },
         checkoutTag: async (name: string) => {
-          await vscode.commands.executeCommand('vscodeGitClient.tag.checkoutNewBranch', name);
+          await vscode.commands.executeCommand(GitCommand.TagCheckoutNewBranch, name);
           await this.state.refreshAll();
         },
         openActions: async (name: string) => {
-          await vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', name);
+          await vscode.commands.executeCommand(GitCommand.BranchActionHub, name);
         },
         refresh: async () => {
           await this.state.refreshBranches();

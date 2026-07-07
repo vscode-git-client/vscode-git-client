@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import {
   isBranchContextMenuCommand,
   isTagContextMenuCommand,
@@ -148,7 +149,7 @@ export class BranchSearchView {
         await this.handlers.openActions(message.name);
         return;
       case 'tagActions':
-        await this.handlers.runCommand('vscodeGitClient.tag.openCommits', message.name);
+        await this.handlers.runCommand(GitCommand.TagOpenCommits, message.name);
         return;
       case 'refresh':
         await this.refresh();

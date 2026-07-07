@@ -125,5 +125,8 @@ export enum GitCommand {
   SubmodulePullTrackedBranch = 'vscodeGitClient.submodule.pullTrackedBranch',
   SubmoduleDiffPointer = 'vscodeGitClient.submodule.diffPointer',
   SubmoduleStagePointerChange = 'vscodeGitClient.submodule.stagePointerChange',
-  SubmoduleDeinit = 'vscodeGitClient.submodule.deinit'
+  SubmoduleDeinit = 'vscodeGitClient.submodule.deinit',
+  TextCompareOpen = 'vscodeGitClient.textCompare.open'
 }
+
+export const GIT_COMMAND_PREFIX = 'vscodeGitClient.';

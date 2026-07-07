@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import { StateStore } from '../state/stateStore';
 import { BranchRef, TagRef } from '../types';
@@ -89,7 +90,7 @@ export class BranchTreeItem extends vscode.TreeItem {
 
     this.command = {
       title: 'Open Branch Commits',
-      command: 'vscodeGitClient.branch.openCommits',
+      command: GitCommand.BranchOpenCommits,
       arguments: [this]
     };
   }
@@ -109,7 +110,7 @@ export class TagTreeItem extends vscode.TreeItem {
     this.iconPath = new vscode.ThemeIcon('tag');
     this.command = {
       title: 'Open Tag Commits',
-      command: 'vscodeGitClient.tag.openCommits',
+      command: GitCommand.TagOpenCommits,
       arguments: [this]
     };
   }

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from './config/commands';
 import { CommandController } from './commands/commandController';
 import { registerTextCompareCommands } from './commands/textCompareCommands';
 import { EditorOrchestrator } from './editor/editorOrchestrator';
@@ -370,7 +371,7 @@ async function registerBranchActionHubInGitCheckout(
           label: 'VS Code Git Client Branch Action Hub',
           icon: 'tools',
           run(branch: string): void {
-            void vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', branch);
+            void vscode.commands.executeCommand(GitCommand.BranchActionHub, branch);
           }
         }
       ]
@@ -388,19 +389,19 @@ function attachOperationStatusBarActions(
 ): void {
   const continueItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 30);
   continueItem.name = 'VS Code Git Client Operation Continue';
-  continueItem.command = 'vscodeGitClient.operation.continue';
+  continueItem.command = GitCommand.OperationContinue;
   continueItem.text = '$(check) Continue';
   continueItem.tooltip = 'Continue current operation';
 
   const abortItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 29);
   abortItem.name = 'VS Code Git Client Operation Abort';
-  abortItem.command = 'vscodeGitClient.operation.abort';
+  abortItem.command = GitCommand.OperationAbort;
   abortItem.text = '$(close) Abort';
   abortItem.tooltip = 'Abort current operation';
 
   const skipItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 28);
   skipItem.name = 'VS Code Git Client Rebase Skip';
-  skipItem.command = 'vscodeGitClient.operation.skip';
+  skipItem.command = GitCommand.OperationSkip;
   skipItem.text = '$(debug-step-over) Skip';
   skipItem.tooltip = 'Skip current commit during rebase/cherry-pick';
 
