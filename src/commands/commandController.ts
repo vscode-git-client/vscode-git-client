@@ -1,5 +1,6 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import { EditorOrchestrator } from '../editor/editorOrchestrator';
 import { confirmDangerousAction } from '../guards';
@@ -16,150 +17,24 @@ import {
 } from '../providers/commitFilesTreeProvider';
 import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../providers/graphTreeProvider';
 import { StashTreeItem } from '../providers/stashTreeProvider';
-import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
 import { SubmoduleTreeItem } from '../providers/submoduleTreeProvider';
+import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
 import { convertToSshUrl } from '../services/gitParsing';
 import { GitService } from '../services/gitService';
-import { SubmoduleLogSink } from '../services/submoduleLogSink';
 import { resolveWorktreeTargetPath } from '../services/worktreeTargetPath';
 import { expandTemplate, loadTemplates } from '../state/commitTemplates';
 import { StateStore } from '../state/stateStore';
 import { BranchSearchView } from '../views/branchSearchView';
 import { CommitListView } from '../views/commitListView';
-import { GraphFilterView } from '../views/graphFilterView';
 import { GraphFilterSession } from '../views/graphFilterSession';
+import { GraphFilterView } from '../views/graphFilterView';
 import { pickRevisionToCompare, RevisionSelection } from '../views/revisionPicker';
-import { GitCommand } from '../config/commands';
-
-interface QuickAction {
-  label: string;
-  description?: string;
-  run: () => Promise<void>;
-}
-
-type CherryPickIssueKind = 'conflict' | 'nothingToCherryPick' | 'failed';
-type MergeIssueKind = 'conflict' | 'failed';
-type RebaseIssueKind = 'conflict' | 'failed';
-
-type GitScmRepository = {
-  rootUri: vscode.Uri;
-  inputBox: {
-    value: string;
-  };
-};
-
-type GitScmApi = {
-  repositories: GitScmRepository[];
-  getRepository(uri: vscode.Uri): GitScmRepository | null;
-};
-
-type GitScmExtensionExports = {
-  getAPI(version: 1): GitScmApi;
-};
-
-type SelectableChangeTreeItem = GraphCommitFileTreeItem | CommitSelectableFileTreeItem;
-type SelectedChangeTarget =
-  | {
-    kind: 'commit';
-    sha: string;
-    subject: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  }
-  | {
-    kind: 'range';
-    fromRef: string;
-    toRef: string;
-    fromLabel: string;
-    toLabel: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  }
-  | {
-    kind: 'workingTreeCompare';
-    ref: string;
-    refLabel: string;
-    filePaths: string[];
-    canRevert: boolean;
-    canCherryPick: boolean;
-    canCreatePatch: boolean;
-    detailLabel: string;
-    shortLabel: string;
-  };
-
-interface WithSubmoduleProgressOptions {
-  title: string;
-  autoShow: boolean;
-  command: string;          // human-readable name for the warning toast, e.g. "Submodule update"
-}
-
-async function withSubmoduleProgress(
-  logger: Logger,
-  options: WithSubmoduleProgressOptions,
-  run: (args: { sink: SubmoduleLogSink; signal: AbortSignal }) => Promise<{ exitCode: number | null }>
-): Promise<{ exitCode: number | null; cancelled: boolean }> {
-  if (options.autoShow) {
-    logger.show(true);
-  }
-  let cancelled = false;
-  const controller = new AbortController();
-
-  const result = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: options.title,
-      cancellable: true
-    },
-    async (progress, token) => {
-      token.onCancellationRequested(() => {
-        cancelled = true;
-        controller.abort();
-      });
-
-      const sink: SubmoduleLogSink = {
-        header(line) { logger.appendRaw(line); },
-        stdout(line) { logger.appendRaw(line); },
-        stderr(line) {
-          logger.appendRaw(line);
-          progress.report({ message: line });
-        },
-        done(exitCode, durationMs) {
-          const secs = (durationMs / 1000).toFixed(1);
-          if (cancelled) {
-            logger.appendRaw(`[cancelled after ${secs}s]`);
-          } else {
-            logger.appendRaw(`[done in ${secs}s, exit ${exitCode}]`);
-          }
-        },
-        error(err) {
-          logger.appendRaw(`[error] ${err.message}`);
-        }
-      };
-
-      return run({ sink, signal: controller.signal });
-    }
-  );
-
-  if (!cancelled && result.exitCode !== 0) {
-    const action = await vscode.window.showWarningMessage(
-      `${options.command} failed; see Output for details.`,
-      'Show Output'
-    );
-    if (action === 'Show Output') {
-      logger.show(true);
-    }
-  }
-
-  return { exitCode: result.exitCode, cancelled };
-}
+import { withSubmoduleProgress } from './helpers/with-submodule-progress';
+import type { GitScmRepository } from './types/GitScmRepository';
+import type { SelectableChangeTreeItem, SelectedChangeTarget } from './types/SelectableChangeTarget';
+import type { GitScmExtensionExports } from './types/GitScmExtensionExports';
+import type { QuickAction } from './types';
+import type { CherryPickIssueKind, MergeIssueKind, RebaseIssueKind } from './types';
 
 export class CommandController {
   constructor(
