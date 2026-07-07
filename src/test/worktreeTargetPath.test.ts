@@ -18,13 +18,18 @@ async function makeTempRoot(): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })));
+  await Promise.all(
+    tempRoots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true }))
+  );
 });
 
 describe('Worktree target path utilities', () => {
   it('normalizes branch names for filesystem-safe generated folders', () => {
     assert.strictEqual(normalizeWorktreePathSegment('feature/foo'), 'feature-foo');
-    assert.strictEqual(normalizeWorktreePathSegment('refs/heads/release/2026.06'), 'release-2026.06');
+    assert.strictEqual(
+      normalizeWorktreePathSegment('refs/heads/release/2026.06'),
+      'release-2026.06'
+    );
     assert.strictEqual(
       buildDefaultWorktreeDirectoryName('/repos/sample-project', 'staging'),
       'sample-project-staging'
@@ -47,7 +52,11 @@ describe('Worktree target path utilities', () => {
     await fs.mkdir(selected);
     await fs.writeFile(path.join(selected, 'existing-file.txt'), 'data');
 
-    const resolved = await resolveWorktreeTargetPath(selected, '/repos/sample-project', 'feature/staging');
+    const resolved = await resolveWorktreeTargetPath(
+      selected,
+      '/repos/sample-project',
+      'feature/staging'
+    );
 
     assert.deepStrictEqual(resolved, {
       ok: true,

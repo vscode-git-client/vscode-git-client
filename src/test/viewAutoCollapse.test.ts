@@ -47,9 +47,11 @@ describe('sparse repository view auto-collapse', () => {
     const state = makeState();
     const commands: string[] = [];
     const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as unknown as {
-      executeCommand: typeof vscode.commands.executeCommand;
-    }).executeCommand = recordExecutedCommands(commands);
+    (
+      vscode.commands as unknown as {
+        executeCommand: typeof vscode.commands.executeCommand;
+      }
+    ).executeCommand = recordExecutedCommands(commands);
 
     try {
       attachSparseRepositoryViewAutoCollapse(
@@ -74,9 +76,11 @@ describe('sparse repository view auto-collapse', () => {
         'workbench.actions.treeView.vscodeGitClient.submodules.collapseAll'
       ]);
     } finally {
-      (vscode.commands as unknown as {
-        executeCommand: typeof vscode.commands.executeCommand;
-      }).executeCommand = originalExecuteCommand;
+      (
+        vscode.commands as unknown as {
+          executeCommand: typeof vscode.commands.executeCommand;
+        }
+      ).executeCommand = originalExecuteCommand;
     }
   });
 
@@ -88,9 +92,11 @@ describe('sparse repository view auto-collapse', () => {
 
     const commands: string[] = [];
     const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as unknown as {
-      executeCommand: typeof vscode.commands.executeCommand;
-    }).executeCommand = recordExecutedCommands(commands);
+    (
+      vscode.commands as unknown as {
+        executeCommand: typeof vscode.commands.executeCommand;
+      }
+    ).executeCommand = recordExecutedCommands(commands);
 
     try {
       attachSparseRepositoryViewAutoCollapse(
@@ -104,7 +110,10 @@ describe('sparse repository view auto-collapse', () => {
 
       assert.strictEqual(commands.length, 2);
 
-      state.worktrees = [worktree(), worktree({ worktreePath: '/repo-feature', isCurrent: false, branch: 'feature' })];
+      state.worktrees = [
+        worktree(),
+        worktree({ worktreePath: '/repo-feature', isCurrent: false, branch: 'feature' })
+      ];
       state.fire();
       await Promise.resolve();
 
@@ -114,9 +123,11 @@ describe('sparse repository view auto-collapse', () => {
 
       assert.strictEqual(commands.length, 4);
     } finally {
-      (vscode.commands as unknown as {
-        executeCommand: typeof vscode.commands.executeCommand;
-      }).executeCommand = originalExecuteCommand;
+      (
+        vscode.commands as unknown as {
+          executeCommand: typeof vscode.commands.executeCommand;
+        }
+      ).executeCommand = originalExecuteCommand;
     }
   });
 
@@ -128,9 +139,11 @@ describe('sparse repository view auto-collapse', () => {
 
     const commands: string[] = [];
     const originalExecuteCommand = vscode.commands.executeCommand;
-    (vscode.commands as unknown as {
-      executeCommand: typeof vscode.commands.executeCommand;
-    }).executeCommand = recordExecutedCommands(commands);
+    (
+      vscode.commands as unknown as {
+        executeCommand: typeof vscode.commands.executeCommand;
+      }
+    ).executeCommand = recordExecutedCommands(commands);
 
     try {
       attachSparseRepositoryViewAutoCollapse(
@@ -147,9 +160,11 @@ describe('sparse repository view auto-collapse', () => {
 
       assert.deepStrictEqual(commands, []);
     } finally {
-      (vscode.commands as unknown as {
-        executeCommand: typeof vscode.commands.executeCommand;
-      }).executeCommand = originalExecuteCommand;
+      (
+        vscode.commands as unknown as {
+          executeCommand: typeof vscode.commands.executeCommand;
+        }
+      ).executeCommand = originalExecuteCommand;
     }
   });
 });

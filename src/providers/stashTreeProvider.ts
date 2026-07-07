@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { StateStore } from '../state/stateStore';
 import { StashEntry, WorkingTreeChange } from '../types';
 import { GitService } from '../services/gitService';
@@ -8,20 +9,18 @@ export class StashTreeItem extends vscode.TreeItem {
     super(stash.ref, vscode.TreeItemCollapsibleState.None);
     this.contextValue = 'stashEntry';
     this.id = `stash:${stash.ref}`;
-    this.description = stash.fileCount === undefined
-      ? stash.message
-      : `${stash.message} · files ${stash.fileCount}`;
+    this.description =
+      stash.fileCount === undefined ? stash.message : `${stash.message} · files ${stash.fileCount}`;
     this.tooltip = `${stash.ref}\n${stash.message}${stash.author ? `\nauthor: ${stash.author}` : ''}`;
     this.iconPath = new vscode.ThemeIcon('archive');
 
     this.command = {
       title: 'Preview Stash Patch',
-      command: 'vscodeGitClient.stash.previewPatch',
+      command: GitCommand.StashPreviewPatch,
       arguments: [this]
     };
   }
 }
-
 
 export class StashTreeDragAndDropController implements vscode.TreeDragAndDropController<StashTreeItem> {
   dropMimeTypes: string[] = [
@@ -34,9 +33,16 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
   ];
   dragMimeTypes: string[] = ['text/plain', 'application/vnd.code.tree.vscodegitclient.stashes'];
 
-  constructor(private readonly git: GitService, private readonly state: StateStore) {}
+  constructor(
+    private readonly git: GitService,
+    private readonly state: StateStore
+  ) {}
 
-  async handleDrop(target: StashTreeItem | undefined, dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+  async handleDrop(
+    target: StashTreeItem | undefined,
+    dataTransfer: vscode.DataTransfer,
+    token: vscode.CancellationToken
+  ): Promise<void> {
     const stashItem = dataTransfer.get('application/vnd.code.tree.vscodegitclient.stashes');
     if (stashItem) {
       // Log the type of the value to debug what VS Code passes
@@ -48,7 +54,9 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
           await this.git.applyStash(item.stash.ref, false);
           await this.state.refreshAll();
         } catch (error) {
-          vscode.window.showErrorMessage(`Failed to unstash: ${error instanceof Error ? error.message : String(error)}`);
+          vscode.window.showErrorMessage(
+            `Failed to unstash: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
         return;
       }
@@ -58,7 +66,9 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
 
     const uriList = dataTransfer.get('text/uri-list');
     if (uriList) {
-      const uris = (await uriList.asString()).split(/\r?\n/).filter(line => line.trim().length > 0 && !line.startsWith('#'));
+      const uris = (await uriList.asString())
+        .split(/\r?\n/)
+        .filter((line) => line.trim().length > 0 && !line.startsWith('#'));
       for (const uriString of uris) {
         try {
           const uri = vscode.Uri.parse(uriString);
@@ -70,7 +80,7 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
         }
       }
     }
-    
+
     if (paths.length === 0) {
       // Try parsing JSON payloads from other SCM mimetypes
       for (const [mime, item] of dataTransfer) {
@@ -88,8 +98,8 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
                   paths.push(el.resourceUri.fsPath);
                 }
               } else if (el && typeof el === 'string') {
-                  const uri = vscode.Uri.parse(el);
-                  if (uri.scheme === 'file') paths.push(uri.fsPath);
+                const uri = vscode.Uri.parse(el);
+                if (uri.scheme === 'file') paths.push(uri.fsPath);
               }
             }
           }
@@ -116,7 +126,7 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
     try {
       const changes = await this.git.getChangedFiles();
       let includeUntracked = false;
-      
+
       for (const p of paths) {
         const match = changes.find((c: WorkingTreeChange) => c.path === p || p.endsWith(c.path));
         if (match && match.status.trim() === '??') {
@@ -131,14 +141,26 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
       });
       await this.state.refreshAll();
     } catch (error) {
-      vscode.window.showErrorMessage(`Failed to stash files: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(
+        `Failed to stash files: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
-  async handleDrag(source: readonly StashTreeItem[], dataTransfer: vscode.DataTransfer, token: vscode.CancellationToken): Promise<void> {
+  async handleDrag(
+    source: readonly StashTreeItem[],
+    dataTransfer: vscode.DataTransfer,
+    token: vscode.CancellationToken
+  ): Promise<void> {
     if (source.length > 0) {
-      dataTransfer.set('text/plain', new vscode.DataTransferItem(`git stash apply ${source[0].stash.ref}`));
-      dataTransfer.set('application/vnd.code.tree.vscodegitclient.stashes', new vscode.DataTransferItem(source));
+      dataTransfer.set(
+        'text/plain',
+        new vscode.DataTransferItem(`git stash apply ${source[0].stash.ref}`)
+      );
+      dataTransfer.set(
+        'application/vnd.code.tree.vscodegitclient.stashes',
+        new vscode.DataTransferItem(source)
+      );
     }
   }
 }

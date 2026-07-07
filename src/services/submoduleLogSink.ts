@@ -13,9 +13,19 @@ export interface SubmoduleLogSink {
 }
 
 export const NULL_SINK: SubmoduleLogSink = {
-  header() { /* noop */ },
-  stdout() { /* noop */ },
-  stderr() { /* noop */ },
-  done() { /* noop */ },
-  error() { /* noop */ }
+  header() {
+    /* noop */
+  },
+  stdout() {
+    /* noop */
+  },
+  stderr() {
+    /* noop */
+  },
+  done() {
+    /* noop */
+  },
+  error() {
+    /* noop */
+  }
 };

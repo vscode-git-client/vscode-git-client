@@ -16,19 +16,33 @@ import { GitService } from '../services/gitService';
 
 function makeLogger() {
   return {
-    info: () => { /* noop */ },
-    warn: () => { /* noop */ },
-    error: () => { /* noop */ },
-    show: () => { /* noop */ },
-    dispose: () => { /* noop */ }
+    info: () => {
+      /* noop */
+    },
+    warn: () => {
+      /* noop */
+    },
+    error: () => {
+      /* noop */
+    },
+    show: () => {
+      /* noop */
+    },
+    dispose: () => {
+      /* noop */
+    }
   };
 }
 
 function makeConfig() {
   return {
     get: <T>(key: string, defaultValue: T): T => {
-      if (key === 'gitPath') { return 'git' as unknown as T; }
-      if (key === 'commandTimeoutMs') { return 15000 as unknown as T; }
+      if (key === 'gitPath') {
+        return 'git' as unknown as T;
+      }
+      if (key === 'commandTimeoutMs') {
+        return 15000 as unknown as T;
+      }
       return defaultValue;
     }
   };
@@ -101,9 +115,7 @@ describe('parseNameStatusZ', () => {
   it('stops safely when R/C entry is missing its new-path token (truncated input)', () => {
     // Only oldPath follows R100; newPath is absent — stop without emitting the partial entry.
     const stdout = 'M\0src/a.ts\0R100\0src/old.ts';
-    assert.deepStrictEqual(parseNameStatusZ(stdout), [
-      { status: 'M', path: 'src/a.ts' }
-    ]);
+    assert.deepStrictEqual(parseNameStatusZ(stdout), [{ status: 'M', path: 'src/a.ts' }]);
   });
 });
 
@@ -192,7 +204,9 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     // Clean up temp dir
     try {
       fs.rmSync(repoDir, { recursive: true, force: true });
-    } catch { /* ignore cleanup errors */ }
+    } catch {
+      /* ignore cleanup errors */
+    }
   });
 
   // (a) tracked modified + untracked files are both returned
@@ -203,7 +217,10 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     // src/index.ts is tracked-modified
     assert.ok(paths.includes('src/index.ts'), `expected src/index.ts in: ${JSON.stringify(paths)}`);
     // src/new-untracked.ts is untracked
-    assert.ok(paths.includes('src/new-untracked.ts'), `expected src/new-untracked.ts in: ${JSON.stringify(paths)}`);
+    assert.ok(
+      paths.includes('src/new-untracked.ts'),
+      `expected src/new-untracked.ts in: ${JSON.stringify(paths)}`
+    );
     // lib/extra.ts is untracked
     assert.ok(paths.includes('lib/extra.ts'), `expected lib/extra.ts in: ${JSON.stringify(paths)}`);
 
@@ -247,9 +264,18 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
       'src/new-untracked.ts'
     ]);
 
-    assert.ok(patch.includes('diff --git a/src/index.ts b/src/index.ts'), 'expected tracked file patch');
-    assert.ok(patch.includes('diff --git a/src/new-untracked.ts b/src/new-untracked.ts'), 'expected untracked file patch');
-    assert.ok(patch.includes('new file mode'), 'expected untracked file to be represented as an added file');
+    assert.ok(
+      patch.includes('diff --git a/src/index.ts b/src/index.ts'),
+      'expected tracked file patch'
+    );
+    assert.ok(
+      patch.includes('diff --git a/src/new-untracked.ts b/src/new-untracked.ts'),
+      'expected untracked file patch'
+    );
+    assert.ok(
+      patch.includes('new file mode'),
+      'expected untracked file to be represented as an added file'
+    );
   });
 
   // (c) resolveRevisionToCommit with valid sha returns metadata
@@ -257,8 +283,14 @@ describe('GitService working-tree diff helpers (fixture repo)', () => {
     const meta = await git.resolveRevisionToCommit(baseCommitSha);
     assert.ok(meta !== undefined, 'expected metadata for valid sha');
     assert.strictEqual(meta.sha, baseCommitSha);
-    assert.ok(typeof meta.subject === 'string' && meta.subject.length > 0, 'subject should be non-empty');
-    assert.ok(typeof meta.author === 'string' && meta.author.length > 0, 'author should be non-empty');
+    assert.ok(
+      typeof meta.subject === 'string' && meta.subject.length > 0,
+      'subject should be non-empty'
+    );
+    assert.ok(
+      typeof meta.author === 'string' && meta.author.length > 0,
+      'author should be non-empty'
+    );
     assert.ok(typeof meta.date === 'string' && meta.date.length > 0, 'date should be non-empty');
     assert.strictEqual(meta.subject, 'Initial commit');
     assert.strictEqual(meta.author, 'Test User');
@@ -316,13 +348,15 @@ describe('GitService graph branch filtering', () => {
   after(() => {
     try {
       fs.rmSync(repoDir, { recursive: true, force: true });
-    } catch { }
+    } catch {}
   });
 
   it('filters graph by an exact branch name', async () => {
     const commits = await git.getGraph(100, 0, { branch: 'feature/login' });
     assert.ok(commits.length > 0);
-    assert.ok(commits.some((commit) => commit.refs.some((ref) => ref.includes('refs/heads/feature/login'))));
+    assert.ok(
+      commits.some((commit) => commit.refs.some((ref) => ref.includes('refs/heads/feature/login')))
+    );
   });
 
   it('accepts partial branch keywords without throwing', async () => {
@@ -394,7 +428,7 @@ describe('GitService graph scope across refs', () => {
   after(() => {
     try {
       fs.rmSync(repoDir, { recursive: true, force: true });
-    } catch { }
+    } catch {}
   });
 
   it('includes commits from non-current local branches in graph view', async () => {
@@ -446,7 +480,7 @@ describe('GitService graph scope includes remote tracking refs', () => {
   after(() => {
     try {
       fs.rmSync(rootDir, { recursive: true, force: true });
-    } catch { }
+    } catch {}
   });
 
   it('includes commits reachable only from remote-tracking branches', async () => {

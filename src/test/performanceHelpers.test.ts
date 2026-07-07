@@ -13,13 +13,17 @@ describe('GitCommandQueue', () => {
     let active = 0;
     let maxActive = 0;
 
-    await Promise.all(Array.from({ length: 5 }, (_, index) => queue.run(async () => {
-      active += 1;
-      maxActive = Math.max(maxActive, active);
-      await delay(5);
-      active -= 1;
-      return index;
-    })));
+    await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        queue.run(async () => {
+          active += 1;
+          maxActive = Math.max(maxActive, active);
+          await delay(5);
+          active -= 1;
+          return index;
+        })
+      )
+    );
 
     assert.strictEqual(maxActive, 2);
   });

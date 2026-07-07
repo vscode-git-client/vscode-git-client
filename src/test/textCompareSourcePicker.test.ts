@@ -14,7 +14,10 @@ describe('buildSourcePickerItems', () => {
 
   it('assigns stable kind identifiers', () => {
     const items = buildSourcePickerItems();
-    assert.deepStrictEqual(items.map((item) => item.sourceKind), ['file', 'clipboard', 'empty']);
+    assert.deepStrictEqual(
+      items.map((item) => item.sourceKind),
+      ['file', 'clipboard', 'empty']
+    );
   });
 });
 
@@ -37,9 +40,10 @@ describe('pickTextCompareSource', () => {
     const originalOpenTextDocument = vscode.workspace.openTextDocument;
 
     const uri = vscode.Uri.file('/workspace/foo.ts');
-    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'file', label: '$(file) Open file...' }) as any;
     vscode.window.showOpenDialog = async () => [uri];
-    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' } as any);
+    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' }) as any;
 
     try {
       const result = await pickTextCompareSource('left');
@@ -59,7 +63,8 @@ describe('pickTextCompareSource', () => {
     const originalShowQuickPick = vscode.window.showQuickPick;
     const originalShowOpenDialog = vscode.window.showOpenDialog;
 
-    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'file', label: '$(file) Open file...' }) as any;
     vscode.window.showOpenDialog = async () => undefined;
 
     try {
@@ -77,15 +82,15 @@ describe('pickTextCompareSource', () => {
     const originalOpenTextDocument = vscode.workspace.openTextDocument;
 
     const uri = vscode.Uri.file('/workspace/missing.ts');
-    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'file', label: '$(file) Open file...' }) as any;
     vscode.window.showOpenDialog = async () => [uri];
-    vscode.workspace.openTextDocument = async () => { throw new Error('ENOENT'); };
+    vscode.workspace.openTextDocument = async () => {
+      throw new Error('ENOENT');
+    };
 
     try {
-      await assert.rejects(
-        async () => pickTextCompareSource('left'),
-        /Failed to read file/
-      );
+      await assert.rejects(async () => pickTextCompareSource('left'), /Failed to read file/);
     } finally {
       vscode.window.showQuickPick = originalShowQuickPick;
       vscode.window.showOpenDialog = originalShowOpenDialog;
@@ -100,15 +105,18 @@ describe('pickTextCompareSource', () => {
     const originalWorkspaceFolders = vscode.workspace.workspaceFolders;
 
     const workspaceRoot = vscode.Uri.file('/workspace');
-    (vscode.workspace as any).workspaceFolders = [{ uri: workspaceRoot, name: 'workspace', index: 0 } as any];
-    vscode.window.showQuickPick = async () => ({ sourceKind: 'file', label: '$(file) Open file...' } as any);
+    (vscode.workspace as any).workspaceFolders = [
+      { uri: workspaceRoot, name: 'workspace', index: 0 } as any
+    ];
+    vscode.window.showQuickPick = async () =>
+      ({ sourceKind: 'file', label: '$(file) Open file...' }) as any;
 
     let passedDefaultUri: vscode.Uri | undefined;
     vscode.window.showOpenDialog = async (options) => {
       passedDefaultUri = options?.defaultUri;
       return [vscode.Uri.file('/workspace/foo.ts')];
     };
-    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' } as any);
+    vscode.workspace.openTextDocument = async () => ({ getText: () => 'hello' }) as any;
 
     try {
       await pickTextCompareSource('left');
@@ -127,7 +135,7 @@ describe('pickTextCompareSource', () => {
     const originalReadClipboard = vscode.env.clipboard.readText;
 
     vscode.window.showQuickPick = async () =>
-      ({ sourceKind: 'clipboard', label: '$(clippy) Paste from Clipboard' } as any);
+      ({ sourceKind: 'clipboard', label: '$(clippy) Paste from Clipboard' }) as any;
     vscode.env.clipboard.readText = async () => 'clipboard text';
 
     try {
@@ -146,7 +154,7 @@ describe('pickTextCompareSource', () => {
     const originalShowQuickPick = vscode.window.showQuickPick;
 
     vscode.window.showQuickPick = async () =>
-      ({ sourceKind: 'empty', label: '$(circle-outline) Empty text' } as any);
+      ({ sourceKind: 'empty', label: '$(circle-outline) Empty text' }) as any;
 
     try {
       const result = await pickTextCompareSource('left');

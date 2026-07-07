@@ -5,7 +5,12 @@ import { getSourceLabel, getLanguageForFile } from '../editor/textCompareSource'
 
 describe('getSourceLabel', () => {
   it('returns filename for file source', () => {
-    const label = getSourceLabel({ kind: 'file', uri: vscode.Uri.file('/foo/bar.ts'), content: '', label: 'bar.ts' });
+    const label = getSourceLabel({
+      kind: 'file',
+      uri: vscode.Uri.file('/foo/bar.ts'),
+      content: '',
+      label: 'bar.ts'
+    });
     assert.strictEqual(label, 'bar.ts');
   });
 

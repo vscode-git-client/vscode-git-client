@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import {
   isBranchContextMenuCommand,
   isTagContextMenuCommand,
@@ -14,7 +15,10 @@ export interface BranchSearchHandlers {
   checkoutTag(name: string): Promise<void>;
   openActions(name: string): Promise<void>;
   refresh(): Promise<void>;
-  runCommand(command: BranchContextMenuCommand | TagContextMenuCommand, name: string): Promise<void>;
+  runCommand(
+    command: BranchContextMenuCommand | TagContextMenuCommand,
+    name: string
+  ): Promise<void>;
 }
 
 type IncomingMessage =
@@ -40,7 +44,7 @@ export class BranchSearchView {
     onStateChange: (listener: () => void) => vscode.Disposable
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'vscodeGitClient.branchSearch',
+      GitCommand.BranchSearchView,
       'VS Code Git Client: Search Branches & Tags',
       vscode.ViewColumn.Active,
       {
@@ -121,7 +125,11 @@ export class BranchSearchView {
       sha: tag.sha,
       lastCommitEpoch: tag.lastCommitEpoch
     }));
-    void this.panel.webview.postMessage({ type: 'data', branches: branchPayload, tags: tagPayload });
+    void this.panel.webview.postMessage({
+      type: 'data',
+      branches: branchPayload,
+      tags: tagPayload
+    });
   }
 
   private async handleMessage(message: IncomingMessage): Promise<void> {
@@ -141,7 +149,7 @@ export class BranchSearchView {
         await this.handlers.openActions(message.name);
         return;
       case 'tagActions':
-        await this.handlers.runCommand('vscodeGitClient.tag.openCommits', message.name);
+        await this.handlers.runCommand(GitCommand.TagOpenCommits, message.name);
         return;
       case 'refresh':
         await this.refresh();

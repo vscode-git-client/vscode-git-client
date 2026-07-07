@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { StateStore } from '../state/stateStore';
 import { WorktreeEntry } from '../types';
 
@@ -9,14 +10,23 @@ export class WorktreeTreeItem extends vscode.TreeItem {
     super(label, vscode.TreeItemCollapsibleState.None);
 
     this.id = `worktree:${worktree.worktreePath}`;
-    this.description = worktree.branch ?? (worktree.isDetached ? `detached ${worktree.headSha.slice(0, 8)}` : '');
+    this.description =
+      worktree.branch ?? (worktree.isDetached ? `detached ${worktree.headSha.slice(0, 8)}` : '');
     this.tooltip = buildWorktreeTooltip(worktree);
 
     const contextParts = ['worktreeEntry'];
-    if (worktree.isCurrent) { contextParts.push('worktreeCurrent'); }
-    if (worktree.isDirty) { contextParts.push('worktreeDirty'); }
-    if (worktree.isLocked) { contextParts.push('worktreeLocked'); }
-    if (worktree.isPrunable) { contextParts.push('worktreePrunable'); }
+    if (worktree.isCurrent) {
+      contextParts.push('worktreeCurrent');
+    }
+    if (worktree.isDirty) {
+      contextParts.push('worktreeDirty');
+    }
+    if (worktree.isLocked) {
+      contextParts.push('worktreeLocked');
+    }
+    if (worktree.isPrunable) {
+      contextParts.push('worktreePrunable');
+    }
     this.contextValue = contextParts.join(' ');
 
     this.iconPath = worktree.isCurrent
@@ -29,7 +39,7 @@ export class WorktreeTreeItem extends vscode.TreeItem {
 
     this.resourceUri = vscode.Uri.file(worktree.worktreePath);
     this.command = {
-      command: 'vscodeGitClient.worktree.open',
+      command: GitCommand.WorktreeOpen,
       title: 'Open Worktree',
       arguments: [this]
     };
@@ -87,10 +97,18 @@ export class WorktreeTreeProvider implements vscode.TreeDataProvider<WorktreeNod
     const other = worktrees.filter((w) => !w.isCurrent && !w.isLocked && !w.isPrunable);
 
     const sections: WorktreeSectionNode[] = [];
-    if (current.length > 0) { sections.push(new WorktreeSectionNode('current', current, current.length)); }
-    if (other.length > 0) { sections.push(new WorktreeSectionNode('other', other, other.length)); }
-    if (locked.length > 0) { sections.push(new WorktreeSectionNode('locked', locked, locked.length)); }
-    if (prunable.length > 0) { sections.push(new WorktreeSectionNode('prunable', prunable, prunable.length)); }
+    if (current.length > 0) {
+      sections.push(new WorktreeSectionNode('current', current, current.length));
+    }
+    if (other.length > 0) {
+      sections.push(new WorktreeSectionNode('other', other, other.length));
+    }
+    if (locked.length > 0) {
+      sections.push(new WorktreeSectionNode('locked', locked, locked.length));
+    }
+    if (prunable.length > 0) {
+      sections.push(new WorktreeSectionNode('prunable', prunable, prunable.length));
+    }
     return sections;
   }
 
@@ -101,14 +119,26 @@ export class WorktreeTreeProvider implements vscode.TreeDataProvider<WorktreeNod
 
 function buildWorktreeTooltip(w: WorktreeEntry): string {
   const lines: string[] = [w.worktreePath];
-  if (w.branch) { lines.push(`Branch: ${w.branch}`); }
-  if (w.isDetached) { lines.push(`Detached HEAD: ${w.headSha.slice(0, 8)}`); }
-  if (w.headSubject) { lines.push(`Latest: ${w.headSubject}`); }
-  if (w.isDirty) { lines.push('Has uncommitted changes'); }
+  if (w.branch) {
+    lines.push(`Branch: ${w.branch}`);
+  }
+  if (w.isDetached) {
+    lines.push(`Detached HEAD: ${w.headSha.slice(0, 8)}`);
+  }
+  if (w.headSubject) {
+    lines.push(`Latest: ${w.headSubject}`);
+  }
+  if (w.isDirty) {
+    lines.push('Has uncommitted changes');
+  }
   if (w.ahead > 0 || w.behind > 0) {
     lines.push(`Upstream: ↑${w.ahead} ↓${w.behind}`);
   }
-  if (w.isLocked) { lines.push(`Locked${w.lockReason ? `: ${w.lockReason}` : ''}`); }
-  if (w.isPrunable) { lines.push('Prunable (stale)'); }
+  if (w.isLocked) {
+    lines.push(`Locked${w.lockReason ? `: ${w.lockReason}` : ''}`);
+  }
+  if (w.isPrunable) {
+    lines.push('Prunable (stale)');
+  }
   return lines.join('\n');
 }

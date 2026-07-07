@@ -21,8 +21,14 @@ export function loadTemplates(): CommitTemplate[] {
     if (typeof item === 'string') {
       out.push({ label: item.slice(0, 24), template: item });
     } else if (item && typeof item === 'object') {
-      const label = typeof (item as { label?: unknown }).label === 'string' ? (item as { label: string }).label : '';
-      const template = typeof (item as { template?: unknown }).template === 'string' ? (item as { template: string }).template : '';
+      const label =
+        typeof (item as { label?: unknown }).label === 'string'
+          ? (item as { label: string }).label
+          : '';
+      const template =
+        typeof (item as { template?: unknown }).template === 'string'
+          ? (item as { template: string }).template
+          : '';
       if (label && template) {
         out.push({ label, template });
       }
@@ -54,7 +60,10 @@ export function extractTicket(branch: string): string {
 
 // Expands {branch}, {ticket}, and {scope}. Leaves {cursor} alone for the caller.
 // Returns { text, cursor } where cursor is the offset of {cursor}, or text.length if absent.
-export function expandTemplate(template: string, ctx: TemplateContext): { text: string; cursor: number } {
+export function expandTemplate(
+  template: string,
+  ctx: TemplateContext
+): { text: string; cursor: number } {
   const ticket = extractTicket(ctx.branch);
   const scope = inferScope(ctx.branch);
   let expanded = template

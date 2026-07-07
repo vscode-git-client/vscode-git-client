@@ -5,11 +5,21 @@ import { GitCommandResult } from '../types';
 
 function makeLogger() {
   return {
-    info: () => { /* noop */ },
-    warn: () => { /* noop */ },
-    error: () => { /* noop */ },
-    show: () => { /* noop */ },
-    dispose: () => { /* noop */ }
+    info: () => {
+      /* noop */
+    },
+    warn: () => {
+      /* noop */
+    },
+    error: () => {
+      /* noop */
+    },
+    show: () => {
+      /* noop */
+    },
+    dispose: () => {
+      /* noop */
+    }
   };
 }
 
@@ -34,7 +44,8 @@ class FakeGitService extends GitService {
     this.commands.push(args);
     if (args[0] === 'reflog') {
       return {
-        stdout: 'stash@{0}|~|abc123|~|WIP on main: work in progress|~|Test User|~|2026-05-06T00:00:00Z|#|',
+        stdout:
+          'stash@{0}|~|abc123|~|WIP on main: work in progress|~|Test User|~|2026-05-06T00:00:00Z|#|',
         stderr: ''
       };
     }
@@ -50,8 +61,9 @@ describe('GitService lazy stash listing', () => {
 
     assert.strictEqual(stashes.length, 1);
     assert.strictEqual(stashes[0].fileCount, undefined);
-    assert.deepStrictEqual(git.commands.map((args) => args.slice(0, 3)), [
-      ['reflog', 'show', 'refs/stash']
-    ]);
+    assert.deepStrictEqual(
+      git.commands.map((args) => args.slice(0, 3)),
+      [['reflog', 'show', 'refs/stash']]
+    );
   });
 });

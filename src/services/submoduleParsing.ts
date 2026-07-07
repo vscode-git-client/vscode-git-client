@@ -10,15 +10,26 @@ interface MutableSubmoduleConfigEntry {
 export function parseSubmoduleConfig(raw: string): SubmoduleConfigEntry[] {
   const map = new Map<string, MutableSubmoduleConfigEntry>();
 
-  for (const line of raw.split('\n').map((l) => l.trim()).filter(Boolean)) {
+  for (const line of raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)) {
     const match = line.match(/^submodule\.(.+?)\.(path|url|branch)\s+(.+)$/);
-    if (!match) { continue; }
+    if (!match) {
+      continue;
+    }
     const [, name, key, value] = match;
-    if (!map.has(name)) { map.set(name, { name }); }
+    if (!map.has(name)) {
+      map.set(name, { name });
+    }
     const entry = map.get(name)!;
-    if (key === 'path') { entry.path = value; }
-    else if (key === 'url') { entry.url = value; }
-    else if (key === 'branch') { entry.branch = value; }
+    if (key === 'path') {
+      entry.path = value;
+    } else if (key === 'url') {
+      entry.url = value;
+    } else if (key === 'branch') {
+      entry.branch = value;
+    }
   }
 
   return Array.from(map.values())

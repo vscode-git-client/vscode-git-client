@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
+import { GitCommand } from './config/commands';
 import { Logger } from './logger';
 import { StateStore } from './state/stateStore';
 
-const WORKTREE_VIEW_ID = 'vscodeGitClient.worktrees';
-const SUBMODULE_VIEW_ID = 'vscodeGitClient.submodules';
+const WORKTREE_VIEW_ID = GitCommand.WorktreesView;
+const SUBMODULE_VIEW_ID = GitCommand.SubmodulesView;
 
 export function attachSparseRepositoryViewAutoCollapse(
   context: vscode.ExtensionContext,

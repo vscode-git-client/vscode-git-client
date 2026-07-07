@@ -14,7 +14,7 @@ import { SubmoduleLogSink, NULL_SINK } from './submoduleLogSink';
 
 export interface SpawnGitStreamingOptions {
   gitRoot: string;
-  cwd?: string;          // resolved via resolveSubmoduleCwd when provided
+  cwd?: string; // resolved via resolveSubmoduleCwd when provided
   sink: SubmoduleLogSink;
   signal?: AbortSignal;
 }
@@ -44,7 +44,9 @@ export function spawnGitStreaming(
   return new Promise<SpawnGitStreamingResult>((resolve) => {
     let settled = false;
     const settle = (exitCode: number | null) => {
-      if (settled) { return; }
+      if (settled) {
+        return;
+      }
       settled = true;
       sink.done(exitCode, Date.now() - startedAt);
       resolve({ exitCode });
@@ -75,9 +77,18 @@ export function spawnGitStreaming(
     });
 
     if (signal) {
-      const abort = () => { try { child.kill(); } catch { /* already exited */ } };
-      if (signal.aborted) { abort(); }
-      else { signal.addEventListener('abort', abort, { once: true }); }
+      const abort = () => {
+        try {
+          child.kill();
+        } catch {
+          /* already exited */
+        }
+      };
+      if (signal.aborted) {
+        abort();
+      } else {
+        signal.addEventListener('abort', abort, { once: true });
+      }
     }
   });
 }
@@ -93,7 +104,9 @@ function makeLineBuffer(onLine: (line: string) => void) {
     // segment ends at \n, so collapse \r-only redraws inside it.
     const parts = segment.split('\r');
     const last = parts[parts.length - 1];
-    if (last.length > 0) { onLine(last); }
+    if (last.length > 0) {
+      onLine(last);
+    }
   };
   return {
     push(chunk: string) {
@@ -146,29 +159,32 @@ export class SubmoduleService {
       this.getSubmoduleConfig()
     ]);
 
-    return Promise.all(statusEntries.map(async (s) => {
-      const cfg = configEntries.find((c) => c.path === s.path);
-      const recordedSha = await this.getRecordedSubmoduleSha(s.path);
-      const localStatus = s.isUninitialized
-        ? { isDirty: false, ahead: 0, behind: 0 }
-        : await this.getSubmoduleWorktreeStatus(s.path);
-      const currentSha = s.isUninitialized ? undefined : s.sha;
-      const isPointerMismatch = s.isPointerMismatch || Boolean(currentSha && recordedSha && currentSha !== recordedSha);
-      return {
-        path: s.path,
-        name: cfg?.name ?? s.path,
-        url: cfg?.url ?? '',
-        branch: cfg?.branch,
-        currentSha,
-        recordedSha: recordedSha ?? (s.isUninitialized ? s.sha : undefined),
-        isInitialized: !s.isUninitialized,
-        isDirty: s.isDirty || localStatus.isDirty,
-        isPointerMismatch,
-        ahead: localStatus.ahead,
-        behind: localStatus.behind,
-        submodules: []
-      } as SubmoduleEntry;
-    }));
+    return Promise.all(
+      statusEntries.map(async (s) => {
+        const cfg = configEntries.find((c) => c.path === s.path);
+        const recordedSha = await this.getRecordedSubmoduleSha(s.path);
+        const localStatus = s.isUninitialized
+          ? { isDirty: false, ahead: 0, behind: 0 }
+          : await this.getSubmoduleWorktreeStatus(s.path);
+        const currentSha = s.isUninitialized ? undefined : s.sha;
+        const isPointerMismatch =
+          s.isPointerMismatch || Boolean(currentSha && recordedSha && currentSha !== recordedSha);
+        return {
+          path: s.path,
+          name: cfg?.name ?? s.path,
+          url: cfg?.url ?? '',
+          branch: cfg?.branch,
+          currentSha,
+          recordedSha: recordedSha ?? (s.isUninitialized ? s.sha : undefined),
+          isInitialized: !s.isUninitialized,
+          isDirty: s.isDirty || localStatus.isDirty,
+          isPointerMismatch,
+          ahead: localStatus.ahead,
+          behind: localStatus.behind,
+          submodules: []
+        } as SubmoduleEntry;
+      })
+    );
   }
 
   async getSubmoduleConfig(): Promise<SubmoduleConfigEntry[]> {
@@ -186,7 +202,9 @@ export class SubmoduleService {
   async getSubmoduleStatus(recursive = false): Promise<SubmoduleStatusEntry[]> {
     try {
       const args = ['submodule', 'status'];
-      if (recursive) { args.push('--recursive'); }
+      if (recursive) {
+        args.push('--recursive');
+      }
       const result = await this.runGit(args);
       return parseSubmoduleStatus(result.stdout);
     } catch {
@@ -217,7 +235,9 @@ export class SubmoduleService {
     opts: { sink?: SubmoduleLogSink; signal?: AbortSignal } = {}
   ): Promise<SpawnGitStreamingResult> {
     const args = ['submodule', 'update', '--init'];
-    if (recursive) { args.push('--recursive'); }
+    if (recursive) {
+      args.push('--recursive');
+    }
     args.push('--', submodulePath);
     opts.sink?.header(`$ git ${args.join(' ')}`);
     return this.spawnGitStreaming(args, opts);
@@ -228,7 +248,9 @@ export class SubmoduleService {
     opts: { sink?: SubmoduleLogSink; signal?: AbortSignal } = {}
   ): Promise<SpawnGitStreamingResult> {
     const args = ['submodule', 'update', '--init'];
-    if (recursive) { args.push('--recursive'); }
+    if (recursive) {
+      args.push('--recursive');
+    }
     opts.sink?.header(`$ git ${args.join(' ')}`);
     return this.spawnGitStreaming(args, opts);
   }
@@ -239,8 +261,12 @@ export class SubmoduleService {
     opts: { sink?: SubmoduleLogSink; signal?: AbortSignal } = {}
   ): Promise<SpawnGitStreamingResult> {
     const args = ['submodule', 'sync'];
-    if (recursive) { args.push('--recursive'); }
-    if (submodulePath) { args.push('--', submodulePath); }
+    if (recursive) {
+      args.push('--recursive');
+    }
+    if (submodulePath) {
+      args.push('--', submodulePath);
+    }
     opts.sink?.header(`$ git ${args.join(' ')}`);
     return this.spawnGitStreaming(args, opts);
   }
@@ -251,7 +277,9 @@ export class SubmoduleService {
     opts: { sink?: SubmoduleLogSink; signal?: AbortSignal } = {}
   ): Promise<SpawnGitStreamingResult> {
     const args = ['submodule', 'deinit'];
-    if (force) { args.push('-f'); }
+    if (force) {
+      args.push('-f');
+    }
     args.push('--', submodulePath);
     opts.sink?.header(`$ git ${args.join(' ')}`);
     return this.spawnGitStreaming(args, opts);
@@ -289,23 +317,36 @@ export class SubmoduleService {
     const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
     const fullCwd = resolveSubmoduleCwd(this.gitRoot, cwd);
 
-    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
-      const child = cp.spawn(gitPath, args, { cwd: fullCwd, windowsHide: true });
-      const timer = setTimeout(() => {
-        child.kill();
-        reject(new Error(`Git command timed out: git ${args.join(' ')}`));
-      }, timeoutMs);
-      let stdout = '';
-      let stderr = '';
-      child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-      child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-      child.on('error', (error: Error) => { clearTimeout(timer); reject(error); });
-      child.on('close', (code: number | null) => {
-        clearTimeout(timer);
-        if (code === 0) { resolve({ stdout, stderr }); return; }
-        reject(new Error(stderr || `Git command failed with exit code ${code}`));
-      });
-    }));
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GitCommandResult>((resolve, reject) => {
+          const child = cp.spawn(gitPath, args, { cwd: fullCwd, windowsHide: true });
+          const timer = setTimeout(() => {
+            child.kill();
+            reject(new Error(`Git command timed out: git ${args.join(' ')}`));
+          }, timeoutMs);
+          let stdout = '';
+          let stderr = '';
+          child.stdout.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+          });
+          child.stderr.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+          });
+          child.on('error', (error: Error) => {
+            clearTimeout(timer);
+            reject(error);
+          });
+          child.on('close', (code: number | null) => {
+            clearTimeout(timer);
+            if (code === 0) {
+              resolve({ stdout, stderr });
+              return;
+            }
+            reject(new Error(stderr || `Git command failed with exit code ${code}`));
+          });
+        })
+    );
   }
 
   private async getSubmoduleWorktreeStatus(
@@ -327,7 +368,9 @@ export class SubmoduleService {
     try {
       const result = await this.runGit(['ls-files', '-s', '--', submodulePath]);
       const line = result.stdout.split(/\r?\n/).find((value) => value.trim().length > 0);
-      if (!line) { return undefined; }
+      if (!line) {
+        return undefined;
+      }
       const match = line.match(/^\d+\s+([0-9a-fA-F]{7,40})\s+\d+\t/);
       return match?.[1];
     } catch {

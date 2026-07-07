@@ -27,7 +27,9 @@ describe('repositoryStateDiff', () => {
 
   it('flags headRefChanged on branch switch', () => {
     const prev = buildRepositoryFingerprint(snapshot({ HEAD: { name: 'main', commit: 'aaaa' } }));
-    const next = buildRepositoryFingerprint(snapshot({ HEAD: { name: 'feature', commit: 'aaaa' } }));
+    const next = buildRepositoryFingerprint(
+      snapshot({ HEAD: { name: 'feature', commit: 'aaaa' } })
+    );
     const cs = diffRepositoryFingerprints(prev, next);
     assert.strictEqual(cs.headRefChanged, true);
     assert.strictEqual(cs.headCommitChanged, false);

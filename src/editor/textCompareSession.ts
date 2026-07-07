@@ -11,8 +11,9 @@ export class TextCompareSession implements vscode.Disposable {
   private rightUri: vscode.Uri | undefined;
   private disposed = false;
   private sessionSettled = false;
+  private standaloneCheckArmed = false;
 
-  private constructor() { }
+  private constructor() {}
 
   static async create(left: TextSource, right: TextSource): Promise<TextCompareSession> {
     const session = new TextCompareSession();
@@ -43,11 +44,39 @@ export class TextCompareSession implements vscode.Disposable {
         })
       );
 
-      await this.disposeIfHidden();
+      await this.waitForInitialTabRegistration();
       this.sessionSettled = true;
+      await this.disposeIfHidden();
+      this.standaloneCheckArmed = true;
     } catch (error) {
       await this.closeDocuments(leftDoc?.uri, rightDoc?.uri);
       throw error;
+    }
+  }
+
+  private hasRegisteredTabs(): boolean {
+    const visibleUris = collectVisibleTabUris();
+    const leftVisible = this.leftUri ? visibleUris.has(this.leftUri.toString()) : false;
+    const rightVisible = this.rightUri ? visibleUris.has(this.rightUri.toString()) : false;
+    return leftVisible || rightVisible;
+  }
+
+  /**
+   * `vscode.diff` resolving does not guarantee `tabGroups.all` already reflects
+   * the new diff tab — VS Code's tab bookkeeping can lag a tick behind. Poll
+   * briefly so the initial `disposeIfHidden` call below doesn't mistake "not
+   * registered yet" for "already closed" and tear down a session the user is
+   * actively looking at.
+   */
+  private async waitForInitialTabRegistration(): Promise<void> {
+    const maxAttempts = 20;
+    const delayMs = 25;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      if (this.hasRegisteredTabs()) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   }
 
@@ -65,13 +94,17 @@ export class TextCompareSession implements vscode.Disposable {
       return;
     }
 
-    if (!this.sessionSettled) {
+    if (!this.sessionSettled || !this.standaloneCheckArmed) {
       return;
     }
 
     const standaloneVisibleUris = collectStandaloneVisibleTabUris();
-    const leftStandalone = this.leftUri ? standaloneVisibleUris.has(this.leftUri.toString()) : false;
-    const rightStandalone = this.rightUri ? standaloneVisibleUris.has(this.rightUri.toString()) : false;
+    const leftStandalone = this.leftUri
+      ? standaloneVisibleUris.has(this.leftUri.toString())
+      : false;
+    const rightStandalone = this.rightUri
+      ? standaloneVisibleUris.has(this.rightUri.toString())
+      : false;
 
     if (leftStandalone !== rightStandalone) {
       this.dispose();
@@ -190,7 +223,9 @@ async function closeDocument(uri: vscode.Uri | undefined): Promise<void> {
   }
 
   // Fall back to showing and closing the document even if it has no editor.
-  const document = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === uri.toString());
+  const document = vscode.workspace.textDocuments.find(
+    (doc) => doc.uri.toString() === uri.toString()
+  );
   if (!document) {
     return;
   }

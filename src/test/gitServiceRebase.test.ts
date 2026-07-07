@@ -6,11 +6,21 @@ import { GitCommandResult } from '../types';
 
 function makeLogger() {
   return {
-    info: () => { /* noop */ },
-    warn: () => { /* noop */ },
-    error: () => { /* noop */ },
-    show: () => { /* noop */ },
-    dispose: () => { /* noop */ }
+    info: () => {
+      /* noop */
+    },
+    warn: () => {
+      /* noop */
+    },
+    error: () => {
+      /* noop */
+    },
+    show: () => {
+      /* noop */
+    },
+    dispose: () => {
+      /* noop */
+    }
   };
 }
 
@@ -41,9 +51,11 @@ describe('GitService rebase', () => {
   const originalGetExtension = vscode.extensions.getExtension;
 
   afterEach(() => {
-    (vscode.extensions as unknown as {
-      getExtension: typeof vscode.extensions.getExtension;
-    }).getExtension = originalGetExtension;
+    (
+      vscode.extensions as unknown as {
+        getExtension: typeof vscode.extensions.getExtension;
+      }
+    ).getExtension = originalGetExtension;
   });
 
   it('rebases through the CLI runner even when the VS Code Git API is available', async () => {
@@ -62,20 +74,23 @@ describe('GitService rebase', () => {
       }
     };
 
-    (vscode.extensions as unknown as {
-      getExtension: typeof vscode.extensions.getExtension;
-    }).getExtension = () => ({
-      isActive: true,
-      exports: {
-        enabled: true,
-        getAPI: () => ({
-          repositories: [repository],
-          getRepository: () => repository,
-          getRepositoryRoot: async () => vscode.Uri.file('/repo'),
-          openRepository: async () => repository
-        })
+    (
+      vscode.extensions as unknown as {
+        getExtension: typeof vscode.extensions.getExtension;
       }
-    } as never);
+    ).getExtension = () =>
+      ({
+        isActive: true,
+        exports: {
+          enabled: true,
+          getAPI: () => ({
+            repositories: [repository],
+            getRepository: () => repository,
+            getRepositoryRoot: async () => vscode.Uri.file('/repo'),
+            openRepository: async () => repository
+          })
+        }
+      }) as never;
 
     const git = new RecordingGitService();
 

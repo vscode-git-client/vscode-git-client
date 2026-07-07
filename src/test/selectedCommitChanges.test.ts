@@ -3,6 +3,7 @@ import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { GitCommand } from '../config/commands';
 import { describe, it, afterEach } from 'node:test';
 import * as vscode from 'vscode';
 import { CommandController } from '../commands/commandController';
@@ -46,18 +47,20 @@ function registerController(
 ): Map<string, (...args: unknown[]) => Promise<void>> {
   const commands = new Map<string, (...args: unknown[]) => Promise<void>>();
 
-  (vscode.commands as unknown as {
-    registerCommand: typeof vscode.commands.registerCommand;
-  }).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
+  (
+    vscode.commands as unknown as {
+      registerCommand: typeof vscode.commands.registerCommand;
+    }
+  ).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
     commands.set(command, callback);
-    return { dispose() { } };
+    return { dispose() {} };
   };
 
   const controller = new CommandController(
     git as never,
     state as never,
     (editor ?? {}) as never,
-    { error() { }, warn() { }, info() { } } as never,
+    { error() {}, warn() {}, info() {} } as never,
     (commitFilesView ?? {
       getCommitActionContext: () => undefined,
       getAllFileItems: () => [],
@@ -77,24 +80,51 @@ describe('selected commit file changes', () => {
   const originalShowWarningMessage = vscode.window.showWarningMessage;
 
   afterEach(() => {
-    (vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }).registerCommand = originalRegisterCommand;
-    (vscode.window as unknown as { showInformationMessage: typeof vscode.window.showInformationMessage }).showInformationMessage = originalShowInformationMessage;
-    (vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage }).showWarningMessage = originalShowWarningMessage;
+    (
+      vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }
+    ).registerCommand = originalRegisterCommand;
+    (
+      vscode.window as unknown as {
+        showInformationMessage: typeof vscode.window.showInformationMessage;
+      }
+    ).showInformationMessage = originalShowInformationMessage;
+    (
+      vscode.window as unknown as { showWarningMessage: typeof vscode.window.showWarningMessage }
+    ).showWarningMessage = originalShowWarningMessage;
   });
 
   it('cherry-picks multiple selected Git Graph file rows from the same commit', async () => {
     const events: string[] = [];
     const sha = 'abcdef1234567890';
     const commit = createGraphCommit(sha);
-    const first = new GraphCommitFileTreeItem(commit, 'src/a.ts', undefined, undefined, '/repo', false);
-    const second = new GraphCommitFileTreeItem(commit, 'src/b.ts', undefined, undefined, '/repo', false);
+    const first = new GraphCommitFileTreeItem(
+      commit,
+      'src/a.ts',
+      undefined,
+      undefined,
+      '/repo',
+      false
+    );
+    const second = new GraphCommitFileTreeItem(
+      commit,
+      'src/b.ts',
+      undefined,
+      undefined,
+      '/repo',
+      false
+    );
 
-    (vscode.window as unknown as {
-      showWarningMessage: typeof vscode.window.showWarningMessage;
-    }).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) => acceptLabel;
-    (vscode.window as unknown as {
-      showInformationMessage: typeof vscode.window.showInformationMessage;
-    }).showInformationMessage = async (message: string) => {
+    (
+      vscode.window as unknown as {
+        showWarningMessage: typeof vscode.window.showWarningMessage;
+      }
+    ).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) =>
+      acceptLabel;
+    (
+      vscode.window as unknown as {
+        showInformationMessage: typeof vscode.window.showInformationMessage;
+      }
+    ).showInformationMessage = async (message: string) => {
       events.push(`message:${message}`);
       return undefined;
     };
@@ -115,7 +145,7 @@ describe('selected commit file changes', () => {
       }
     );
 
-    const cherryPick = commands.get('vscodeGitClient.commit.cherryPickSelectedChanges');
+    const cherryPick = commands.get(GitCommand.CommitCherryPickSelectedChanges);
     assert.ok(cherryPick, 'expected selected-changes cherry-pick command to be registered');
 
     await cherryPick(first, [first, second]);
@@ -147,7 +177,7 @@ describe('selected commit file changes', () => {
           rootUri: vscode.Uri.file(root),
           rootPath: root
         },
-        { error() { }, warn() { }, info() { } } as never,
+        { error() {}, warn() {}, info() {} } as never,
         vscode.workspace.getConfiguration()
       );
 
@@ -165,16 +195,37 @@ describe('selected commit file changes', () => {
     const events: string[] = [];
     const fromRef = 'feature-base^';
     const toRef = 'feature-tip';
-    const first = new CommitRangeFileTreeItem(fromRef, toRef, 'base', 'tip', 'src/a.ts', 'M', '/repo');
-    const second = new CommitRangeFileTreeItem(fromRef, toRef, 'base', 'tip', 'src/b.ts', 'A', '/repo');
+    const first = new CommitRangeFileTreeItem(
+      fromRef,
+      toRef,
+      'base',
+      'tip',
+      'src/a.ts',
+      'M',
+      '/repo'
+    );
+    const second = new CommitRangeFileTreeItem(
+      fromRef,
+      toRef,
+      'base',
+      'tip',
+      'src/b.ts',
+      'A',
+      '/repo'
+    );
     const patch = 'diff --git a/src/a.ts b/src/a.ts\n';
 
-    (vscode.window as unknown as {
-      showWarningMessage: typeof vscode.window.showWarningMessage;
-    }).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) => acceptLabel;
-    (vscode.window as unknown as {
-      showInformationMessage: typeof vscode.window.showInformationMessage;
-    }).showInformationMessage = async (message: string) => {
+    (
+      vscode.window as unknown as {
+        showWarningMessage: typeof vscode.window.showWarningMessage;
+      }
+    ).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) =>
+      acceptLabel;
+    (
+      vscode.window as unknown as {
+        showInformationMessage: typeof vscode.window.showInformationMessage;
+      }
+    ).showInformationMessage = async (message: string) => {
       events.push(`message:${message}`);
       return undefined;
     };
@@ -210,7 +261,9 @@ describe('selected commit file changes', () => {
           fromLabel: 'base',
           toLabel: 'tip',
           filePaths: selectedItems
-            .filter((item): item is CommitRangeFileTreeItem => item instanceof CommitRangeFileTreeItem)
+            .filter(
+              (item): item is CommitRangeFileTreeItem => item instanceof CommitRangeFileTreeItem
+            )
             .map((item) => item.filePath)
             .sort((a, b) => a.localeCompare(b)),
           canRevertSelected: true,
@@ -223,7 +276,7 @@ describe('selected commit file changes', () => {
       } as never
     );
 
-    const cherryPick = commands.get('vscodeGitClient.commit.cherryPickSelectedChanges');
+    const cherryPick = commands.get(GitCommand.CommitCherryPickSelectedChanges);
     assert.ok(cherryPick, 'expected selected-changes cherry-pick command to be registered');
 
     await cherryPick(first, [first, second]);
@@ -239,8 +292,22 @@ describe('selected commit file changes', () => {
 
   it('opens multiple selected working-tree comparison file diffs from Commit Details', async () => {
     const events: string[] = [];
-    const first = new WorkingTreeCompareFileTreeItem('HEAD', 'HEAD', 'src/a.ts', 'M', false, '/repo');
-    const second = new WorkingTreeCompareFileTreeItem('HEAD', 'HEAD', 'src/b.ts', 'A', true, '/repo');
+    const first = new WorkingTreeCompareFileTreeItem(
+      'HEAD',
+      'HEAD',
+      'src/a.ts',
+      'M',
+      false,
+      '/repo'
+    );
+    const second = new WorkingTreeCompareFileTreeItem(
+      'HEAD',
+      'HEAD',
+      'src/b.ts',
+      'A',
+      true,
+      '/repo'
+    );
 
     const commands = registerController(
       {},
@@ -261,15 +328,12 @@ describe('selected commit file changes', () => {
       }
     );
 
-    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    const openDiffs = commands.get(GitCommand.GraphOpenFileDiff);
     assert.ok(openDiffs, 'expected open diffs command to be registered');
 
     await openDiffs(second, [first, second]);
 
-    assert.deepStrictEqual(events, [
-      'src/a.ts:HEAD:HEAD:true:M',
-      'src/b.ts:HEAD:HEAD:true:A'
-    ]);
+    assert.deepStrictEqual(events, ['src/a.ts:HEAD:HEAD:true:M', 'src/b.ts:HEAD:HEAD:true:A']);
     assert.ok(first.contextValue?.includes('commitViewSelectableChange'));
   });
 
@@ -288,7 +352,9 @@ describe('selected commit file changes', () => {
     });
 
     const roots = await provider.getChildren();
-    const folder = roots.find((item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem);
+    const folder = roots.find(
+      (item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem
+    );
     assert.ok(folder, 'expected folder row');
     assert.ok(folder.contextValue?.includes('commitViewSelectableChange'));
 
@@ -311,7 +377,9 @@ describe('selected commit file changes', () => {
       ]
     });
     const roots = await provider.getChildren();
-    const folder = roots.find((item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem);
+    const folder = roots.find(
+      (item): item is CommitFolderTreeItem => item instanceof CommitFolderTreeItem
+    );
     assert.ok(folder, 'expected folder row');
 
     const commands = registerController(
@@ -329,30 +397,46 @@ describe('selected commit file changes', () => {
       provider as never
     );
 
-    const openDiffs = commands.get('vscodeGitClient.graph.openFileDiff');
+    const openDiffs = commands.get(GitCommand.GraphOpenFileDiff);
     assert.ok(openDiffs, 'expected open diffs command to be registered');
 
     await openDiffs(folder, [folder]);
 
-    assert.deepStrictEqual(events, [
-      'src/a.ts:HEAD:HEAD',
-      'src/nested/b.ts:HEAD:HEAD'
-    ]);
+    assert.deepStrictEqual(events, ['src/a.ts:HEAD:HEAD', 'src/nested/b.ts:HEAD:HEAD']);
   });
 
   it('reverts selected working-tree comparison file rows from Commit Details', async () => {
     const events: string[] = [];
     const ref = 'HEAD~1';
-    const first = new WorkingTreeCompareFileTreeItem(ref, 'HEAD~1', 'src/a.ts', 'M', false, '/repo');
-    const second = new WorkingTreeCompareFileTreeItem(ref, 'HEAD~1', 'src/new.ts', 'A', true, '/repo');
+    const first = new WorkingTreeCompareFileTreeItem(
+      ref,
+      'HEAD~1',
+      'src/a.ts',
+      'M',
+      false,
+      '/repo'
+    );
+    const second = new WorkingTreeCompareFileTreeItem(
+      ref,
+      'HEAD~1',
+      'src/new.ts',
+      'A',
+      true,
+      '/repo'
+    );
     const patch = 'diff --git a/src/a.ts b/src/a.ts\n';
 
-    (vscode.window as unknown as {
-      showWarningMessage: typeof vscode.window.showWarningMessage;
-    }).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) => acceptLabel;
-    (vscode.window as unknown as {
-      showInformationMessage: typeof vscode.window.showInformationMessage;
-    }).showInformationMessage = async (message: string) => {
+    (
+      vscode.window as unknown as {
+        showWarningMessage: typeof vscode.window.showWarningMessage;
+      }
+    ).showWarningMessage = async (_message: string, _options: unknown, acceptLabel: string) =>
+      acceptLabel;
+    (
+      vscode.window as unknown as {
+        showInformationMessage: typeof vscode.window.showInformationMessage;
+      }
+    ).showInformationMessage = async (message: string) => {
       events.push(`message:${message}`);
       return undefined;
     };
@@ -381,7 +465,10 @@ describe('selected commit file changes', () => {
           ref,
           refLabel: 'HEAD~1',
           filePaths: selectedItems
-            .filter((item): item is WorkingTreeCompareFileTreeItem => item instanceof WorkingTreeCompareFileTreeItem)
+            .filter(
+              (item): item is WorkingTreeCompareFileTreeItem =>
+                item instanceof WorkingTreeCompareFileTreeItem
+            )
             .map((item) => item.filePath)
             .sort((a, b) => a.localeCompare(b)),
           canRevertSelected: true,
@@ -395,7 +482,7 @@ describe('selected commit file changes', () => {
       } as never
     );
 
-    const revert = commands.get('vscodeGitClient.commit.revertSelectedChanges');
+    const revert = commands.get(GitCommand.CommitRevertSelectedChanges);
     assert.ok(revert, 'expected selected-changes revert command to be registered');
 
     await revert(second, [first, second]);

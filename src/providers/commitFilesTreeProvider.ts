@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { GitService } from '../services/gitService';
 import { CommitFileChange, WorkingTreeFileChange } from '../types';
 
@@ -18,10 +19,12 @@ export class CommitFileTreeItem extends vscode.TreeItem {
     this.resourceUri = vscode.Uri.file(path.join(workspaceRoot, filePath));
     this.description = statusBadge(status);
     this.description = this.description.padStart(2, ' ');
-    this.tooltip = oldPath ? `${oldPath} -> ${filePath}\n${statusTitle(status)}` : `${filePath}\n${statusTitle(status)}`;
+    this.tooltip = oldPath
+      ? `${oldPath} -> ${filePath}\n${statusTitle(status)}`
+      : `${filePath}\n${statusTitle(status)}`;
     this.command = {
       title: 'Open Diffs',
-      command: 'vscodeGitClient.graph.openFileDiff',
+      command: GitCommand.GraphOpenFileDiff,
       arguments: [this]
     };
   }
@@ -46,7 +49,7 @@ export class CommitRangeFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${statusTitle(status)}\n${fromLabel} ↔ ${toLabel}`;
     this.command = {
       title: 'Open Diffs',
-      command: 'vscodeGitClient.graph.openFileDiff',
+      command: GitCommand.GraphOpenFileDiff,
       arguments: [this]
     };
   }
@@ -66,7 +69,7 @@ export class RevisionFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\nRevision ${sha.slice(0, 8)}`;
     this.command = {
       title: 'Open File At Revision',
-      command: 'vscodeGitClient.graph.openRepositoryFileAtRevision',
+      command: GitCommand.GraphOpenRepositoryFileAtRevision,
       arguments: [this]
     };
   }
@@ -90,7 +93,7 @@ export class WorkingTreeCompareFileTreeItem extends vscode.TreeItem {
     this.tooltip = `${filePath}\n${untracked ? 'Untracked' : statusTitle(status)}`;
     this.command = {
       title: 'Open Working Tree File Diff',
-      command: 'vscodeGitClient.workingTreeCompare.openFileDiff',
+      command: GitCommand.WorkingTreeCompareOpenFileDiff,
       arguments: [this]
     };
   }
@@ -120,49 +123,61 @@ type CommitViewNode = CommitSelectableFileTreeItem | RevisionFileTreeItem;
 type TreeFileEntry = { path: string; status?: string; oldPath?: string; untracked?: boolean };
 export type CommitActionContext =
   | {
-    readonly kind: 'commit';
-    readonly sha: string;
-    readonly subject: string;
-    readonly filePaths: string[];
-    readonly fileStatuses?: Readonly<Record<string, string>>;
-    readonly canRevertSelected: boolean;
-    readonly canCherryPickSelected: boolean;
-    readonly canCreatePatchSelected: boolean;
-  }
+      readonly kind: 'commit';
+      readonly sha: string;
+      readonly subject: string;
+      readonly filePaths: string[];
+      readonly fileStatuses?: Readonly<Record<string, string>>;
+      readonly canRevertSelected: boolean;
+      readonly canCherryPickSelected: boolean;
+      readonly canCreatePatchSelected: boolean;
+    }
   | {
-    readonly kind: 'range';
-    readonly fromRef: string;
-    readonly toRef: string;
-    readonly fromLabel: string;
-    readonly toLabel: string;
-    readonly filePaths: string[];
-    readonly fileStatuses?: Readonly<Record<string, string>>;
-    readonly canRevertSelected: boolean;
-    readonly canCherryPickSelected: boolean;
-    readonly canCreatePatchSelected: boolean;
-  }
+      readonly kind: 'range';
+      readonly fromRef: string;
+      readonly toRef: string;
+      readonly fromLabel: string;
+      readonly toLabel: string;
+      readonly filePaths: string[];
+      readonly fileStatuses?: Readonly<Record<string, string>>;
+      readonly canRevertSelected: boolean;
+      readonly canCherryPickSelected: boolean;
+      readonly canCreatePatchSelected: boolean;
+    }
   | {
-    readonly kind: 'workingTreeCompare';
-    readonly ref: string;
-    readonly refLabel: string;
-    readonly filePaths: string[];
-    readonly fileStatuses?: Readonly<Record<string, string>>;
-    readonly canRevertSelected: boolean;
-    readonly canCherryPickSelected: boolean;
-    readonly canCreatePatchSelected: boolean;
-  };
+      readonly kind: 'workingTreeCompare';
+      readonly ref: string;
+      readonly refLabel: string;
+      readonly filePaths: string[];
+      readonly fileStatuses?: Readonly<Record<string, string>>;
+      readonly canRevertSelected: boolean;
+      readonly canCherryPickSelected: boolean;
+      readonly canCreatePatchSelected: boolean;
+    };
 type ActiveTreeState =
-  | { mode: 'commit'; sha: string; subject: string; files: CommitFileChange[]; canRevertSelected: boolean }
   | {
-    mode: 'range';
-    fromRef: string;
-    toRef: string;
-    fromLabel: string;
-    toLabel: string;
-    files: CommitFileChange[];
-  }
+      mode: 'commit';
+      sha: string;
+      subject: string;
+      files: CommitFileChange[];
+      canRevertSelected: boolean;
+    }
+  | {
+      mode: 'range';
+      fromRef: string;
+      toRef: string;
+      fromLabel: string;
+      toLabel: string;
+      files: CommitFileChange[];
+    }
   | { mode: 'revision'; sha: string; files: TreeFileEntry[] }
-  | { mode: 'workingTreeCompare'; ref: string; refLabel: string; scopePath: string; files: WorkingTreeFileChange[] };
+  | {
+      mode: 'workingTreeCompare';
+      ref: string;
+      refLabel: string;
+      scopePath: string;
+      files: WorkingTreeFileChange[];
+    };
 
 export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitViewNode> {
   private readonly emitter = new vscode.EventEmitter<void>();
@@ -170,7 +185,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   private activeState: ActiveTreeState | undefined;
   private view: vscode.TreeView<CommitViewNode> | undefined;
 
-  constructor(private readonly git: GitService) { }
+  constructor(private readonly git: GitService) {}
 
   attachView(view: vscode.TreeView<CommitViewNode> | undefined): void {
     this.view = view;
@@ -215,7 +230,12 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
 
     if (element instanceof CommitFolderTreeItem) {
       if (this.activeState.mode === 'commit') {
-        return buildCommitTree(this.activeState.sha, element.children, element.folderPath, this.git.rootPath);
+        return buildCommitTree(
+          this.activeState.sha,
+          element.children,
+          element.folderPath,
+          this.git.rootPath
+        );
       }
       if (this.activeState.mode === 'range') {
         return buildCommitRangeTree(
@@ -237,7 +257,12 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
           this.git.rootPath
         );
       }
-      return buildRevisionTree(this.activeState.sha, element.children, element.folderPath, this.git.rootPath);
+      return buildRevisionTree(
+        this.activeState.sha,
+        element.children,
+        element.folderPath,
+        this.git.rootPath
+      );
     }
 
     return [];
@@ -249,10 +274,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'commit', sha, subject, files, canRevertSelected: canRevert };
     this.updateViewTitle(`Commit Details ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', canRevert);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', !canRevert);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', !canRevert);
+    await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanRevertSelected,
+      canRevert
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCherryPickSelected,
+      !canRevert
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCreatePatchSelected,
+      !canRevert
+    );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -266,10 +303,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'revision', sha, files };
     this.updateViewTitle(`Repository ${formatRevisionNumber(sha)}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
+    await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanRevertSelected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCherryPickSelected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCreatePatchSelected,
+      false
+    );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -289,10 +338,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'range', fromRef, toRef, fromLabel, toLabel, files };
     this.updateViewTitle(`Commit Details ${fromLabel}..${toLabel}`);
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', true);
+    await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanRevertSelected,
+      true
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCherryPickSelected,
+      true
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCreatePatchSelected,
+      true
+    );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -310,10 +371,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = { mode: 'workingTreeCompare', ref, refLabel, scopePath, files };
     this.updateViewTitle('Commit Details');
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', true);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', true);
+    await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanRevertSelected,
+      true
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCherryPickSelected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCreatePatchSelected,
+      true
+    );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
   }
 
@@ -321,10 +394,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     this.activeState = undefined;
     this.updateViewTitle('Commit Details');
     this.emitter.fire();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
+    await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, false);
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanRevertSelected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCherryPickSelected,
+      false
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      GitCommand.CommitViewCanCreatePatchSelected,
+      false
+    );
   }
 
   getAllFileItems(): CommitFileTreeItem[] {
@@ -333,11 +418,22 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     }
     const activeCommit = this.activeState;
     return activeCommit.files
-      .map((file) => new CommitFileTreeItem(activeCommit.sha, file.path, file.status, file.oldPath, this.git.rootPath))
+      .map(
+        (file) =>
+          new CommitFileTreeItem(
+            activeCommit.sha,
+            file.path,
+            file.status,
+            file.oldPath,
+            this.git.rootPath
+          )
+      )
       .sort((a, b) => a.filePath.localeCompare(b.filePath));
   }
 
-  getCommitActionContext(selectedItems: readonly CommitSelectableFileTreeItem[]): CommitActionContext | undefined {
+  getCommitActionContext(
+    selectedItems: readonly CommitSelectableFileTreeItem[]
+  ): CommitActionContext | undefined {
     if (!this.activeState) {
       return undefined;
     }
@@ -409,7 +505,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   }
 }
 
-const CommitFilesTreeProviderViewId = 'vscodeGitClient.commitView';
+const CommitFilesTreeProviderViewId = GitCommand.CommitViewView;
 
 function buildCommitTree(
   sha: string,
@@ -421,8 +517,10 @@ function buildCommitTree(
     files,
     basePath,
     workspaceRoot,
-    (filePath, status, _untracked, oldPath) => new CommitFileTreeItem(sha, filePath, status ?? '', oldPath, workspaceRoot),
-    (folderPath, children) => new CommitFolderTreeItem(`commitView:${sha}`, folderPath, children, workspaceRoot)
+    (filePath, status, _untracked, oldPath) =>
+      new CommitFileTreeItem(sha, filePath, status ?? '', oldPath, workspaceRoot),
+    (folderPath, children) =>
+      new CommitFolderTreeItem(`commitView:${sha}`, folderPath, children, workspaceRoot)
   );
 }
 
@@ -437,7 +535,8 @@ function buildRevisionTree(
     basePath,
     workspaceRoot,
     (filePath) => new RevisionFileTreeItem(sha, filePath, workspaceRoot),
-    (folderPath, children) => new CommitFolderTreeItem(`commitView:revision:${sha}`, folderPath, children, workspaceRoot)
+    (folderPath, children) =>
+      new CommitFolderTreeItem(`commitView:revision:${sha}`, folderPath, children, workspaceRoot)
   );
 }
 
@@ -454,9 +553,23 @@ function buildCommitRangeTree(
     files,
     basePath,
     workspaceRoot,
-    (filePath, status) => new CommitRangeFileTreeItem(fromRef, toRef, fromLabel, toLabel, filePath, status ?? '', workspaceRoot),
+    (filePath, status) =>
+      new CommitRangeFileTreeItem(
+        fromRef,
+        toRef,
+        fromLabel,
+        toLabel,
+        filePath,
+        status ?? '',
+        workspaceRoot
+      ),
     (folderPath, children) =>
-      new CommitFolderTreeItem(`commitView:range:${fromRef}:${toRef}`, folderPath, children, workspaceRoot)
+      new CommitFolderTreeItem(
+        `commitView:range:${fromRef}:${toRef}`,
+        folderPath,
+        children,
+        workspaceRoot
+      )
   );
 }
 
@@ -472,10 +585,22 @@ function buildWorkingTreeCompareTree(
     basePath,
     workspaceRoot,
     (filePath, status, untracked) => {
-      return new WorkingTreeCompareFileTreeItem(ref, refLabel, filePath, status ?? '', untracked ?? false, workspaceRoot);
+      return new WorkingTreeCompareFileTreeItem(
+        ref,
+        refLabel,
+        filePath,
+        status ?? '',
+        untracked ?? false,
+        workspaceRoot
+      );
     },
     (folderPath, children) =>
-      new CommitFolderTreeItem(`commitView:workingTreeCompare:${ref}`, folderPath, children, workspaceRoot)
+      new CommitFolderTreeItem(
+        `commitView:workingTreeCompare:${ref}`,
+        folderPath,
+        children,
+        workspaceRoot
+      )
   );
 }
 
@@ -483,11 +608,25 @@ function buildTree(
   files: TreeFileEntry[],
   basePath: string,
   workspaceRoot: string,
-  toFileItem: (filePath: string, status?: string, untracked?: boolean, oldPath?: string) => CommitFileTreeItem | CommitRangeFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem,
+  toFileItem: (
+    filePath: string,
+    status?: string,
+    untracked?: boolean,
+    oldPath?: string
+  ) =>
+    | CommitFileTreeItem
+    | CommitRangeFileTreeItem
+    | RevisionFileTreeItem
+    | WorkingTreeCompareFileTreeItem,
   toFolderItem: (folderPath: string, children: TreeFileEntry[]) => CommitFolderTreeItem
 ): CommitViewNode[] {
   const folders = new Map<string, TreeFileEntry[]>();
-  const leaves: Array<CommitFileTreeItem | CommitRangeFileTreeItem | RevisionFileTreeItem | WorkingTreeCompareFileTreeItem> = [];
+  const leaves: Array<
+    | CommitFileTreeItem
+    | CommitRangeFileTreeItem
+    | RevisionFileTreeItem
+    | WorkingTreeCompareFileTreeItem
+  > = [];
 
   for (const file of files) {
     const relative = basePath ? file.path.slice(basePath.length + 1) : file.path;
@@ -539,17 +678,21 @@ function selectedFilePaths<T extends CommitSelectableFileTreeItem>(
   selectedItems: readonly CommitSelectableFileTreeItem[],
   ctor: new (...args: never[]) => T
 ): string[] {
-  return [...new Set(
-    selectedItems.flatMap((item) => {
-      if (item instanceof CommitFolderTreeItem) {
-        return item.children.map((child) => child.path);
-      }
-      if (item instanceof ctor) {
-        return [item.filePath];
-      }
-      return [];
-    }).filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b));
+  return [
+    ...new Set(
+      selectedItems
+        .flatMap((item) => {
+          if (item instanceof CommitFolderTreeItem) {
+            return item.children.map((child) => child.path);
+          }
+          if (item instanceof ctor) {
+            return [item.filePath];
+          }
+          return [];
+        })
+        .filter(Boolean)
+    )
+  ].sort((a, b) => a.localeCompare(b));
 }
 
 function statusMap(files: readonly TreeFileEntry[]): Readonly<Record<string, string>> {

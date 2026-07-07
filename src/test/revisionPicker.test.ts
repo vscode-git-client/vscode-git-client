@@ -21,8 +21,8 @@ describe('isLikelyShaPrefix', () => {
   });
 
   it('returns true for mid-range lengths (7, 12, 20)', () => {
-    assert.strictEqual(isLikelyShaPrefix('abc1234'), true);          // 7 chars
-    assert.strictEqual(isLikelyShaPrefix('0123456789ab'), true);     // 12 chars
+    assert.strictEqual(isLikelyShaPrefix('abc1234'), true); // 7 chars
+    assert.strictEqual(isLikelyShaPrefix('0123456789ab'), true); // 12 chars
     assert.strictEqual(isLikelyShaPrefix('0123456789abcdef0123'), true); // 20 chars
   });
 
@@ -90,7 +90,12 @@ describe('buildRevisionPickerItems', () => {
   it('emits a Local branches separator + icon-prefixed items for local branches', () => {
     const branches: BranchRef[] = [
       makeBranch({ name: 'main', type: 'local' }),
-      makeBranch({ name: 'feature/foo', shortName: 'feature/foo', fullName: 'refs/heads/feature/foo', type: 'local' })
+      makeBranch({
+        name: 'feature/foo',
+        shortName: 'feature/foo',
+        fullName: 'refs/heads/feature/foo',
+        type: 'local'
+      })
     ];
     const items = buildRevisionPickerItems(branches, []);
 
@@ -107,7 +112,13 @@ describe('buildRevisionPickerItems', () => {
 
   it('emits a Remote branches separator + icon-prefixed items for remote branches', () => {
     const branches: BranchRef[] = [
-      makeBranch({ name: 'origin/main', shortName: 'main', fullName: 'refs/remotes/origin/main', type: 'remote', remoteName: 'origin' })
+      makeBranch({
+        name: 'origin/main',
+        shortName: 'main',
+        fullName: 'refs/remotes/origin/main',
+        type: 'remote',
+        remoteName: 'origin'
+      })
     ];
     const items = buildRevisionPickerItems(branches, []);
 
@@ -145,7 +156,13 @@ describe('buildRevisionPickerItems', () => {
   it('emits all three sections when all groups are non-empty, in correct order', () => {
     const branches: BranchRef[] = [
       makeBranch({ name: 'main', type: 'local' }),
-      makeBranch({ name: 'origin/main', shortName: 'main', fullName: 'refs/remotes/origin/main', type: 'remote', remoteName: 'origin' })
+      makeBranch({
+        name: 'origin/main',
+        shortName: 'main',
+        fullName: 'refs/remotes/origin/main',
+        type: 'remote',
+        remoteName: 'origin'
+      })
     ];
     const tags: TagRef[] = [makeTag({ name: 'v1.0.0' })];
 
@@ -163,9 +180,7 @@ describe('buildRevisionPickerItems', () => {
   });
 
   it('marks the current branch with a "(current)" description', () => {
-    const branches: BranchRef[] = [
-      makeBranch({ name: 'main', type: 'local', current: true })
-    ];
+    const branches: BranchRef[] = [makeBranch({ name: 'main', type: 'local', current: true })];
     const items = buildRevisionPickerItems(branches, []);
 
     const branchItem = items.find((item) => item.label === '$(git-branch) main');
@@ -176,7 +191,13 @@ describe('buildRevisionPickerItems', () => {
   it('revision field is set correctly for each kind', () => {
     const branches: BranchRef[] = [
       makeBranch({ name: 'main', type: 'local' }),
-      makeBranch({ name: 'origin/main', shortName: 'main', fullName: 'refs/remotes/origin/main', type: 'remote', remoteName: 'origin' })
+      makeBranch({
+        name: 'origin/main',
+        shortName: 'main',
+        fullName: 'refs/remotes/origin/main',
+        type: 'remote',
+        remoteName: 'origin'
+      })
     ];
     const tags: TagRef[] = [makeTag({ name: 'v1.0.0' })];
 
@@ -184,18 +205,39 @@ describe('buildRevisionPickerItems', () => {
 
     const localItem = items.find((i) => i.label === '$(git-branch) main');
     assert.ok(localItem !== undefined, 'local branch item not found');
-    assert.ok((localItem as { revision?: { ref?: string; kind?: string } }).revision !== undefined, 'revision payload missing');
-    assert.strictEqual((localItem as { revision?: { ref?: string; kind?: string } }).revision!.ref, 'main');
-    assert.strictEqual((localItem as { revision?: { ref?: string; kind?: string } }).revision!.kind, 'branch');
+    assert.ok(
+      (localItem as { revision?: { ref?: string; kind?: string } }).revision !== undefined,
+      'revision payload missing'
+    );
+    assert.strictEqual(
+      (localItem as { revision?: { ref?: string; kind?: string } }).revision!.ref,
+      'main'
+    );
+    assert.strictEqual(
+      (localItem as { revision?: { ref?: string; kind?: string } }).revision!.kind,
+      'branch'
+    );
 
     const remoteItem = items.find((i) => i.label === '$(cloud) origin/main');
     assert.ok(remoteItem !== undefined, 'remote branch item not found');
-    assert.strictEqual((remoteItem as { revision?: { ref?: string; kind?: string } }).revision!.ref, 'origin/main');
-    assert.strictEqual((remoteItem as { revision?: { ref?: string; kind?: string } }).revision!.kind, 'remote');
+    assert.strictEqual(
+      (remoteItem as { revision?: { ref?: string; kind?: string } }).revision!.ref,
+      'origin/main'
+    );
+    assert.strictEqual(
+      (remoteItem as { revision?: { ref?: string; kind?: string } }).revision!.kind,
+      'remote'
+    );
 
     const tagItem = items.find((i) => i.label === '$(tag) v1.0.0');
     assert.ok(tagItem !== undefined, 'tag item not found');
-    assert.strictEqual((tagItem as { revision?: { ref?: string; kind?: string } }).revision!.ref, 'v1.0.0');
-    assert.strictEqual((tagItem as { revision?: { ref?: string; kind?: string } }).revision!.kind, 'tag');
+    assert.strictEqual(
+      (tagItem as { revision?: { ref?: string; kind?: string } }).revision!.ref,
+      'v1.0.0'
+    );
+    assert.strictEqual(
+      (tagItem as { revision?: { ref?: string; kind?: string } }).revision!.kind,
+      'tag'
+    );
   });
 });

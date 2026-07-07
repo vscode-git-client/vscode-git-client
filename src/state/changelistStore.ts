@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 
 export type Changelist = {
   id: string;
@@ -6,7 +7,7 @@ export type Changelist = {
   paths: string[];
 };
 
-const STATE_KEY = 'vscodeGitClient.changelists';
+const STATE_KEY = GitCommand.ChangelistsStateKey;
 const LEGACY_STATE_KEY = 'intelliGit.changelists';
 const DEFAULT_ID = 'default';
 
@@ -22,7 +23,8 @@ export class ChangelistStore implements vscode.Disposable {
   private assignments: Map<string, string>;
 
   constructor(private readonly memento: vscode.Memento) {
-    const persisted = memento.get<PersistedShape>(STATE_KEY) ?? memento.get<PersistedShape>(LEGACY_STATE_KEY);
+    const persisted =
+      memento.get<PersistedShape>(STATE_KEY) ?? memento.get<PersistedShape>(LEGACY_STATE_KEY);
     if (persisted && Array.isArray(persisted.lists)) {
       this.lists = persisted.lists.filter((l) => l.id !== DEFAULT_ID);
       this.assignments = new Map(Object.entries(persisted.assignments || {}));

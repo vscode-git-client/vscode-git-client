@@ -13,6 +13,7 @@
     ],
     "module": "CommonJS",
     "outDir": "dist",
+    "resolveJsonModule": true,
     "rootDir": "src",
     "skipDefaultLibCheck": true,
     "skipLibCheck": true,

@@ -4,17 +4,19 @@ import { describe, it } from 'node:test';
 import { SubmoduleService } from '../services/submoduleService';
 import type { SubmoduleLogSink } from '../services/submoduleLogSink';
 
-interface Captured { args: string[]; cwd?: string; }
+interface Captured {
+  args: string[];
+  cwd?: string;
+}
 
 class FakeSubmoduleService extends SubmoduleService {
   readonly spawned: Captured[] = [];
 
   constructor() {
-    super(
-      { get: <T>(_k: string, d: T) => d } as never,
-      '/repo',
-      async () => ({ stdout: '', stderr: '' })
-    );
+    super({ get: <T>(_k: string, d: T) => d } as never, '/repo', async () => ({
+      stdout: '',
+      stderr: ''
+    }));
   }
 
   protected override async spawnGitStreaming(
@@ -31,11 +33,21 @@ function recordingSink(): { sink: SubmoduleLogSink; lines: string[] } {
   return {
     lines,
     sink: {
-      header(line) { lines.push(`H:${line}`); },
-      stdout(line) { lines.push(`O:${line}`); },
-      stderr(line) { lines.push(`E:${line}`); },
-      done() { /* noop */ },
-      error() { /* noop */ }
+      header(line) {
+        lines.push(`H:${line}`);
+      },
+      stdout(line) {
+        lines.push(`O:${line}`);
+      },
+      stderr(line) {
+        lines.push(`E:${line}`);
+      },
+      done() {
+        /* noop */
+      },
+      error() {
+        /* noop */
+      }
     }
   };
 }
@@ -47,7 +59,7 @@ describe('SubmoduleService streaming ops', () => {
     const result = await svc.initAllSubmodules({ sink });
     assert.strictEqual(result.exitCode, 0);
     assert.deepStrictEqual(svc.spawned[0].args, ['submodule', 'init']);
-    assert.ok(lines.some(l => l === 'H:$ git submodule init'));
+    assert.ok(lines.some((l) => l === 'H:$ git submodule init'));
   });
 
   it('updateAllSubmodules(true) adds --recursive', async () => {
@@ -59,7 +71,13 @@ describe('SubmoduleService streaming ops', () => {
   it('updateSubmodule passes the path after `--`', async () => {
     const svc = new FakeSubmoduleService();
     await svc.updateSubmodule('libs/foo', false, { sink: recordingSink().sink });
-    assert.deepStrictEqual(svc.spawned[0].args, ['submodule', 'update', '--init', '--', 'libs/foo']);
+    assert.deepStrictEqual(svc.spawned[0].args, [
+      'submodule',
+      'update',
+      '--init',
+      '--',
+      'libs/foo'
+    ]);
   });
 
   it('syncSubmodule with no path syncs all', async () => {

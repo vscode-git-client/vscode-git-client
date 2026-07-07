@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.17.2",
+  "version": "1.17.3",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -41,8 +41,12 @@
     "copy-templates": "node scripts/copy-templates.js",
     "vscode:prepublish": "npm run check-types && npm run bundle",
     "watch": "tsc -watch -p .",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/*.test.js",
+    "test:coverage": "npm run compile && mkdir -p coverage && node --require ./scripts/register-vscode-mock.js --experimental-test-coverage --test dist/test/*.test.js 2>&1 | tee coverage/output.txt; node scripts/generate-coverage-html.js",
     "docs:dev": "npm --prefix website run dev",
     "docs:build": "npm --prefix website run build",
     "docs:preview": "npm --prefix website run preview",
@@ -943,6 +947,11 @@
           "group": "navigation@3"
         },
         {
+          "command": "vscodeGitClient.branch.resetCurrentToCommit",
+          "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
+          "group": "navigation@3.5"
+        },
+        {
           "command": "vscodeGitClient.graph.compareWithCurrent",
           "when": "view == vscodeGitClient.graph && viewItem == graphCommit",
           "group": "navigation@4"
@@ -1282,14 +1291,15 @@
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/vscode": "^1.90.0",
-    "@typescript-eslint/eslint-plugin": "^8.58.2",
-    "@typescript-eslint/parser": "^8.58.2",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.9.1",
     "esbuild": "^0.28.0",
     "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
     "handlebars": "^4.7.9",
+    "prettier": "^3.9.4",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.63.0",
     "xlsx": "^0.18.5"
   }
 }

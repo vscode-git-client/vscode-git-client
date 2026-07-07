@@ -42,8 +42,14 @@ export class GutterDecorationController implements vscode.Disposable {
     private readonly logger: Logger
   ) {
     this.enabled = getConfigValue<boolean>('gutterMarkers.enabled', true);
-    this.maxLineCount = getConfigValue<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
-    this.maxFileSizeKb = getConfigValue<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
+    this.maxLineCount = getConfigValue<number>(
+      'gutterMarkers.maxLineCount',
+      DEFAULT_GUTTER_MAX_LINE_COUNT
+    );
+    this.maxFileSizeKb = getConfigValue<number>(
+      'gutterMarkers.maxFileSizeKb',
+      DEFAULT_GUTTER_MAX_FILE_SIZE_KB
+    );
     this.decorations = createDecorations();
 
     this.disposables.push(
@@ -78,8 +84,14 @@ export class GutterDecorationController implements vscode.Disposable {
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (affectsConfig(event, 'gutterMarkers')) {
           this.enabled = getConfigValue<boolean>('gutterMarkers.enabled', true);
-          this.maxLineCount = getConfigValue<number>('gutterMarkers.maxLineCount', DEFAULT_GUTTER_MAX_LINE_COUNT);
-          this.maxFileSizeKb = getConfigValue<number>('gutterMarkers.maxFileSizeKb', DEFAULT_GUTTER_MAX_FILE_SIZE_KB);
+          this.maxLineCount = getConfigValue<number>(
+            'gutterMarkers.maxLineCount',
+            DEFAULT_GUTTER_MAX_LINE_COUNT
+          );
+          this.maxFileSizeKb = getConfigValue<number>(
+            'gutterMarkers.maxFileSizeKb',
+            DEFAULT_GUTTER_MAX_FILE_SIZE_KB
+          );
           if (!this.enabled) {
             this.clearAllVisible();
           } else {
@@ -204,14 +216,22 @@ export class GutterDecorationController implements vscode.Disposable {
     return this.gitService.toRepoRelative(uri.fsPath);
   }
 
-  private async shouldSkipDocument(doc: vscode.TextDocument, relativePath: string): Promise<boolean> {
+  private async shouldSkipDocument(
+    doc: vscode.TextDocument,
+    relativePath: string
+  ): Promise<boolean> {
     if (isGeneratedPath(relativePath)) {
       return true;
     }
 
     try {
       const stat = await vscode.workspace.fs.stat(doc.uri);
-      return shouldSkipGutterDocument(doc.lineCount, stat.size, this.maxLineCount, this.maxFileSizeKb);
+      return shouldSkipGutterDocument(
+        doc.lineCount,
+        stat.size,
+        this.maxLineCount,
+        this.maxFileSizeKb
+      );
     } catch {
       return shouldSkipGutterDocument(doc.lineCount, 0, this.maxLineCount, this.maxFileSizeKb);
     }
