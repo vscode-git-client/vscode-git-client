@@ -100,7 +100,9 @@ export class CompareView {
       try {
         await this.handleMessage(message);
       } catch (error) {
-        void vscode.window.showErrorMessage(`VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`);
+        void vscode.window.showErrorMessage(
+          `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     });
 
@@ -124,7 +126,11 @@ export class CompareView {
   render(result: CompareResult): void {
     this.currentResult = result;
     this.panel.title = `Compare ${result.leftRef} <> ${result.rightRef}`;
-    this.panel.webview.html = renderCompareHtml(result, this.getCompareExportFormat(), this.modeStore.getCompareViewMode());
+    this.panel.webview.html = renderCompareHtml(
+      result,
+      this.getCompareExportFormat(),
+      this.modeStore.getCompareViewMode()
+    );
   }
 
   private rerender(): void {
@@ -177,7 +183,9 @@ export class CompareView {
         try {
           await this.onRefresh(this.currentResult.leftRef, this.currentResult.rightRef);
         } finally {
-          void this.panel.webview.postMessage({ type: 'refreshComplete' } satisfies RefreshCompleteMessage);
+          void this.panel.webview.postMessage({
+            type: 'refreshComplete'
+          } satisfies RefreshCompleteMessage);
         }
       }
       return;
@@ -198,7 +206,9 @@ export class CompareView {
     await handleCommitAction(message);
   }
 
-  private resolveContinuousSelection(rawShas: readonly string[]): CompareCommitRangeSelection | undefined {
+  private resolveContinuousSelection(
+    rawShas: readonly string[]
+  ): CompareCommitRangeSelection | undefined {
     if (!this.currentResult) {
       return undefined;
     }
@@ -208,8 +218,16 @@ export class CompareView {
       return undefined;
     }
 
-    const leftSelection = this.resolveContinuousSelectionForSide(this.currentResult.commitsOnlyLeft, selectedShas, 'left');
-    const rightSelection = this.resolveContinuousSelectionForSide(this.currentResult.commitsOnlyRight, selectedShas, 'right');
+    const leftSelection = this.resolveContinuousSelectionForSide(
+      this.currentResult.commitsOnlyLeft,
+      selectedShas,
+      'left'
+    );
+    const rightSelection = this.resolveContinuousSelectionForSide(
+      this.currentResult.commitsOnlyRight,
+      selectedShas,
+      'right'
+    );
 
     return leftSelection ?? rightSelection;
   }
@@ -247,9 +265,10 @@ export class CompareView {
   }
 
   private async exportCompare(message: ExportCompareMessage): Promise<void> {
-    const format = message.format === 'excel' || message.format === 'csv'
-      ? message.format
-      : this.getCompareExportFormat();
+    const format =
+      message.format === 'excel' || message.format === 'csv'
+        ? message.format
+        : this.getCompareExportFormat();
     if (format === 'excel') {
       await this.exportAsExcel(message);
       return;
@@ -262,7 +281,9 @@ export class CompareView {
     const rightRef = message.rightRef || this.currentResult?.rightRef || 'right';
     const defaultFileName = `${sanitizeFileNameSegment(leftRef)}-vs-${sanitizeFileNameSegment(rightRef)}.xlsx`;
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-    const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, defaultFileName) : undefined;
+    const defaultUri = workspaceRoot
+      ? vscode.Uri.joinPath(workspaceRoot, defaultFileName)
+      : undefined;
     const targetUri = await vscode.window.showSaveDialog({
       title: 'Export Compare Branches As Excel',
       saveLabel: 'Export',
@@ -298,9 +319,12 @@ export class CompareView {
     XLSX.utils.book_append_sheet(workbook, leftSheet, leftSheetName);
     XLSX.utils.book_append_sheet(workbook, rightSheet, rightSheetName);
     const workbookBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    const bytes = workbookBuffer instanceof Uint8Array ? workbookBuffer : Buffer.from(workbookBuffer);
+    const bytes =
+      workbookBuffer instanceof Uint8Array ? workbookBuffer : Buffer.from(workbookBuffer);
     await vscode.workspace.fs.writeFile(targetUri, bytes);
-    void vscode.window.showInformationMessage(`VS Code Git Client: Exported compare commits to ${targetUri.fsPath}`);
+    void vscode.window.showInformationMessage(
+      `VS Code Git Client: Exported compare commits to ${targetUri.fsPath}`
+    );
   }
 
   private async exportAsCsv(message: ExportCompareMessage): Promise<void> {
@@ -308,7 +332,9 @@ export class CompareView {
     const rightRef = message.rightRef || this.currentResult?.rightRef || 'right';
     const defaultFileName = `${sanitizeFileNameSegment(leftRef)}-vs-${sanitizeFileNameSegment(rightRef)}.csv`;
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-    const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, defaultFileName) : undefined;
+    const defaultUri = workspaceRoot
+      ? vscode.Uri.joinPath(workspaceRoot, defaultFileName)
+      : undefined;
     const targetUri = await vscode.window.showSaveDialog({
       title: 'Export Compare Branches As CSV',
       saveLabel: 'Export',
@@ -324,16 +350,31 @@ export class CompareView {
 
     const [leftUri, rightUri] = buildCsvUris(targetUri, leftRef, rightRef);
     const headers = ['SHA', 'Subject', 'Author', 'Date'];
-    const leftRows = message.leftCommits.map((commit) => [commit.sha, commit.subject, commit.author, commit.date]);
-    const rightRows = message.rightCommits.map((commit) => [commit.sha, commit.subject, commit.author, commit.date]);
+    const leftRows = message.leftCommits.map((commit) => [
+      commit.sha,
+      commit.subject,
+      commit.author,
+      commit.date
+    ]);
+    const rightRows = message.rightCommits.map((commit) => [
+      commit.sha,
+      commit.subject,
+      commit.author,
+      commit.date
+    ]);
     await vscode.workspace.fs.writeFile(leftUri, Buffer.from(toCsv(headers, leftRows), 'utf8'));
     await vscode.workspace.fs.writeFile(rightUri, Buffer.from(toCsv(headers, rightRows), 'utf8'));
-    void vscode.window.showInformationMessage(`VS Code Git Client: Exported compare commits to ${leftUri.fsPath} and ${rightUri.fsPath}`);
+    void vscode.window.showInformationMessage(
+      `VS Code Git Client: Exported compare commits to ${leftUri.fsPath} and ${rightUri.fsPath}`
+    );
   }
-
 }
 
-function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFormat, mode: CompareViewMode): string {
+function renderCompareHtml(
+  result: CompareResult,
+  exportFormat: CompareExportFormat,
+  mode: CompareViewMode
+): string {
   const graphData = mode === 'graph' ? buildGraphRenderData(result) : undefined;
   return renderTemplate('compareView.hbs', {
     leftRef: result.leftRef,
@@ -342,7 +383,9 @@ function renderCompareHtml(result: CompareResult, exportFormat: CompareExportFor
     rightRef: result.rightRef,
     rightTotal: result.commitsOnlyRight.length,
     rightCommits: renderCommitRows(result.commitsOnlyRight, 'right'),
-    authorsJson: toInlineJson(collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight)),
+    authorsJson: toInlineJson(
+      collectDistinctAuthors(result.commitsOnlyLeft, result.commitsOnlyRight)
+    ),
     exportFormat,
     exportButtonLabel: exportFormat === 'excel' ? 'Export Excel' : 'Export CSV',
     mode,
@@ -474,7 +517,11 @@ function parseIsoTimestamp(value: string): number {
   return Number.isFinite(t) ? t : 0;
 }
 
-function renderGraphRow(commit: GraphCommit, side: 'left' | 'right', date: { label: string; title: string; timestamp: number }): string {
+function renderGraphRow(
+  commit: GraphCommit,
+  side: 'left' | 'right',
+  date: { label: string; title: string; timestamp: number }
+): string {
   return `<li class="graph-row commit-row" data-sha="${escapeHtml(commit.sha)}" data-short-sha="${escapeHtml(commit.shortSha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><span class="graph-row-spacer"></span><span class="graph-row-sha">${escapeHtml(commit.shortSha)}</span><span class="graph-row-subject">${escapeHtml(commit.subject)}</span><span class="graph-row-author">${escapeHtml(commit.author)}</span><span class="graph-row-date muted" title="${escapeHtml(date.title)}">${escapeHtml(date.label)}</span></li>`;
 }
 
@@ -547,18 +594,16 @@ function isCommitRangeClickMessage(value: unknown): value is CommitRangeClickMes
     return false;
   }
   const candidate = value as Record<string, unknown>;
-  return candidate.type === 'commitRangeClick'
-    && Array.isArray(candidate.shas)
-    && candidate.shas.every((sha) => typeof sha === 'string');
+  return (
+    candidate.type === 'commitRangeClick' &&
+    Array.isArray(candidate.shas) &&
+    candidate.shas.every((sha) => typeof sha === 'string')
+  );
 }
 
 function normalizeShas(rawShas: readonly string[]): string[] {
   return Array.from(
-    new Set(
-      rawShas
-        .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .filter(Boolean)
-    )
+    new Set(rawShas.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean))
   );
 }
 
@@ -567,11 +612,17 @@ function isSetCompareModeMessage(value: unknown): value is SetCompareModeMessage
     return false;
   }
   const candidate = value as Record<string, unknown>;
-  return candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph');
+  return (
+    candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph')
+  );
 }
 
 function isSelectionChangeMessage(value: unknown): value is SelectionChangeMessage {
-  return typeof value === 'object' && value !== null && (value as Record<string, unknown>).type === 'selectionChange';
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as Record<string, unknown>).type === 'selectionChange'
+  );
 }
 
 function isRefreshMessage(value: unknown): value is RefreshMessage {
@@ -631,7 +682,11 @@ function sanitizeFileNameSegment(value: string): string {
   return cleaned || 'branch';
 }
 
-function buildCsvUris(baseUri: vscode.Uri, leftRef: string, rightRef: string): [vscode.Uri, vscode.Uri] {
+function buildCsvUris(
+  baseUri: vscode.Uri,
+  leftRef: string,
+  rightRef: string
+): [vscode.Uri, vscode.Uri] {
   const basePath = baseUri.path.replace(/\.csv$/i, '');
   const leftSegment = sanitizeFileNameSegment(leftRef);
   const rightSegment = sanitizeFileNameSegment(rightRef);

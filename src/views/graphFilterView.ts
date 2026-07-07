@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { getConfigValue } from '../configuration';
-import { handleCommitAction, isCommitActionMessage, type CommitActionMessage } from './commitActions';
+import {
+  handleCommitAction,
+  isCommitActionMessage,
+  type CommitActionMessage
+} from './commitActions';
 import { collectBranchNames, sanitizeCommitFilters, serializeCommits } from './commitFilterModel';
 import { GraphFilterSnapshot } from './graphFilterSession';
 import { renderTemplate } from './templateRenderer';
@@ -37,7 +41,12 @@ export class GraphFilterView {
 
   private constructor(
     private readonly handlers: GraphFilterHandlers,
-    private readonly getInitial: () => { filters: CommitFilters; branches: BranchRef[]; commits: GraphCommit[]; hasMore: boolean }
+    private readonly getInitial: () => {
+      filters: CommitFilters;
+      branches: BranchRef[];
+      commits: GraphCommit[];
+      hasMore: boolean;
+    }
   ) {
     this.panel = vscode.window.createWebviewPanel(
       'vscodeGitClient.graphFilter',
@@ -73,7 +82,12 @@ export class GraphFilterView {
 
   static open(
     handlers: GraphFilterHandlers,
-    getInitial: () => { filters: CommitFilters; branches: BranchRef[]; commits: GraphCommit[]; hasMore: boolean }
+    getInitial: () => {
+      filters: CommitFilters;
+      branches: BranchRef[];
+      commits: GraphCommit[];
+      hasMore: boolean;
+    }
   ): GraphFilterView {
     if (GraphFilterView.current) {
       GraphFilterView.current.panel.reveal(vscode.ViewColumn.Active, false);
@@ -135,7 +149,11 @@ export class GraphFilterView {
       case 'loadMore': {
         try {
           const { commits, hasMore } = await this.handlers.loadMore();
-          void this.panel.webview.postMessage({ type: 'appendCommits', commits: serializeCommits(commits), hasMore });
+          void this.panel.webview.postMessage({
+            type: 'appendCommits',
+            commits: serializeCommits(commits),
+            hasMore
+          });
         } catch (error) {
           void vscode.window.showErrorMessage(
             `VS Code Git Client: ${error instanceof Error ? error.message : String(error)}`
@@ -146,7 +164,8 @@ export class GraphFilterView {
       }
       case 'apply': {
         const requestId = ++this.applyRequestId;
-        const inputRevision = typeof message.inputRevision === 'number' ? message.inputRevision : undefined;
+        const inputRevision =
+          typeof message.inputRevision === 'number' ? message.inputRevision : undefined;
         const snapshot = await this.handlers.apply(sanitizeCommitFilters(message.filters));
         if (requestId !== this.applyRequestId) {
           return;
@@ -219,10 +238,6 @@ export class GraphFilterView {
 
 function normalizeShas(values: readonly string[]): string[] {
   return Array.from(
-    new Set(
-      values
-        .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .filter(Boolean)
-    )
+    new Set(values.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean))
   );
 }

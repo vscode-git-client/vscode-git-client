@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { CommitFilesTreeProvider } from './commitFilesTreeProvider';
 
-export class CommitFileDecorationProvider implements vscode.FileDecorationProvider, vscode.Disposable {
+export class CommitFileDecorationProvider
+  implements vscode.FileDecorationProvider, vscode.Disposable
+{
   private readonly emitter = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
   readonly onDidChangeFileDecorations = this.emitter.event;
 

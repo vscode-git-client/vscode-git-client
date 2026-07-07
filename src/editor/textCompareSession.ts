@@ -13,7 +13,7 @@ export class TextCompareSession implements vscode.Disposable {
   private sessionSettled = false;
   private standaloneCheckArmed = false;
 
-  private constructor() { }
+  private constructor() {}
 
   static async create(left: TextSource, right: TextSource): Promise<TextCompareSession> {
     const session = new TextCompareSession();
@@ -99,8 +99,12 @@ export class TextCompareSession implements vscode.Disposable {
     }
 
     const standaloneVisibleUris = collectStandaloneVisibleTabUris();
-    const leftStandalone = this.leftUri ? standaloneVisibleUris.has(this.leftUri.toString()) : false;
-    const rightStandalone = this.rightUri ? standaloneVisibleUris.has(this.rightUri.toString()) : false;
+    const leftStandalone = this.leftUri
+      ? standaloneVisibleUris.has(this.leftUri.toString())
+      : false;
+    const rightStandalone = this.rightUri
+      ? standaloneVisibleUris.has(this.rightUri.toString())
+      : false;
 
     if (leftStandalone !== rightStandalone) {
       this.dispose();
@@ -219,7 +223,9 @@ async function closeDocument(uri: vscode.Uri | undefined): Promise<void> {
   }
 
   // Fall back to showing and closing the document even if it has no editor.
-  const document = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === uri.toString());
+  const document = vscode.workspace.textDocuments.find(
+    (doc) => doc.uri.toString() === uri.toString()
+  );
   if (!document) {
     return;
   }

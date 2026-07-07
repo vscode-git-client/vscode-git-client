@@ -1,5 +1,5 @@
-import type { GitScmRepository } from "./GitScmRepository";
-import type * as vscode from "vscode";
+import type { GitScmRepository } from './GitScmRepository';
+import type * as vscode from 'vscode';
 
 export type GitScmApi = {
   repositories: GitScmRepository[];

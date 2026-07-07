@@ -2,7 +2,20 @@ import * as vscode from 'vscode';
 import { getConfigValue } from '../configuration';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
-import { BranchRef, CommitFilters, ComparePair, CompareResult, GitOperationState, GraphCommit, MergeConflictFile, StashEntry, SubmoduleEntry, TagRef, WorkingTreeChange, WorktreeEntry } from '../types';
+import {
+  BranchRef,
+  CommitFilters,
+  ComparePair,
+  CompareResult,
+  GitOperationState,
+  GraphCommit,
+  MergeConflictFile,
+  StashEntry,
+  SubmoduleEntry,
+  TagRef,
+  WorkingTreeChange,
+  WorktreeEntry
+} from '../types';
 import { RefreshScheduler, RefreshScope } from './refreshScheduler';
 import { RepoChangeSet } from '../services/repositoryStateDiff';
 import { mapChangeSetToScopes } from './gitEventRouter';
@@ -16,7 +29,9 @@ const COMPARE_VIEW_MODE_KEY = 'vscodeGitClient.compareViewMode';
 export type CompareViewMode = 'list' | 'graph';
 
 function branchesEqual(a: readonly BranchRef[], b: readonly BranchRef[]): boolean {
-  if (a.length !== b.length) { return false; }
+  if (a.length !== b.length) {
+    return false;
+  }
   for (let i = 0; i < a.length; i += 1) {
     const left = a[i];
     const right = b[i];
@@ -36,7 +51,9 @@ function branchesEqual(a: readonly BranchRef[], b: readonly BranchRef[]): boolea
 }
 
 function tagsEqual(a: readonly TagRef[], b: readonly TagRef[]): boolean {
-  if (a.length !== b.length) { return false; }
+  if (a.length !== b.length) {
+    return false;
+  }
   for (let i = 0; i < a.length; i += 1) {
     const left = a[i];
     const right = b[i];
@@ -90,7 +107,10 @@ export class StateStore {
       this.workspaceState.get<ComparePair[]>(LEGACY_RECENT_COMPARE_PAIRS_KEY, [])
     );
     this._recentComparePairs = Array.isArray(persisted) ? persisted : [];
-    if (this._recentComparePairs.length > 0 && !this.workspaceState.get<ComparePair[]>(RECENT_COMPARE_PAIRS_KEY)) {
+    if (
+      this._recentComparePairs.length > 0 &&
+      !this.workspaceState.get<ComparePair[]>(RECENT_COMPARE_PAIRS_KEY)
+    ) {
       void this.workspaceState.update(RECENT_COMPARE_PAIRS_KEY, this._recentComparePairs);
     }
   }
@@ -176,7 +196,10 @@ export class StateStore {
   }
 
   private getRefreshDebounceMs(): number {
-    return getConfigValue<number>('performance.refreshDebounceMs', StateStore.DEFAULT_REFRESH_DEBOUNCE_MS);
+    return getConfigValue<number>(
+      'performance.refreshDebounceMs',
+      StateStore.DEFAULT_REFRESH_DEBOUNCE_MS
+    );
   }
 
   setRefreshScopeVisible(scope: RefreshScope, visible: boolean): void {
@@ -280,10 +303,7 @@ export class StateStore {
   }
 
   private async loadRefs(): Promise<void> {
-    await Promise.all([
-      this.loadBranches(),
-      this.loadTags()
-    ]);
+    await Promise.all([this.loadBranches(), this.loadTags()]);
   }
 
   private async loadBranches(): Promise<void> {
@@ -305,13 +325,17 @@ export class StateStore {
     try {
       const remoteUrls = await remoteUrlsPromise;
       const remotes = await this.git.getRemoteBranches(remoteUrls);
-      const merged = phaseAOk
-        ? [...(locals ?? []), ...remotes]
-        : remotes;
+      const merged = phaseAOk ? [...(locals ?? []), ...remotes] : remotes;
       merged.sort((a, b) => {
-        if (a.current) { return -1; }
-        if (b.current) { return 1; }
-        if (a.type !== b.type) { return a.type === 'local' ? -1 : 1; }
+        if (a.current) {
+          return -1;
+        }
+        if (b.current) {
+          return 1;
+        }
+        if (a.type !== b.type) {
+          return a.type === 'local' ? -1 : 1;
+        }
         return a.name.localeCompare(b.name);
       });
       if (!branchesEqual(this._branches, merged)) {
@@ -358,7 +382,11 @@ export class StateStore {
   private async loadSubmodules(): Promise<void> {
     this._submodules = await this.git.getSubmodules().catch(() => []);
     this._submodulesLoaded = true;
-    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.hasSubmodules', this._submodules.length > 0);
+    void vscode.commands.executeCommand(
+      'setContext',
+      'vscodeGitClient.hasSubmodules',
+      this._submodules.length > 0
+    );
   }
 
   private async loadChanges(): Promise<void> {
@@ -370,8 +398,16 @@ export class StateStore {
     this._changes = changes;
     this._operationState = operationState;
     this._conflicts = conflicts;
-    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.operation', operationState.kind);
-    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.hasConflicts', conflicts.length > 0);
+    void vscode.commands.executeCommand(
+      'setContext',
+      'vscodeGitClient.operation',
+      operationState.kind
+    );
+    void vscode.commands.executeCommand(
+      'setContext',
+      'vscodeGitClient.hasConflicts',
+      conflicts.length > 0
+    );
   }
 
   async refreshGraph(filters?: CommitFilters): Promise<void> {
@@ -386,7 +422,9 @@ export class StateStore {
   }
 
   async loadMoreGraph(): Promise<GraphCommit[]> {
-    if (this._loadingMoreGraph) { return []; }
+    if (this._loadingMoreGraph) {
+      return [];
+    }
     this._loadingMoreGraph = true;
     try {
       const pageSize = getConfigValue<number>('maxGraphCommits', 200);
@@ -444,7 +482,7 @@ export class StateStore {
       if (!gitDir) {
         this.logger.warn(
           'VS Code Git Client: .git directory could not be resolved; ' +
-          'stashes/worktrees/submodules will refresh only on view focus.'
+            'stashes/worktrees/submodules will refresh only on view focus.'
         );
         return;
       }
@@ -507,7 +545,9 @@ export class StateStore {
   }
 
   private _scheduleRefreshChanges(): void {
-    if (this._changesRefreshTimer) { clearTimeout(this._changesRefreshTimer); }
+    if (this._changesRefreshTimer) {
+      clearTimeout(this._changesRefreshTimer);
+    }
     this._changesRefreshTimer = setTimeout(() => {
       void this.requestRefresh(['changes']).catch((err) => {
         this.logger.warn(`Auto-refresh changes failed: ${String(err)}`);
@@ -544,16 +584,22 @@ export class StateStore {
       fingerprints.push(`stashes:${JSON.stringify(this._stashes)}`);
     }
     if (scopes.has('changes')) {
-      fingerprints.push(`changes:${JSON.stringify({ changes: this._changes, operation: this._operationState, conflicts: this._conflicts })}`);
+      fingerprints.push(
+        `changes:${JSON.stringify({ changes: this._changes, operation: this._operationState, conflicts: this._conflicts })}`
+      );
     }
     if (scopes.has('graph')) {
       fingerprints.push(`graph:${JSON.stringify(this._graph)}:${String(this._graphHasMore)}`);
     }
     if (scopes.has('worktrees')) {
-      fingerprints.push(`worktrees:${String(this._worktreesLoaded)}:${JSON.stringify(this._worktrees)}`);
+      fingerprints.push(
+        `worktrees:${String(this._worktreesLoaded)}:${JSON.stringify(this._worktrees)}`
+      );
     }
     if (scopes.has('submodules')) {
-      fingerprints.push(`submodules:${String(this._submodulesLoaded)}:${JSON.stringify(this._submodules)}`);
+      fingerprints.push(
+        `submodules:${String(this._submodulesLoaded)}:${JSON.stringify(this._submodules)}`
+      );
     }
 
     return fingerprints.join('|');
@@ -561,7 +607,10 @@ export class StateStore {
 
   private pushComparePair(pair: ComparePair): void {
     const key = `${pair.left}:::${pair.right}`;
-    this._recentComparePairs = [pair, ...this._recentComparePairs.filter((item) => `${item.left}:::${item.right}` !== key)].slice(0, 10);
+    this._recentComparePairs = [
+      pair,
+      ...this._recentComparePairs.filter((item) => `${item.left}:::${item.right}` !== key)
+    ].slice(0, 10);
     void this.workspaceState.update(RECENT_COMPARE_PAIRS_KEY, this._recentComparePairs);
   }
 

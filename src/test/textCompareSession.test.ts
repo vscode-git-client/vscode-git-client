@@ -5,7 +5,10 @@ import { formatTextCompareTitle, TextCompareSession } from '../editor/textCompar
 
 describe('formatTextCompareTitle', () => {
   it('combines two labels with the compare glyph', () => {
-    assert.strictEqual(formatTextCompareTitle('foo.txt', 'bar.txt'), 'foo.txt ↔ bar.txt · Text Compare');
+    assert.strictEqual(
+      formatTextCompareTitle('foo.txt', 'bar.txt'),
+      'foo.txt ↔ bar.txt · Text Compare'
+    );
   });
 
   it('treats empty labels as empty strings', () => {
@@ -63,7 +66,10 @@ describe('TextCompareSession', () => {
     const leftUri = { scheme: 'untitled', toString: () => 'untitled:left' } as vscode.Uri;
     const rightUri = { scheme: 'untitled', toString: () => 'untitled:right' } as vscode.Uri;
 
-    const DiffInput = vscode.TabInputTextDiff as unknown as new (o: vscode.Uri, m: vscode.Uri) => { original: vscode.Uri; modified: vscode.Uri };
+    const DiffInput = vscode.TabInputTextDiff as unknown as new (
+      o: vscode.Uri,
+      m: vscode.Uri
+    ) => { original: vscode.Uri; modified: vscode.Uri };
     const TextInput = vscode.TabInputText as unknown as new (u: vscode.Uri) => { uri: vscode.Uri };
     const diffInput = new DiffInput(leftUri, rightUri);
     const standaloneInput = new TextInput(leftUri);
@@ -74,10 +80,7 @@ describe('TextCompareSession', () => {
     (vscode.window as any).tabGroups = {
       all: [
         {
-          tabs: [
-            { input: diffInput },
-            { input: standaloneInput }
-          ]
+          tabs: [{ input: diffInput }, { input: standaloneInput }]
         }
       ],
       onDidChangeTabs: () => ({ dispose: () => undefined }),
@@ -121,11 +124,15 @@ describe('TextCompareSession', () => {
     const leftUri = { scheme: 'untitled', toString: () => 'untitled:left' } as vscode.Uri;
     const rightUri = { scheme: 'untitled', toString: () => 'untitled:right' } as vscode.Uri;
 
-    const DiffInput = vscode.TabInputTextDiff as unknown as new (o: vscode.Uri, m: vscode.Uri) => { original: vscode.Uri; modified: vscode.Uri };
+    const DiffInput = vscode.TabInputTextDiff as unknown as new (
+      o: vscode.Uri,
+      m: vscode.Uri
+    ) => { original: vscode.Uri; modified: vscode.Uri };
     const diffInput = new DiffInput(leftUri, rightUri);
     const diffTab = { input: diffInput, isDirty: false };
 
-    let changeListener: ((event: { opened: unknown[]; closed: unknown[]; changed: unknown[] }) => void) | undefined;
+    let changeListener:
+      ((event: { opened: unknown[]; closed: unknown[]; changed: unknown[] }) => void) | undefined;
 
     const originalTabGroups = vscode.window.tabGroups;
     const originalShowTextDocument = (vscode.window as any).showTextDocument;
@@ -136,7 +143,9 @@ describe('TextCompareSession', () => {
           tabs: [diffTab]
         }
       ],
-      onDidChangeTabs: (listener: (event: { opened: unknown[]; closed: unknown[]; changed: unknown[] }) => void) => {
+      onDidChangeTabs: (
+        listener: (event: { opened: unknown[]; closed: unknown[]; changed: unknown[] }) => void
+      ) => {
         changeListener = listener;
         return { dispose: () => undefined };
       },
@@ -184,7 +193,10 @@ describe('TextCompareSession', () => {
     const leftUri = { scheme: 'untitled', toString: () => 'untitled:left' } as vscode.Uri;
     const rightUri = { scheme: 'untitled', toString: () => 'untitled:right' } as vscode.Uri;
 
-    const DiffInput = vscode.TabInputTextDiff as unknown as new (o: vscode.Uri, m: vscode.Uri) => { original: vscode.Uri; modified: vscode.Uri };
+    const DiffInput = vscode.TabInputTextDiff as unknown as new (
+      o: vscode.Uri,
+      m: vscode.Uri
+    ) => { original: vscode.Uri; modified: vscode.Uri };
     const diffInput = new DiffInput(leftUri, rightUri);
     const diffTab = { input: diffInput, isDirty: false };
 

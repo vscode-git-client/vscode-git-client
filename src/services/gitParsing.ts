@@ -42,7 +42,7 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
   const tokens = stdout.split('\0').filter((token) => token.length > 0);
   const entries: NameStatusEntry[] = [];
 
-  for (let index = 0; index < tokens.length; ) {
+  for (let index = 0; index < tokens.length;) {
     const statusToken = tokens[index++];
     const status = statusToken[0].toUpperCase();
 
@@ -81,8 +81,7 @@ export function convertToSshUrl(currentUrl: string, targetHost: string): string 
     return null;
   }
   const match =
-    currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/) ??
-    currentUrl.match(/^git@[^:]+:(.+)$/);
+    currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/) ?? currentUrl.match(/^git@[^:]+:(.+)$/);
   if (!match) {
     return null;
   }

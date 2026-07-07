@@ -11,10 +11,7 @@ describe('RefreshScheduler', () => {
       batches.push([...scopes].sort());
     });
 
-    await Promise.all([
-      scheduler.request(['changes']),
-      scheduler.request(['refs'])
-    ]);
+    await Promise.all([scheduler.request(['changes']), scheduler.request(['refs'])]);
 
     assert.deepStrictEqual(batches, [['changes', 'refs']]);
   });

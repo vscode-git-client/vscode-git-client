@@ -14,11 +14,21 @@ function recorder(): { sink: SubmoduleLogSink; calls: RecordedCall[] } {
   return {
     calls,
     sink: {
-      header(line) { calls.push({ type: 'stdout', payload: `HEADER:${line}` }); },
-      stdout(line) { calls.push({ type: 'stdout', payload: line }); },
-      stderr(line) { calls.push({ type: 'stderr', payload: line }); },
-      done(exitCode, durationMs) { calls.push({ type: 'done', payload: { exitCode, durationMs } }); },
-      error(err) { calls.push({ type: 'error', payload: err.message }); }
+      header(line) {
+        calls.push({ type: 'stdout', payload: `HEADER:${line}` });
+      },
+      stdout(line) {
+        calls.push({ type: 'stdout', payload: line });
+      },
+      stderr(line) {
+        calls.push({ type: 'stderr', payload: line });
+      },
+      done(exitCode, durationMs) {
+        calls.push({ type: 'done', payload: { exitCode, durationMs } });
+      },
+      error(err) {
+        calls.push({ type: 'error', payload: err.message });
+      }
     }
   };
 }
@@ -28,11 +38,7 @@ function runNode(script: string, signal?: AbortSignal) {
   const { sink, calls } = recorder();
   return {
     calls,
-    promise: spawnGitStreaming(
-      'node',
-      ['-e', script],
-      { gitRoot: process.cwd(), sink, signal }
-    )
+    promise: spawnGitStreaming('node', ['-e', script], { gitRoot: process.cwd(), sink, signal })
   };
 }
 
@@ -41,14 +47,14 @@ describe('spawnGitStreaming', () => {
     const { promise, calls } = runNode(`process.stdout.write('one\\ntwo\\nthree\\n');`);
     const result = await promise;
     assert.strictEqual(result.exitCode, 0);
-    const stdouts = calls.filter(c => c.type === 'stdout').map(c => c.payload);
+    const stdouts = calls.filter((c) => c.type === 'stdout').map((c) => c.payload);
     assert.deepStrictEqual(stdouts, ['one', 'two', 'three']);
   });
 
   it('flushes a trailing partial line on close', async () => {
     const { promise, calls } = runNode(`process.stdout.write('partial');`);
     await promise;
-    const stdouts = calls.filter(c => c.type === 'stdout').map(c => c.payload);
+    const stdouts = calls.filter((c) => c.type === 'stdout').map((c) => c.payload);
     assert.deepStrictEqual(stdouts, ['partial']);
   });
 
@@ -56,7 +62,7 @@ describe('spawnGitStreaming', () => {
     const { promise, calls } = runNode(`process.stderr.write('boom\\n'); process.exit(2);`);
     const result = await promise;
     assert.strictEqual(result.exitCode, 2);
-    const stderrs = calls.filter(c => c.type === 'stderr').map(c => c.payload);
+    const stderrs = calls.filter((c) => c.type === 'stderr').map((c) => c.payload);
     assert.deepStrictEqual(stderrs, ['boom']);
   });
 
@@ -65,7 +71,7 @@ describe('spawnGitStreaming', () => {
       `process.stderr.write('Receiving 1%\\rReceiving 50%\\rReceiving 100%\\n');`
     );
     await promise;
-    const stderrs = calls.filter(c => c.type === 'stderr').map(c => c.payload);
+    const stderrs = calls.filter((c) => c.type === 'stderr').map((c) => c.payload);
     assert.deepStrictEqual(stderrs, ['Receiving 100%']);
   });
 
@@ -78,21 +84,20 @@ describe('spawnGitStreaming', () => {
     setTimeout(() => controller.abort(), 100);
     const result = await promise;
     assert.strictEqual(result.exitCode, null);
-    const doneCall = calls.find(c => c.type === 'done');
+    const doneCall = calls.find((c) => c.type === 'done');
     assert.ok(doneCall, 'expected done() to be called');
   });
 
   it('calls sink.error and resolves with null exitCode on spawn failure', async () => {
     const { sink, calls } = recorder();
-    const result = await spawnGitStreaming(
-      '/nonexistent/binary-that-does-not-exist',
-      [],
-      { gitRoot: process.cwd(), sink }
-    );
+    const result = await spawnGitStreaming('/nonexistent/binary-that-does-not-exist', [], {
+      gitRoot: process.cwd(),
+      sink
+    });
     assert.strictEqual(result.exitCode, null);
-    const errorCall = calls.find(c => c.type === 'error');
+    const errorCall = calls.find((c) => c.type === 'error');
     assert.ok(errorCall, 'expected error() to be called');
-    const doneCall = calls.find(c => c.type === 'done');
+    const doneCall = calls.find((c) => c.type === 'done');
     assert.ok(doneCall, 'expected done() to be called');
   });
 });

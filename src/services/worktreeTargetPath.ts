@@ -5,7 +5,10 @@ export type WorktreeTargetPathResult =
   | { readonly ok: true; readonly targetPath: string }
   | { readonly ok: false; readonly message: string };
 
-export function buildDefaultWorktreeDirectoryName(currentWorktreePath: string, refName: string): string {
+export function buildDefaultWorktreeDirectoryName(
+  currentWorktreePath: string,
+  refName: string
+): string {
   const currentName = normalizeWorktreePathSegment(path.basename(currentWorktreePath));
   const refSegment = normalizeWorktreePathSegment(refName);
   return `${currentName}-${refSegment}`;

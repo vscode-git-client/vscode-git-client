@@ -14,7 +14,10 @@ export interface BranchSearchHandlers {
   checkoutTag(name: string): Promise<void>;
   openActions(name: string): Promise<void>;
   refresh(): Promise<void>;
-  runCommand(command: BranchContextMenuCommand | TagContextMenuCommand, name: string): Promise<void>;
+  runCommand(
+    command: BranchContextMenuCommand | TagContextMenuCommand,
+    name: string
+  ): Promise<void>;
 }
 
 type IncomingMessage =
@@ -121,7 +124,11 @@ export class BranchSearchView {
       sha: tag.sha,
       lastCommitEpoch: tag.lastCommitEpoch
     }));
-    void this.panel.webview.postMessage({ type: 'data', branches: branchPayload, tags: tagPayload });
+    void this.panel.webview.postMessage({
+      type: 'data',
+      branches: branchPayload,
+      tags: tagPayload
+    });
   }
 
   private async handleMessage(message: IncomingMessage): Promise<void> {

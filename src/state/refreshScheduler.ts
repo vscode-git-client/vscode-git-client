@@ -1,4 +1,5 @@
-export type RefreshScope = 'changes' | 'refs' | 'graph' | 'stashes' | 'worktrees' | 'submodules' | 'full';
+export type RefreshScope =
+  'changes' | 'refs' | 'graph' | 'stashes' | 'worktrees' | 'submodules' | 'full';
 
 export interface RefreshSchedulerOptions {
   readonly delayMs?: number;

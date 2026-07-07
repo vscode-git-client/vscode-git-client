@@ -22,7 +22,8 @@ export class ChangelistStore implements vscode.Disposable {
   private assignments: Map<string, string>;
 
   constructor(private readonly memento: vscode.Memento) {
-    const persisted = memento.get<PersistedShape>(STATE_KEY) ?? memento.get<PersistedShape>(LEGACY_STATE_KEY);
+    const persisted =
+      memento.get<PersistedShape>(STATE_KEY) ?? memento.get<PersistedShape>(LEGACY_STATE_KEY);
     if (persisted && Array.isArray(persisted.lists)) {
       this.lists = persisted.lists.filter((l) => l.id !== DEFAULT_ID);
       this.assignments = new Map(Object.entries(persisted.assignments || {}));

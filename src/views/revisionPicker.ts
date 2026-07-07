@@ -53,7 +53,10 @@ export function buildRevisionPickerItems(
   const remoteBranches = branches.filter((b) => b.type === 'remote');
 
   if (localBranches.length > 0) {
-    items.push({ label: 'Local branches', kind: vscode.QuickPickItemKind.Separator } as RevisionPickerItem);
+    items.push({
+      label: 'Local branches',
+      kind: vscode.QuickPickItemKind.Separator
+    } as RevisionPickerItem);
     for (const branch of localBranches) {
       items.push({
         label: `$(git-branch) ${branch.name}`,
@@ -64,7 +67,10 @@ export function buildRevisionPickerItems(
   }
 
   if (remoteBranches.length > 0) {
-    items.push({ label: 'Remote branches', kind: vscode.QuickPickItemKind.Separator } as RevisionPickerItem);
+    items.push({
+      label: 'Remote branches',
+      kind: vscode.QuickPickItemKind.Separator
+    } as RevisionPickerItem);
     for (const branch of remoteBranches) {
       items.push({
         label: `$(cloud) ${branch.name}`,
@@ -89,7 +95,9 @@ export function buildRevisionPickerItems(
 // ── Minimal git interface (avoids importing full GitService in tests) ──────────
 
 export interface RevisionResolver {
-  resolveRevisionToCommit(input: string): Promise<{ sha: string; subject: string; author: string; date: string } | undefined>;
+  resolveRevisionToCommit(
+    input: string
+  ): Promise<{ sha: string; subject: string; author: string; date: string } | undefined>;
 }
 
 // ── pickRevisionToCompare ─────────────────────────────────────────────────────
@@ -122,7 +130,8 @@ export async function pickRevisionToCompare(
     };
 
     const qp = vscode.window.createQuickPick<RevisionPickerItem>();
-    const defaultPlaceholder = options.placeholder ?? 'Select a branch, tag, or type a commit SHA...';
+    const defaultPlaceholder =
+      options.placeholder ?? 'Select a branch, tag, or type a commit SHA...';
     qp.title = options.title;
     qp.placeholder = defaultPlaceholder;
     qp.matchOnDescription = true;
@@ -158,9 +167,10 @@ export async function pickRevisionToCompare(
             return;
           }
           applyBaseItems();
-          qp.placeholder = baseItems.length > 0
-            ? defaultPlaceholder
-            : (options.emptyPlaceholder ?? 'No branches found - type a commit SHA');
+          qp.placeholder =
+            baseItems.length > 0
+              ? defaultPlaceholder
+              : (options.emptyPlaceholder ?? 'No branches found - type a commit SHA');
         })
         .catch(() => {
           if (!disposed) {
@@ -232,7 +242,11 @@ export async function pickRevisionToCompare(
       const [selected] = qp.selectedItems;
       const typed = qp.value.trim();
       if (!selected?.revision && options.allowTypedRevision && typed) {
-        settle({ ref: typed, label: typed, kind: isLikelyShaPrefix(typed.toLowerCase()) ? 'commit' : 'revision' });
+        settle({
+          ref: typed,
+          label: typed,
+          kind: isLikelyShaPrefix(typed.toLowerCase()) ? 'commit' : 'revision'
+        });
         qp.hide();
         return;
       }

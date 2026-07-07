@@ -19,7 +19,10 @@ class BranchSectionNode extends vscode.TreeItem {
 }
 
 class TagSectionNode extends vscode.TreeItem {
-  constructor(public readonly tags: TagRef[], count: number) {
+  constructor(
+    public readonly tags: TagRef[],
+    count: number
+  ) {
     super('Tags', vscode.TreeItemCollapsibleState.Expanded);
     this.contextValue = 'tagSection';
     this.id = 'branchSection:tags';
@@ -153,7 +156,12 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
 
     if (element instanceof BranchPathNode) {
-      return this.buildPathNodes(element.branches, element.fullPath, element.pathMode, element.idPrefix);
+      return this.buildPathNodes(
+        element.branches,
+        element.fullPath,
+        element.pathMode,
+        element.idPrefix
+      );
     }
 
     if (element instanceof TagSectionNode) {
@@ -199,7 +207,10 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
     return Array.from(byRemote.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([remoteName, remoteBranches]) => new BranchRemoteNode(remoteName, remoteBranches, remoteBranches[0]?.remoteUrl));
+      .map(
+        ([remoteName, remoteBranches]) =>
+          new BranchRemoteNode(remoteName, remoteBranches, remoteBranches[0]?.remoteUrl)
+      );
   }
 
   private buildPathNodes(
@@ -215,7 +226,9 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
       const branchPath = pathMode === 'name' ? branch.name : branch.shortName;
       const relativeName = basePath ? branchPath.slice(basePath.length + 1) : branchPath;
       if (!relativeName) {
-        leaves.push(new BranchTreeItem(branch, branchPath.split('/').at(-1) ?? branchPath, idPrefix));
+        leaves.push(
+          new BranchTreeItem(branch, branchPath.split('/').at(-1) ?? branchPath, idPrefix)
+        );
         continue;
       }
 
@@ -234,7 +247,16 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
     const groupItems = Array.from(groups.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([fullPath, branchSet]) => new BranchPathNode(idPrefix, fullPath.split('/').at(-1) ?? fullPath, fullPath, branchSet, pathMode));
+      .map(
+        ([fullPath, branchSet]) =>
+          new BranchPathNode(
+            idPrefix,
+            fullPath.split('/').at(-1) ?? fullPath,
+            fullPath,
+            branchSet,
+            pathMode
+          )
+      );
 
     leaves.sort((a, b) => {
       if (a.branch.current) {
@@ -304,7 +326,10 @@ export class BranchTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
         }
         return a.localeCompare(b);
       })
-      .map(([fullPath, tagSet]) => new TagPathNode(idPrefix, fullPath.split('/').at(-1) ?? fullPath, fullPath, tagSet));
+      .map(
+        ([fullPath, tagSet]) =>
+          new TagPathNode(idPrefix, fullPath.split('/').at(-1) ?? fullPath, fullPath, tagSet)
+      );
 
     leaves.sort((a, b) => compareTagsByTimeDesc(a.tag, b.tag));
 
@@ -354,7 +379,9 @@ function buildBranchTooltip(branch: BranchRef): string {
 }
 
 function buildTagTooltip(tag: TagRef): string {
-  const remoteLines = (tag.availableOnRemotes ?? []).map((remoteName) => `Available on ${remoteName}`);
+  const remoteLines = (tag.availableOnRemotes ?? []).map(
+    (remoteName) => `Available on ${remoteName}`
+  );
   const lines = [
     ...remoteLines,
     (tag.availableOnRemotes?.length ?? 0) === 0 ? 'Local only' : '',

@@ -13,8 +13,7 @@ const VIRTUAL_GIT_SCHEME = 'vscodegitclient';
 const WORKTREE_REF = 'WORKTREE';
 
 type ComparableDiffSide =
-  | { kind: 'ref'; ref: string; relativePath: string }
-  | { kind: 'worktree'; relativePath: string };
+  { kind: 'ref'; ref: string; relativePath: string } | { kind: 'worktree'; relativePath: string };
 type CompareWithRevisionDirection = 'forward' | 'reverse';
 
 export class EditorOrchestrator {
@@ -25,7 +24,7 @@ export class EditorOrchestrator {
     private readonly state: StateStore,
     private readonly contentProvider: VirtualGitContentProvider,
     private readonly commitFilesView: CommitFilesTreeProvider
-  ) { }
+  ) {}
 
   async openMergeConflict(filePath: string): Promise<void> {
     await this.git.openMergeEditor(filePath);
@@ -48,10 +47,16 @@ export class EditorOrchestrator {
   }
 
   async openDiffForUri(uri: vscode.Uri, title: string): Promise<void> {
-    await vscode.commands.executeCommand('vscode.diff', uri.with({ query: 'left' }), uri.with({ query: 'right' }), title, {
-      preview: false,
-      preserveFocus: false
-    });
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      uri.with({ query: 'left' }),
+      uri.with({ query: 'right' }),
+      title,
+      {
+        preview: false,
+        preserveFocus: false
+      }
+    );
   }
 
   async openBranchCompare(leftRef: string, rightRef: string): Promise<CompareResult> {
@@ -93,7 +98,9 @@ export class EditorOrchestrator {
   async openCommitFileDiff(sha: string, filePath: string): Promise<void> {
     const entries = await this.git.getFilesInCommitWithStatus(sha);
     const entry = entries.find((item) => item.path === filePath);
-    await this.openCommitFileDiffWithStatus(sha, filePath, entry?.status, { oldPath: entry?.oldPath });
+    await this.openCommitFileDiffWithStatus(sha, filePath, entry?.status, {
+      oldPath: entry?.oldPath
+    });
   }
 
   async openBranchComparisonFileDiff(leftRef: string, rightRef: string): Promise<void> {
@@ -138,7 +145,9 @@ export class EditorOrchestrator {
     }
 
     const normalized = filePath.replaceAll(path.sep, '/');
-    const leftUri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(`${sha}^`)}/${normalized}`);
+    const leftUri = vscode.Uri.parse(
+      `vscodegitclient:${encodeURIComponent(`${sha}^`)}/${normalized}`
+    );
     const rightUri = vscode.Uri.parse(`vscodegitclient:${encodeURIComponent(sha)}/${normalized}`);
     this.contentProvider.setContent(leftUri, leftContent);
     this.contentProvider.setContent(rightUri, rightContent);
@@ -190,19 +199,25 @@ export class EditorOrchestrator {
     const activeTab = vscode.window.tabGroups.activeTabGroup.activeTab;
     const input = activeTab?.input;
     if (!(input instanceof vscode.TabInputTextDiff)) {
-      void vscode.window.showInformationMessage('Open a VS Code Git Client diff tab to swap compare direction.');
+      void vscode.window.showInformationMessage(
+        'Open a VS Code Git Client diff tab to swap compare direction.'
+      );
       return;
     }
 
     const left = await this.parseComparableDiffSide(input.original);
     const right = await this.parseComparableDiffSide(input.modified);
     if (!left || !right) {
-      void vscode.window.showInformationMessage('This diff tab was not opened by VS Code Git Client.');
+      void vscode.window.showInformationMessage(
+        'This diff tab was not opened by VS Code Git Client.'
+      );
       return;
     }
 
     if (left.relativePath !== right.relativePath) {
-      void vscode.window.showInformationMessage('Cannot swap diff direction for sides that point at different files.');
+      void vscode.window.showInformationMessage(
+        'Cannot swap diff direction for sides that point at different files.'
+      );
       return;
     }
 
@@ -259,9 +274,7 @@ export class EditorOrchestrator {
   async openCommitRangeDetails(rawShas: readonly string[]): Promise<void> {
     const orderedShas = Array.from(
       new Set(
-        rawShas
-          .map((value) => (typeof value === 'string' ? value.trim() : ''))
-          .filter(Boolean)
+        rawShas.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)
       )
     );
     if (orderedShas.length < 2) {
@@ -301,7 +314,11 @@ export class EditorOrchestrator {
   async openFileAtRevision(ref: string, filePath: string): Promise<void> {
     const uri = await this.createVirtualUri(ref, filePath);
     const document = await vscode.workspace.openTextDocument(uri);
-    await vscode.window.showTextDocument(document, { preview: false, preserveFocus: true, viewColumn: vscode.ViewColumn.Beside });
+    await vscode.window.showTextDocument(document, {
+      preview: false,
+      preserveFocus: true,
+      viewColumn: vscode.ViewColumn.Beside
+    });
   }
 
   async openWorkingTreeFile(filePath: string): Promise<void> {
@@ -369,7 +386,10 @@ export class EditorOrchestrator {
     return uri;
   }
 
-  private async createComparableDiffUri(side: ComparableDiffSide, status?: string): Promise<vscode.Uri> {
+  private async createComparableDiffUri(
+    side: ComparableDiffSide,
+    status?: string
+  ): Promise<vscode.Uri> {
     if (side.kind === 'worktree') {
       return this.createWorkingTreeUri(side.relativePath, status);
     }
@@ -419,7 +439,9 @@ export class EditorOrchestrator {
   private async closeEmptyEditorGroups(): Promise<void> {
     const groups = vscode.window.tabGroups.all;
     const allGroupsAreEmpty = groups.every((group) => group.tabs.length === 0);
-    const emptyGroups = groups.filter((group) => group.tabs.length === 0 && !(allGroupsAreEmpty && group.isActive));
+    const emptyGroups = groups.filter(
+      (group) => group.tabs.length === 0 && !(allGroupsAreEmpty && group.isActive)
+    );
 
     if (emptyGroups.length > 0) {
       await vscode.window.tabGroups.close(emptyGroups, true);
@@ -458,7 +480,9 @@ function getCompareWithRevisionDirection(): CompareWithRevisionDirection {
   return configured === 'reverse' ? 'reverse' : 'forward';
 }
 
-function parseVirtualGitUri(uri: vscode.Uri): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
+function parseVirtualGitUri(
+  uri: vscode.Uri
+): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
   const fromQuery = parseVirtualGitMetadata(uri.query);
   if (fromQuery) {
     return fromQuery;
@@ -501,7 +525,9 @@ function withVirtualGitMetadata(
   return uri.with({ query: query.toString() });
 }
 
-function parseVirtualGitMetadata(query: string): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
+function parseVirtualGitMetadata(
+  query: string
+): { kind: 'ref' | 'worktree'; ref: string; relativePath: string } | undefined {
   if (!query) {
     return undefined;
   }

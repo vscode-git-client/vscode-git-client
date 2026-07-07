@@ -99,7 +99,7 @@ function makeWorkspaceState(): vscode.Memento {
   return {
     keys: () => Array.from(data.keys()) as readonly string[],
     get: <T>(key: string, defaultValue?: T): T | undefined =>
-      (data.has(key) ? (data.get(key) as T) : defaultValue),
+      data.has(key) ? (data.get(key) as T) : defaultValue,
     update: async (key: string, value: unknown) => {
       data.set(key, value);
     }

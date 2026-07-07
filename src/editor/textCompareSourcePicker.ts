@@ -9,8 +9,16 @@ export interface SourceQuickPickItem extends vscode.QuickPickItem {
 export function buildSourcePickerItems(): SourceQuickPickItem[] {
   return [
     { sourceKind: 'file', label: '$(file) Open file...', description: 'Choose a workspace file' },
-    { sourceKind: 'clipboard', label: '$(clippy) Paste from Clipboard', description: 'Use current clipboard text' },
-    { sourceKind: 'empty', label: '$(circle-outline) Empty text', description: 'Start with an empty buffer' }
+    {
+      sourceKind: 'clipboard',
+      label: '$(clippy) Paste from Clipboard',
+      description: 'Use current clipboard text'
+    },
+    {
+      sourceKind: 'empty',
+      label: '$(circle-outline) Empty text',
+      description: 'Start with an empty buffer'
+    }
   ];
 }
 

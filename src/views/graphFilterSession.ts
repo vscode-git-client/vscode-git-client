@@ -23,7 +23,7 @@ export class GraphFilterSession {
   constructor(
     private readonly loadGraph: GraphFilterLoader,
     private readonly getPageSize: () => number
-  ) { }
+  ) {}
 
   getSnapshot(master: GraphFilterSnapshot): GraphFilterSnapshot {
     if (this.usingMaster) {
@@ -63,7 +63,9 @@ export class GraphFilterSession {
     return this.getSnapshot(master);
   }
 
-  async loadMore(master: GraphFilterSnapshot): Promise<{ commits: GraphCommit[]; hasMore: boolean }> {
+  async loadMore(
+    master: GraphFilterSnapshot
+  ): Promise<{ commits: GraphCommit[]; hasMore: boolean }> {
     if (this.loadingMore) {
       return { commits: [], hasMore: this.getSnapshot(master).hasMore };
     }

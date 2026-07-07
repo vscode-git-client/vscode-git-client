@@ -59,7 +59,11 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
   switch (message.action) {
     case 'openDetails':
       if (message.isContinuous && normalizedShas.length > 1) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.openCommitRangeDetails', undefined, normalizedShas);
+        await vscode.commands.executeCommand(
+          'vscodeGitClient.graph.openCommitRangeDetails',
+          undefined,
+          normalizedShas
+        );
         return;
       }
       if (normalizedShas.length === 1) {
@@ -74,7 +78,9 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
     case 'copyCommitId':
       await vscode.env.clipboard.writeText(normalizedShas.join('\n'));
       void vscode.window.setStatusBarMessage(
-        normalizedShas.length > 1 ? `Copied ${normalizedShas.length} commit IDs` : `Copied commit ID ${sha}`,
+        normalizedShas.length > 1
+          ? `Copied ${normalizedShas.length} commit IDs`
+          : `Copied commit ID ${sha}`,
         1500
       );
       return;
@@ -84,7 +90,9 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       }
       await vscode.env.clipboard.writeText(normalizedSubjects.join('\n'));
       void vscode.window.setStatusBarMessage(
-        normalizedSubjects.length > 1 ? `Copied ${normalizedSubjects.length} commit messages` : 'Copied commit message',
+        normalizedSubjects.length > 1
+          ? `Copied ${normalizedSubjects.length} commit messages`
+          : 'Copied commit message',
         1500
       );
       return;
@@ -97,14 +105,22 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       return;
     case 'createPatch':
       if (message.isContinuous && normalizedShas.length > 1) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.createPatchForRange', undefined, normalizedShas);
+        await vscode.commands.executeCommand(
+          'vscodeGitClient.graph.createPatchForRange',
+          undefined,
+          normalizedShas
+        );
         return;
       }
       await runForEachSha('vscodeGitClient.graph.createPatch');
       return;
     case 'cherryPick':
       if (message.isContinuous && normalizedShas.length > 1) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.cherryPick', undefined, normalizedShas);
+        await vscode.commands.executeCommand(
+          'vscodeGitClient.graph.cherryPick',
+          undefined,
+          normalizedShas
+        );
         return;
       }
       await runForEachSha('vscodeGitClient.graph.cherryPick');
@@ -123,7 +139,11 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       return;
     case 'revertCommit':
       if (message.isContinuous && normalizedShas.length > 1) {
-        await vscode.commands.executeCommand('vscodeGitClient.graph.revert', undefined, normalizedShas);
+        await vscode.commands.executeCommand(
+          'vscodeGitClient.graph.revert',
+          undefined,
+          normalizedShas
+        );
         return;
       }
       await runForEachSha('vscodeGitClient.graph.revert');
@@ -165,12 +185,15 @@ export function isCommitActionMessage(value: unknown): value is CommitActionMess
     (Array.isArray(candidate.shas) && candidate.shas.every((item) => typeof item === 'string'));
   const hasValidSubjects =
     candidate.subjects === undefined ||
-    (Array.isArray(candidate.subjects) && candidate.subjects.every((item) => typeof item === 'string'));
-  return candidate.type === 'commitAction'
-    && typeof candidate.action === 'string'
-    && typeof candidate.sha === 'string'
-    && (candidate.subject === undefined || typeof candidate.subject === 'string')
-    && (candidate.isContinuous === undefined || typeof candidate.isContinuous === 'boolean')
-    && hasValidShas
-    && hasValidSubjects;
+    (Array.isArray(candidate.subjects) &&
+      candidate.subjects.every((item) => typeof item === 'string'));
+  return (
+    candidate.type === 'commitAction' &&
+    typeof candidate.action === 'string' &&
+    typeof candidate.sha === 'string' &&
+    (candidate.subject === undefined || typeof candidate.subject === 'string') &&
+    (candidate.isContinuous === undefined || typeof candidate.isContinuous === 'boolean') &&
+    hasValidShas &&
+    hasValidSubjects
+  );
 }

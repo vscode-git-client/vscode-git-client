@@ -24,15 +24,19 @@ type GitBaseApi = {
   registerRemoteSourceProvider(provider: {
     name: string;
     getRemoteSources(query?: string): unknown[] | Promise<unknown[]>;
-    getRemoteSourceActions?(url: string): {
-      label: string;
-      icon: string;
-      run(branch: string): void;
-    }[] | Promise<{
-      label: string;
-      icon: string;
-      run(branch: string): void;
-    }[]>;
+    getRemoteSourceActions?(url: string):
+      | {
+          label: string;
+          icon: string;
+          run(branch: string): void;
+        }[]
+      | Promise<
+          {
+            label: string;
+            icon: string;
+            run(branch: string): void;
+          }[]
+        >;
   }): vscode.Disposable;
 };
 
@@ -44,10 +48,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const logger = new Logger();
   context.subscriptions.push({ dispose: () => logger.dispose() });
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanRevertSelected', false);
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCherryPickSelected', false);
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewCanCreatePatchSelected', false);
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphMultiCommitSelection', false);
+  await vscode.commands.executeCommand(
+    'setContext',
+    'vscodeGitClient.commitViewCanRevertSelected',
+    false
+  );
+  await vscode.commands.executeCommand(
+    'setContext',
+    'vscodeGitClient.commitViewCanCherryPickSelected',
+    false
+  );
+  await vscode.commands.executeCommand(
+    'setContext',
+    'vscodeGitClient.commitViewCanCreatePatchSelected',
+    false
+  );
+  await vscode.commands.executeCommand(
+    'setContext',
+    'vscodeGitClient.graphMultiCommitSelection',
+    false
+  );
   await vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', false);
 
   const configuration = vscode.workspace.getConfiguration('vscodeGitClient');
@@ -64,7 +84,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     repositoryContext = getRepositoryContext();
   } catch (error) {
     logger.warn(String(error));
-    void vscode.window.showWarningMessage('VS Code Git Client: Open a workspace folder to enable the extension.');
+    void vscode.window.showWarningMessage(
+      'VS Code Git Client: Open a workspace folder to enable the extension.'
+    );
   }
 
   if (!repositoryContext) {
@@ -77,12 +99,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     };
     context.subscriptions.push(
       ...compactTreeViews([
-        createTreeViewSafely('vscodeGitClient.branches', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('vscodeGitClient.stashes', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely(
+          'vscodeGitClient.branches',
+          { treeDataProvider: emptyProvider },
+          logger
+        ),
+        createTreeViewSafely(
+          'vscodeGitClient.stashes',
+          { treeDataProvider: emptyProvider },
+          logger
+        ),
         createTreeViewSafely('vscodeGitClient.graph', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('vscodeGitClient.commitView', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('vscodeGitClient.worktrees', { treeDataProvider: emptyProvider }, logger),
-        createTreeViewSafely('vscodeGitClient.submodules', { treeDataProvider: emptyProvider }, logger)
+        createTreeViewSafely(
+          'vscodeGitClient.commitView',
+          { treeDataProvider: emptyProvider },
+          logger
+        ),
+        createTreeViewSafely(
+          'vscodeGitClient.worktrees',
+          { treeDataProvider: emptyProvider },
+          logger
+        ),
+        createTreeViewSafely(
+          'vscodeGitClient.submodules',
+          { treeDataProvider: emptyProvider },
+          logger
+        )
       ])
     );
     return;
@@ -91,7 +133,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const gitService = new GitService(repositoryContext, logger, configuration);
   const stateStore = new StateStore(gitService, logger, configuration, context.workspaceState);
 
-  context.subscriptions.push(vscode.languages.registerDocumentDropEditProvider('*', new StashDocumentDropEditProvider(gitService, stateStore)));
+  context.subscriptions.push(
+    vscode.languages.registerDocumentDropEditProvider(
+      '*',
+      new StashDocumentDropEditProvider(gitService, stateStore)
+    )
+  );
 
   const branchProvider = new BranchTreeProvider(stateStore);
   const stashProvider = new StashTreeProvider(stateStore);
@@ -99,41 +146,72 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const worktreeProvider = new WorktreeTreeProvider(stateStore);
   const submoduleProvider = new SubmoduleTreeProvider(stateStore);
 
-  const branchView = createTreeViewSafely('vscodeGitClient.branches', {
-    treeDataProvider: branchProvider,
-    showCollapseAll: true
-  }, logger);
-  const stashView = createTreeViewSafely('vscodeGitClient.stashes', {
-    treeDataProvider: stashProvider,
-    dragAndDropController: new StashTreeDragAndDropController(gitService, stateStore),
-    showCollapseAll: true
-  }, logger);
-  const graphView = createTreeViewSafely('vscodeGitClient.graph', {
-    treeDataProvider: graphProvider,
-    showCollapseAll: true,
-    canSelectMany: true
-  }, logger);
-  const worktreeView = createTreeViewSafely('vscodeGitClient.worktrees', {
-    treeDataProvider: worktreeProvider,
-    showCollapseAll: true
-  }, logger);
-  const submoduleView = createTreeViewSafely('vscodeGitClient.submodules', {
-    treeDataProvider: submoduleProvider,
-    showCollapseAll: true
-  }, logger);
+  const branchView = createTreeViewSafely(
+    'vscodeGitClient.branches',
+    {
+      treeDataProvider: branchProvider,
+      showCollapseAll: true
+    },
+    logger
+  );
+  const stashView = createTreeViewSafely(
+    'vscodeGitClient.stashes',
+    {
+      treeDataProvider: stashProvider,
+      dragAndDropController: new StashTreeDragAndDropController(gitService, stateStore),
+      showCollapseAll: true
+    },
+    logger
+  );
+  const graphView = createTreeViewSafely(
+    'vscodeGitClient.graph',
+    {
+      treeDataProvider: graphProvider,
+      showCollapseAll: true,
+      canSelectMany: true
+    },
+    logger
+  );
+  const worktreeView = createTreeViewSafely(
+    'vscodeGitClient.worktrees',
+    {
+      treeDataProvider: worktreeProvider,
+      showCollapseAll: true
+    },
+    logger
+  );
+  const submoduleView = createTreeViewSafely(
+    'vscodeGitClient.submodules',
+    {
+      treeDataProvider: submoduleProvider,
+      showCollapseAll: true
+    },
+    logger
+  );
   const commitFilesProvider = new CommitFilesTreeProvider(gitService);
   const commitDecorationProvider = new CommitFileDecorationProvider(commitFilesProvider);
-  const commitView = createTreeViewSafely('vscodeGitClient.commitView', {
-    treeDataProvider: commitFilesProvider,
-    showCollapseAll: true,
-    canSelectMany: true
-  }, logger);
+  const commitView = createTreeViewSafely(
+    'vscodeGitClient.commitView',
+    {
+      treeDataProvider: commitFilesProvider,
+      showCollapseAll: true,
+      canSelectMany: true
+    },
+    logger
+  );
   commitFilesProvider.attachView(commitView);
 
   const virtualProvider = new VirtualGitContentProvider();
-  context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('vscodegitclient', virtualProvider));
+  context.subscriptions.push(
+    vscode.workspace.registerTextDocumentContentProvider('vscodegitclient', virtualProvider)
+  );
 
-  const editor = new EditorOrchestrator(gitService, stateStore, virtualProvider, commitFilesProvider);
+  const editor = new EditorOrchestrator(
+    gitService,
+    stateStore,
+    virtualProvider,
+    commitFilesProvider
+  );
 
   const gutterController = new GutterDecorationController(gitService, stateStore, logger);
 
@@ -155,8 +233,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   if (branchView) {
     context.subscriptions.push(
       branchView.onDidChangeSelection((event) => {
-        const selectedRemote = event.selection.find((item): item is BranchRemoteNode => item instanceof BranchRemoteNode);
-        const hasUrl = Boolean(selectedRemote?.branches.some((branch) => Boolean(branch.remoteUrl)));
+        const selectedRemote = event.selection.find(
+          (item): item is BranchRemoteNode => item instanceof BranchRemoteNode
+        );
+        const hasUrl = Boolean(
+          selectedRemote?.branches.some((branch) => Boolean(branch.remoteUrl))
+        );
         void vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', hasUrl);
       })
     );
@@ -199,7 +281,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.onDidSaveTextDocument(() => {
       // Debounce: rapid saves (e.g. format-on-save + prettier) would otherwise
       // queue multiple back-to-back git-status processes, noticeable on Windows.
-      void stateStore.requestRefresh(['changes'], { delayMs: stateStore.getSaveRefreshDebounceMs() });
+      void stateStore.requestRefresh(['changes'], {
+        delayMs: stateStore.getSaveRefreshDebounceMs()
+      });
     })
   );
 
@@ -226,7 +310,9 @@ function createTreeViewSafely<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/No view is registered with id/i.test(message)) {
-      logger.warn(`Skipping tree view registration for ${id}: ${message}. Reload the Extension Development Host if package.json was just changed.`);
+      logger.warn(
+        `Skipping tree view registration for ${id}: ${message}. Reload the Extension Development Host if package.json was just changed.`
+      );
       return undefined;
     }
     throw error;
@@ -260,9 +346,12 @@ async function registerBranchActionHubInGitCheckout(
   logger: Logger
 ): Promise<void> {
   try {
-    const gitBaseExtension = vscode.extensions.getExtension<GitBaseExtensionExports>('vscode.git-base');
+    const gitBaseExtension =
+      vscode.extensions.getExtension<GitBaseExtensionExports>('vscode.git-base');
     if (!gitBaseExtension) {
-      logger.warn('Git Base extension is not available. Branch action hub integration is disabled.');
+      logger.warn(
+        'Git Base extension is not available. Branch action hub integration is disabled.'
+      );
       return;
     }
 
@@ -276,7 +365,7 @@ async function registerBranchActionHubInGitCheckout(
     const disposable = gitBaseApi.registerRemoteSourceProvider({
       name: 'VS Code Git Client Branch Actions',
       getRemoteSources: () => [],
-      getRemoteSourceActions: () => ([
+      getRemoteSourceActions: () => [
         {
           label: 'VS Code Git Client Branch Action Hub',
           icon: 'tools',
@@ -284,7 +373,7 @@ async function registerBranchActionHubInGitCheckout(
             void vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', branch);
           }
         }
-      ])
+      ]
     });
 
     context.subscriptions.push(disposable);
@@ -322,7 +411,11 @@ function attachOperationStatusBarActions(
     const isActionable = isRebaseActive || isCherryPickActive;
 
     if (isActionable) {
-      if (isRebaseActive && stateStore.operationState.stepCurrent && stateStore.operationState.stepTotal) {
+      if (
+        isRebaseActive &&
+        stateStore.operationState.stepCurrent &&
+        stateStore.operationState.stepTotal
+      ) {
         continueItem.text = `$(check) Continue (${stateStore.operationState.stepCurrent}/${stateStore.operationState.stepTotal})`;
       } else {
         continueItem.text = '$(check) Continue';
@@ -338,11 +431,5 @@ function attachOperationStatusBarActions(
   };
 
   update();
-  context.subscriptions.push(
-    continueItem,
-    abortItem,
-    skipItem,
-    stateStore.onDidChange(update)
-  );
+  context.subscriptions.push(continueItem, abortItem, skipItem, stateStore.onDidChange(update));
 }
-

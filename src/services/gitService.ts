@@ -77,7 +77,11 @@ interface VsCodeGitRepository {
   commit(message: string, opts?: { all?: boolean | 'tracked'; amend?: boolean }): Promise<void>;
   rebase(branch: string): Promise<void>;
   mergeAbort(): Promise<void>;
-  createStash(options?: { message?: string; includeUntracked?: boolean; staged?: boolean }): Promise<void>;
+  createStash(options?: {
+    message?: string;
+    includeUntracked?: boolean;
+    staged?: boolean;
+  }): Promise<void>;
 }
 
 interface VsCodeGitApi {
@@ -110,9 +114,15 @@ export class GitService {
   ].join(FIELD_SEPARATOR);
 
   private static readonly BRANCH_SORT_COMPARATOR = (a: BranchRef, b: BranchRef): number => {
-    if (a.current) { return -1; }
-    if (b.current) { return 1; }
-    if (a.type !== b.type) { return a.type === 'local' ? -1 : 1; }
+    if (a.current) {
+      return -1;
+    }
+    if (b.current) {
+      return 1;
+    }
+    if (a.type !== b.type) {
+      return a.type === 'local' ? -1 : 1;
+    }
     return a.name.localeCompare(b.name);
   };
 
@@ -127,7 +137,9 @@ export class GitService {
   private static readonly TAG_SORT_COMPARATOR = (a: TagRef, b: TagRef): number => {
     const left = a.lastCommitEpoch ?? 0;
     const right = b.lastCommitEpoch ?? 0;
-    if (left !== right) { return right - left; }
+    if (left !== right) {
+      return right - left;
+    }
     return a.name.localeCompare(b.name);
   };
 
@@ -135,7 +147,7 @@ export class GitService {
     private readonly context: RepositoryContext,
     private readonly logger: Logger,
     private readonly config: vscode.WorkspaceConfiguration
-  ) { }
+  ) {}
 
   get rootPath(): string {
     return this.context.rootPath;
@@ -538,7 +550,9 @@ export class GitService {
     };
 
     const shortenRef = async (value?: string): Promise<string | undefined> => {
-      if (!value) { return undefined; }
+      if (!value) {
+        return undefined;
+      }
       try {
         const result = await this.runGit(['rev-parse', '--short', value]);
         return result.stdout.trim() || value.slice(0, 8);
@@ -555,7 +569,7 @@ export class GitService {
         exists('rebase-apply'),
         exists('MERGE_HEAD'),
         exists('CHERRY_PICK_HEAD'),
-        exists('REVERT_HEAD'),
+        exists('REVERT_HEAD')
       ]);
 
     // Rebase: interactive/merge backend
@@ -661,7 +675,10 @@ export class GitService {
 
   private async getVsCodeRepository(): Promise<VsCodeGitRepository | undefined> {
     const rootUri = vscode.Uri.file(this.gitRoot);
-    if (this._vscodeGitRepository && this.samePath(this._vscodeGitRepository.rootUri.fsPath, rootUri.fsPath)) {
+    if (
+      this._vscodeGitRepository &&
+      this.samePath(this._vscodeGitRepository.rootUri.fsPath, rootUri.fsPath)
+    ) {
       return this._vscodeGitRepository;
     }
 
@@ -672,8 +689,10 @@ export class GitService {
 
     const repository =
       api.getRepository(rootUri) ??
-      api.repositories.find((candidate) => this.samePath(candidate.rootUri.fsPath, rootUri.fsPath)) ??
-      await api.openRepository(rootUri);
+      api.repositories.find((candidate) =>
+        this.samePath(candidate.rootUri.fsPath, rootUri.fsPath)
+      ) ??
+      (await api.openRepository(rootUri));
     if (!repository) {
       return undefined;
     }
@@ -806,11 +825,15 @@ export class GitService {
   }
 
   async getGitDir(): Promise<string | undefined> {
-    if (this._gitDirCache) { return this._gitDirCache; }
+    if (this._gitDirCache) {
+      return this._gitDirCache;
+    }
     try {
       const result = await this.runGit(['rev-parse', '--git-dir']);
       const raw = result.stdout.trim();
-      if (!raw) { return undefined; }
+      if (!raw) {
+        return undefined;
+      }
       const resolved = path.isAbsolute(raw) ? raw : path.join(this.gitRoot, raw);
       this._gitDirCache = resolved;
       return resolved;
@@ -890,7 +913,10 @@ export class GitService {
     return entries.sort((a, b) => a.index - b.index);
   }
 
-  async createStash(message: string, options: { includeUntracked: boolean; keepIndex: boolean }): Promise<void> {
+  async createStash(
+    message: string,
+    options: { includeUntracked: boolean; keepIndex: boolean }
+  ): Promise<void> {
     const repository = await this.getVsCodeRepository();
     if (repository && !options.keepIndex) {
       this.logger.info(`vscode.git createStash ${message}`);
@@ -928,18 +954,15 @@ export class GitService {
   }
 
   async getGraph(maxCount: number, skip = 0, filters?: CommitFilters): Promise<GraphCommit[]> {
-    const format = [
-      '%m',
-      '%H',
-      '%h',
-      '%P',
-      '%D',
-      '%an',
-      '%aI',
-      '%s'
-    ].join(FIELD_SEPARATOR);
+    const format = ['%m', '%H', '%h', '%P', '%D', '%an', '%aI', '%s'].join(FIELD_SEPARATOR);
 
-    const args = ['log', '--date=iso-strict', '--decorate=full', `--max-count=${maxCount}`, `--format=${format}${RECORD_SEPARATOR}`];
+    const args = [
+      'log',
+      '--date=iso-strict',
+      '--decorate=full',
+      `--max-count=${maxCount}`,
+      `--format=${format}${RECORD_SEPARATOR}`
+    ];
     if (skip > 0) {
       args.push(`--skip=${skip}`);
     }
@@ -980,13 +1003,14 @@ export class GitService {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] = line.split(FIELD_SEPARATOR);
+        const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+          line.split(FIELD_SEPARATOR);
         const parents = parentsRaw?.split(' ').filter(Boolean) ?? [];
         const refs = refsRaw
           ? refsRaw
-            .split(',')
-            .map((ref) => ref.trim())
-            .filter(Boolean)
+              .split(',')
+              .map((ref) => ref.trim())
+              .filter(Boolean)
           : [];
         return {
           graph,
@@ -1080,10 +1104,7 @@ export class GitService {
 
   async getParentCommit(sha: string): Promise<string | undefined> {
     const result = await this.runGit(['rev-list', '--parents', '-n', '1', sha]);
-    const tokens = result.stdout
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
+    const tokens = result.stdout.trim().split(/\s+/).filter(Boolean);
 
     if (tokens.length < 2) {
       return undefined;
@@ -1109,7 +1130,11 @@ export class GitService {
     if (shas.length === 0) {
       return '';
     }
-    const result = await this.runGit(['format-patch', '--stdout', `${shas[0]}^..${shas[shas.length - 1]}`]);
+    const result = await this.runGit([
+      'format-patch',
+      '--stdout',
+      `${shas[0]}^..${shas[shas.length - 1]}`
+    ]);
     return result.stdout;
   }
 
@@ -1122,7 +1147,11 @@ export class GitService {
     return result.stdout;
   }
 
-  async getPatchBetweenRefsForFiles(fromRef: string, toRef: string, filePaths: string[]): Promise<string> {
+  async getPatchBetweenRefsForFiles(
+    fromRef: string,
+    toRef: string,
+    filePaths: string[]
+  ): Promise<string> {
     if (filePaths.length === 0) {
       return '';
     }
@@ -1131,13 +1160,23 @@ export class GitService {
     return result.stdout;
   }
 
-  async getPatchBetweenWorkingTreeAndRefForFiles(ref: string, filePaths: string[]): Promise<string> {
+  async getPatchBetweenWorkingTreeAndRefForFiles(
+    ref: string,
+    filePaths: string[]
+  ): Promise<string> {
     if (filePaths.length === 0) {
       return '';
     }
 
     const trackedResult = await this.runGit(['diff', '--binary', ref, '--', ...filePaths]);
-    const untrackedResult = await this.runGit(['ls-files', '--others', '--exclude-standard', '-z', '--', ...filePaths]);
+    const untrackedResult = await this.runGit([
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '-z',
+      '--',
+      ...filePaths
+    ]);
     const untrackedPaths = untrackedResult.stdout
       .split('\0')
       .map((value) => value.trim())
@@ -1235,7 +1274,10 @@ export class GitService {
     };
   }
 
-  private async tryGetMergeBaseCommit(leftRef: string, rightRef: string): Promise<GraphCommit | undefined> {
+  private async tryGetMergeBaseCommit(
+    leftRef: string,
+    rightRef: string
+  ): Promise<GraphCommit | undefined> {
     try {
       const base = await this.runGit(['merge-base', leftRef, rightRef]);
       const sha = base.stdout.trim();
@@ -1315,7 +1357,9 @@ export class GitService {
     if (refSpec === 'WORKTREE') {
       try {
         const gitRoot = await this.getGitRoot();
-        const bytes = await vscode.workspace.fs.readFile(vscode.Uri.file(path.join(gitRoot, relativePath)));
+        const bytes = await vscode.workspace.fs.readFile(
+          vscode.Uri.file(path.join(gitRoot, relativePath))
+        );
         return Buffer.from(bytes).toString('utf8');
       } catch (error) {
         if (this.isMissingFileContentError(error)) {
@@ -1365,9 +1409,10 @@ export class GitService {
         const statusRaw = parts[0] ?? '';
         const status = (statusRaw ?? '').trim();
         const normalizedStatus = status[0]?.toUpperCase();
-        const oldPath = normalizedStatus === 'R' || normalizedStatus === 'C'
-          ? (parts[1] ?? '').trim()
-          : undefined;
+        const oldPath =
+          normalizedStatus === 'R' || normalizedStatus === 'C'
+            ? (parts[1] ?? '').trim()
+            : undefined;
         const path = (parts.at(-1) ?? '').trim();
         return { status, path, oldPath };
       })
@@ -1382,7 +1427,10 @@ export class GitService {
       .filter(Boolean);
   }
 
-  async getFilesChangedBetweenRefsWithStatus(fromRef: string, toRef: string): Promise<CommitFileChange[]> {
+  async getFilesChangedBetweenRefsWithStatus(
+    fromRef: string,
+    toRef: string
+  ): Promise<CommitFileChange[]> {
     const result = await this.runGit(['diff', '--name-status', fromRef, toRef]);
     return result.stdout
       .split('\n')
@@ -1393,9 +1441,10 @@ export class GitService {
         const statusRaw = parts[0] ?? '';
         const status = (statusRaw ?? '').trim();
         const normalizedStatus = status[0]?.toUpperCase();
-        const oldPath = normalizedStatus === 'R' || normalizedStatus === 'C'
-          ? (parts[1] ?? '').trim()
-          : undefined;
+        const oldPath =
+          normalizedStatus === 'R' || normalizedStatus === 'C'
+            ? (parts[1] ?? '').trim()
+            : undefined;
         const path = (parts.at(-1) ?? '').trim();
         return { status, path, oldPath };
       })
@@ -1409,20 +1458,29 @@ export class GitService {
    * When `scopePath` is provided, results are restricted to that subtree.
    * Results are sorted by path for stable output.
    */
-  async getFilesChangedBetweenWorkingTreeAndRef(ref: string, scopePath?: string): Promise<WorkingTreeFileChange[]> {
+  async getFilesChangedBetweenWorkingTreeAndRef(
+    ref: string,
+    scopePath?: string
+  ): Promise<WorkingTreeFileChange[]> {
     const scopeArgs = scopePath ? ['--', scopePath] : [];
 
     // Tracked changes
-    const trackedResult = await this.runGit([
-      'diff', '--name-status', '-z', ref, ...scopeArgs
-    ]);
+    const trackedResult = await this.runGit(['diff', '--name-status', '-z', ref, ...scopeArgs]);
     const trackedEntries = parseNameStatusZ(trackedResult.stdout).map(
-      (entry): WorkingTreeFileChange => ({ status: entry.status, path: entry.path, untracked: false })
+      (entry): WorkingTreeFileChange => ({
+        status: entry.status,
+        path: entry.path,
+        untracked: false
+      })
     );
 
     // Untracked files
     const untrackedResult = await this.runGit([
-      'ls-files', '--others', '--exclude-standard', '-z', ...scopeArgs
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+      '-z',
+      ...scopeArgs
     ]);
     const untrackedEntries: WorkingTreeFileChange[] = untrackedResult.stdout
       .split('\0')
@@ -1456,7 +1514,11 @@ export class GitService {
 
       // Fetch metadata in one log call using NUL separators
       const logResult = await this.runGit([
-        'log', '-1', '--format=%H%x00%s%x00%an%x00%ad', '--date=iso-strict', sha
+        'log',
+        '-1',
+        '--format=%H%x00%s%x00%an%x00%ad',
+        '--date=iso-strict',
+        sha
       ]);
       const parts = logResult.stdout.trim().split('\0');
       if (parts.length < 4) {
@@ -1496,7 +1558,12 @@ export class GitService {
     const branch = await this.getCurrentBranch();
     let upstreamName = '';
     try {
-      const upstream = await this.runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', `${branch}@{upstream}`]);
+      const upstream = await this.runGit([
+        'rev-parse',
+        '--abbrev-ref',
+        '--symbolic-full-name',
+        `${branch}@{upstream}`
+      ]);
       upstreamName = upstream.stdout.trim();
     } catch {
       return { outgoing: [], incoming: [] };
@@ -1506,8 +1573,14 @@ export class GitService {
     const incomingResult = await this.runGit(['log', '--oneline', `${branch}..${upstreamName}`]);
 
     return {
-      outgoing: outgoingResult.stdout.split('\n').map((l) => l.trim()).filter(Boolean),
-      incoming: incomingResult.stdout.split('\n').map((l) => l.trim()).filter(Boolean)
+      outgoing: outgoingResult.stdout
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean),
+      incoming: incomingResult.stdout
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
     };
   }
 
@@ -1599,13 +1672,17 @@ export class GitService {
     try {
       const staged = await this.runGit(['diff', '--staged']);
       diff = staged.stdout;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     if (!diff.trim()) {
       try {
         const unstaged = await this.runGit(['diff']);
         diff = unstaged.stdout;
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     if (!diff.trim()) {
@@ -1613,20 +1690,26 @@ export class GitService {
     }
 
     const maxLen = 8000;
-    const truncated = diff.length > maxLen ? diff.slice(0, maxLen) + '\n... (diff truncated)' : diff;
+    const truncated =
+      diff.length > maxLen ? diff.slice(0, maxLen) + '\n... (diff truncated)' : diff;
 
     const preferredFamilies = ['gpt-5-mini', 'gpt-4.1', 'gpt-4o', 'gpt-4', 'claude-3.5-sonnet'];
     let model: vscode.LanguageModelChat | undefined;
     for (const family of preferredFamilies) {
       const [m] = await vscode.lm.selectChatModels({ family });
-      if (m) { model = m; break; }
+      if (m) {
+        model = m;
+        break;
+      }
     }
     if (!model) {
       const [any] = await vscode.lm.selectChatModels();
       model = any;
     }
     if (!model) {
-      throw new Error('No AI model available. Install GitHub Copilot or another AI extension to enable this feature.');
+      throw new Error(
+        'No AI model available. Install GitHub Copilot or another AI extension to enable this feature.'
+      );
     }
 
     const cts = new vscode.CancellationTokenSource();
@@ -1649,7 +1732,14 @@ export class GitService {
 
   async fileHistory(path: string): Promise<GraphCommit[]> {
     const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
-    const result = await this.runGit(['log', '--date=iso-strict', '--follow', `--format=${format}`, '--', path]);
+    const result = await this.runGit([
+      'log',
+      '--date=iso-strict',
+      '--follow',
+      `--format=${format}`,
+      '--',
+      path
+    ]);
     return parseGraphRows(result.stdout);
   }
 
@@ -1684,123 +1774,136 @@ export class GitService {
     const BATCH_SIZE = 25;
     const FLUSH_INTERVAL_MS = 80;
 
-    return this.gitCommandQueue.run(() => new Promise<GraphCommit[]>((resolve, reject) => {
-      const startedAt = Date.now();
-      const child = cp.spawn(gitPath, args, {
-        cwd: this.gitRoot,
-        windowsHide: true
-      });
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GraphCommit[]>((resolve, reject) => {
+          const startedAt = Date.now();
+          const child = cp.spawn(gitPath, args, {
+            cwd: this.gitRoot,
+            windowsHide: true
+          });
 
-      const all: GraphCommit[] = [];
-      let pending: GraphCommit[] = [];
-      let buffer = '';
-      let stderr = '';
-      let flushTimer: NodeJS.Timeout | null = null;
-      let idleTimer: NodeJS.Timeout | null = null;
+          const all: GraphCommit[] = [];
+          let pending: GraphCommit[] = [];
+          let buffer = '';
+          let stderr = '';
+          let flushTimer: NodeJS.Timeout | null = null;
+          let idleTimer: NodeJS.Timeout | null = null;
 
-      const clearTimers = (): void => {
-        if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
-        if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
-      };
-
-      // Idle timeout: only fires when git has produced no output for
-      // `idleTimeoutMs`. A continuously streaming git log never trips it, so
-      // the total wall-clock time is unbounded — fine because we surface
-      // commits as they arrive.
-      const resetIdleTimer = (): void => {
-        if (idleTimer) { clearTimeout(idleTimer); }
-        idleTimer = setTimeout(() => {
-          child.kill();
-          this.logGitDuration(command, startedAt);
-          clearTimers();
-          reject(new Error(`Git command idle for ${idleTimeoutMs}ms: ${command}`));
-        }, idleTimeoutMs);
-      };
-
-      const flush = (): void => {
-        if (flushTimer) {
-          clearTimeout(flushTimer);
-          flushTimer = null;
-        }
-        if (pending.length === 0) {
-          return;
-        }
-        const batch = pending;
-        pending = [];
-        all.push(...batch);
-        try {
-          onBatch(batch);
-        } catch (err) {
-          this.logger.info(`directoryHistory onBatch error: ${err instanceof Error ? err.message : String(err)}`);
-        }
-      };
-
-      const scheduleFlush = (): void => {
-        if (pending.length >= BATCH_SIZE) {
-          flush();
-          return;
-        }
-        if (flushTimer === null) {
-          flushTimer = setTimeout(flush, FLUSH_INTERVAL_MS);
-        }
-      };
-
-      const consumeBuffer = (): void => {
-        let sepIndex = buffer.indexOf(RECORD_SEPARATOR);
-        while (sepIndex !== -1) {
-          const record = buffer.slice(0, sepIndex).trim();
-          buffer = buffer.slice(sepIndex + RECORD_SEPARATOR.length);
-          if (record) {
-            const parsed = parseGraphRows(record + RECORD_SEPARATOR);
-            if (parsed.length > 0) {
-              pending.push(...parsed);
+          const clearTimers = (): void => {
+            if (flushTimer) {
+              clearTimeout(flushTimer);
+              flushTimer = null;
             }
-          }
-          sepIndex = buffer.indexOf(RECORD_SEPARATOR);
-        }
-        if (pending.length > 0) {
-          scheduleFlush();
-        }
-      };
+            if (idleTimer) {
+              clearTimeout(idleTimer);
+              idleTimer = null;
+            }
+          };
 
-      resetIdleTimer();
+          // Idle timeout: only fires when git has produced no output for
+          // `idleTimeoutMs`. A continuously streaming git log never trips it, so
+          // the total wall-clock time is unbounded — fine because we surface
+          // commits as they arrive.
+          const resetIdleTimer = (): void => {
+            if (idleTimer) {
+              clearTimeout(idleTimer);
+            }
+            idleTimer = setTimeout(() => {
+              child.kill();
+              this.logGitDuration(command, startedAt);
+              clearTimers();
+              reject(new Error(`Git command idle for ${idleTimeoutMs}ms: ${command}`));
+            }, idleTimeoutMs);
+          };
 
-      child.stdout.on('data', (chunk: Buffer) => {
-        resetIdleTimer();
-        buffer += chunk.toString();
-        consumeBuffer();
-      });
+          const flush = (): void => {
+            if (flushTimer) {
+              clearTimeout(flushTimer);
+              flushTimer = null;
+            }
+            if (pending.length === 0) {
+              return;
+            }
+            const batch = pending;
+            pending = [];
+            all.push(...batch);
+            try {
+              onBatch(batch);
+            } catch (err) {
+              this.logger.info(
+                `directoryHistory onBatch error: ${err instanceof Error ? err.message : String(err)}`
+              );
+            }
+          };
 
-      child.stderr.on('data', (chunk: Buffer) => {
-        resetIdleTimer();
-        stderr += chunk.toString();
-      });
+          const scheduleFlush = (): void => {
+            if (pending.length >= BATCH_SIZE) {
+              flush();
+              return;
+            }
+            if (flushTimer === null) {
+              flushTimer = setTimeout(flush, FLUSH_INTERVAL_MS);
+            }
+          };
 
-      child.on('error', (error: Error) => {
-        clearTimers();
-        this.logGitDuration(command, startedAt);
-        reject(error);
-      });
+          const consumeBuffer = (): void => {
+            let sepIndex = buffer.indexOf(RECORD_SEPARATOR);
+            while (sepIndex !== -1) {
+              const record = buffer.slice(0, sepIndex).trim();
+              buffer = buffer.slice(sepIndex + RECORD_SEPARATOR.length);
+              if (record) {
+                const parsed = parseGraphRows(record + RECORD_SEPARATOR);
+                if (parsed.length > 0) {
+                  pending.push(...parsed);
+                }
+              }
+              sepIndex = buffer.indexOf(RECORD_SEPARATOR);
+            }
+            if (pending.length > 0) {
+              scheduleFlush();
+            }
+          };
 
-      child.on('close', (code: number | null) => {
-        clearTimers();
-        this.logGitDuration(command, startedAt);
-        if (code !== 0) {
-          reject(new Error(stderr || `Git command failed with exit code ${code}: ${command}`));
-          return;
-        }
-        // Drain any trailing record without a separator (defensive — format ends with separator).
-        const tail = buffer.trim();
-        if (tail) {
-          const parsed = parseGraphRows(tail + RECORD_SEPARATOR);
-          if (parsed.length > 0) {
-            pending.push(...parsed);
-          }
-        }
-        flush();
-        resolve(all);
-      });
-    }));
+          resetIdleTimer();
+
+          child.stdout.on('data', (chunk: Buffer) => {
+            resetIdleTimer();
+            buffer += chunk.toString();
+            consumeBuffer();
+          });
+
+          child.stderr.on('data', (chunk: Buffer) => {
+            resetIdleTimer();
+            stderr += chunk.toString();
+          });
+
+          child.on('error', (error: Error) => {
+            clearTimers();
+            this.logGitDuration(command, startedAt);
+            reject(error);
+          });
+
+          child.on('close', (code: number | null) => {
+            clearTimers();
+            this.logGitDuration(command, startedAt);
+            if (code !== 0) {
+              reject(new Error(stderr || `Git command failed with exit code ${code}: ${command}`));
+              return;
+            }
+            // Drain any trailing record without a separator (defensive — format ends with separator).
+            const tail = buffer.trim();
+            if (tail) {
+              const parsed = parseGraphRows(tail + RECORD_SEPARATOR);
+              if (parsed.length > 0) {
+                pending.push(...parsed);
+              }
+            }
+            flush();
+            resolve(all);
+          });
+        })
+    );
   }
 
   async fileBlame(path: string): Promise<string> {
@@ -1827,8 +1930,16 @@ export class GitService {
 
       await vscode.commands.executeCommand('mergeEditor.openInput', {
         base: { uri: writeTemp('base', base), title: 'Base' },
-        input1: { uri: writeTemp('ours', ours), title: 'Yours (Current Branch)', description: filePath },
-        input2: { uri: writeTemp('theirs', theirs), title: 'Theirs (Incoming)', description: filePath },
+        input1: {
+          uri: writeTemp('ours', ours),
+          title: 'Yours (Current Branch)',
+          description: filePath
+        },
+        input2: {
+          uri: writeTemp('theirs', theirs),
+          title: 'Theirs (Incoming)',
+          description: filePath
+        },
         output: outputUri
       });
       await this.applyMergeEditorColumnLayout();
@@ -1872,7 +1983,9 @@ export class GitService {
           status = await this.getWorktreeStatus(w.worktreePath);
           const logResult = await this.runGitAt(w.worktreePath, ['log', '-1', '--format=%s']);
           headSubject = logResult.stdout.trim() || undefined;
-        } catch { /* worktree may be unavailable */ }
+        } catch {
+          /* worktree may be unavailable */
+        }
         return {
           ...w,
           isCurrent: w.worktreePath === currentPath,
@@ -1891,7 +2004,9 @@ export class GitService {
 
   async addWorktreeBranch(worktreePath: string, branch: string, base?: string): Promise<void> {
     const args = ['worktree', 'add', '-b', branch, worktreePath];
-    if (base) { args.push(base); }
+    if (base) {
+      args.push(base);
+    }
     await this.runGit(args);
   }
 
@@ -1901,13 +2016,17 @@ export class GitService {
 
   async removeWorktree(worktreePath: string, force = false): Promise<void> {
     const args = ['worktree', 'remove', worktreePath];
-    if (force) { args.push('--force'); }
+    if (force) {
+      args.push('--force');
+    }
     await this.runGit(args);
   }
 
   async lockWorktree(worktreePath: string, reason?: string): Promise<void> {
     const args = ['worktree', 'lock', worktreePath];
-    if (reason) { args.push('--reason', reason); }
+    if (reason) {
+      args.push('--reason', reason);
+    }
     await this.runGit(args);
   }
 
@@ -1925,7 +2044,11 @@ export class GitService {
   }
 
   async getWorktreeStatus(worktreePath: string): Promise<WorktreeStatus> {
-    const statusResult = await this.runGitAt(worktreePath, ['status', '--porcelain=v1', '--branch']);
+    const statusResult = await this.runGitAt(worktreePath, [
+      'status',
+      '--porcelain=v1',
+      '--branch'
+    ]);
     const lines = statusResult.stdout.split('\n');
     const branchLine = lines[0] ?? '';
     const isDirty = lines.slice(1).some((l) => l.trim().length > 0);
@@ -2015,31 +2138,41 @@ export class GitService {
     const gitPath = getConfigValue<string>('gitPath', 'git');
     const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
 
-    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
-      const command = `${gitPath} ${args.join(' ')}`;
-      const startedAt = Date.now();
-      const child = cp.spawn(gitPath, args, { cwd, windowsHide: true });
-      const timer = setTimeout(() => {
-        child.kill();
-        this.logGitDuration(command, startedAt);
-        reject(new Error(`Git command timed out: git ${args.join(' ')}`));
-      }, timeoutMs);
-      let stdout = '';
-      let stderr = '';
-      child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-      child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-      child.on('error', (error: Error) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        reject(error);
-      });
-      child.on('close', (code: number | null) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        if (code === 0) { resolve({ stdout, stderr }); return; }
-        reject(new Error(stderr || `Git command failed with exit code ${code}`));
-      });
-    }));
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GitCommandResult>((resolve, reject) => {
+          const command = `${gitPath} ${args.join(' ')}`;
+          const startedAt = Date.now();
+          const child = cp.spawn(gitPath, args, { cwd, windowsHide: true });
+          const timer = setTimeout(() => {
+            child.kill();
+            this.logGitDuration(command, startedAt);
+            reject(new Error(`Git command timed out: git ${args.join(' ')}`));
+          }, timeoutMs);
+          let stdout = '';
+          let stderr = '';
+          child.stdout.on('data', (chunk: Buffer) => {
+            stdout += chunk.toString();
+          });
+          child.stderr.on('data', (chunk: Buffer) => {
+            stderr += chunk.toString();
+          });
+          child.on('error', (error: Error) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            reject(error);
+          });
+          child.on('close', (code: number | null) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            if (code === 0) {
+              resolve({ stdout, stderr });
+              return;
+            }
+            reject(new Error(stderr || `Git command failed with exit code ${code}`));
+          });
+        })
+    );
   }
 
   async runGit(args: string[]): Promise<GitCommandResult> {
@@ -2048,101 +2181,118 @@ export class GitService {
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
-    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
-      const startedAt = Date.now();
-      const child = cp.spawn(gitPath, args, {
-        cwd: this.gitRoot,
-        windowsHide: true
-      });
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GitCommandResult>((resolve, reject) => {
+          const startedAt = Date.now();
+          const child = cp.spawn(gitPath, args, {
+            cwd: this.gitRoot,
+            windowsHide: true
+          });
 
-      const timer = setTimeout(() => {
-        child.kill();
-        this.logGitDuration(command, startedAt);
-        reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
-      }, timeoutMs);
+          const timer = setTimeout(() => {
+            child.kill();
+            this.logGitDuration(command, startedAt);
+            reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
+          }, timeoutMs);
 
-      let stdout = '';
-      let stderr = '';
+          let stdout = '';
+          let stderr = '';
 
-      child.stdout.on('data', (chunk) => {
-        stdout += chunk.toString();
-      });
+          child.stdout.on('data', (chunk) => {
+            stdout += chunk.toString();
+          });
 
-      child.stderr.on('data', (chunk) => {
-        stderr += chunk.toString();
-      });
+          child.stderr.on('data', (chunk) => {
+            stderr += chunk.toString();
+          });
 
-      child.on('error', (error) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        reject(error);
-      });
+          child.on('error', (error) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            reject(error);
+          });
 
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        if (code === 0) {
-          resolve({ stdout, stderr });
-          return;
-        }
+          child.on('close', (code) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            if (code === 0) {
+              resolve({ stdout, stderr });
+              return;
+            }
 
-        const error = new Error(stderr || `Git command failed with exit code ${code}: ${command}`);
-        reject(error);
-      });
-    }));
+            const error = new Error(
+              stderr || `Git command failed with exit code ${code}: ${command}`
+            );
+            reject(error);
+          });
+        })
+    );
   }
 
-  private async runGitAllowExitCodes(args: string[], allowedExitCodes: readonly number[]): Promise<GitCommandResult> {
+  private async runGitAllowExitCodes(
+    args: string[],
+    allowedExitCodes: readonly number[]
+  ): Promise<GitCommandResult> {
     const gitPath = getConfigValue<string>('gitPath', 'git');
     const timeoutMs = getConfigValue<number>('commandTimeoutMs', 15000);
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
-    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
-      const startedAt = Date.now();
-      const child = cp.spawn(gitPath, args, {
-        cwd: this.gitRoot,
-        windowsHide: true
-      });
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GitCommandResult>((resolve, reject) => {
+          const startedAt = Date.now();
+          const child = cp.spawn(gitPath, args, {
+            cwd: this.gitRoot,
+            windowsHide: true
+          });
 
-      const timer = setTimeout(() => {
-        child.kill();
-        this.logGitDuration(command, startedAt);
-        reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
-      }, timeoutMs);
+          const timer = setTimeout(() => {
+            child.kill();
+            this.logGitDuration(command, startedAt);
+            reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
+          }, timeoutMs);
 
-      let stdout = '';
-      let stderr = '';
+          let stdout = '';
+          let stderr = '';
 
-      child.stdout.on('data', (chunk) => {
-        stdout += chunk.toString();
-      });
+          child.stdout.on('data', (chunk) => {
+            stdout += chunk.toString();
+          });
 
-      child.stderr.on('data', (chunk) => {
-        stderr += chunk.toString();
-      });
+          child.stderr.on('data', (chunk) => {
+            stderr += chunk.toString();
+          });
 
-      child.on('error', (error) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        reject(error);
-      });
+          child.on('error', (error) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            reject(error);
+          });
 
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        if (code !== null && allowedExitCodes.includes(code)) {
-          resolve({ stdout, stderr });
-          return;
-        }
+          child.on('close', (code) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            if (code !== null && allowedExitCodes.includes(code)) {
+              resolve({ stdout, stderr });
+              return;
+            }
 
-        const error = new Error(stderr || `Git command failed with exit code ${code}: ${command}`);
-        reject(error);
-      });
-    }));
+            const error = new Error(
+              stderr || `Git command failed with exit code ${code}: ${command}`
+            );
+            reject(error);
+          });
+        })
+    );
   }
 
-  private async applyCommitFilesPatch(ref: string, filePaths: string[], reverse: boolean): Promise<void> {
+  private async applyCommitFilesPatch(
+    ref: string,
+    filePaths: string[],
+    reverse: boolean
+  ): Promise<void> {
     if (filePaths.length === 0) {
       return;
     }
@@ -2165,50 +2315,55 @@ export class GitService {
     const command = `${gitPath} ${args.join(' ')}`;
     this.logger.info(`git ${args.join(' ')}`);
 
-    return this.gitCommandQueue.run(() => new Promise<GitCommandResult>((resolve, reject) => {
-      const startedAt = Date.now();
-      const child = cp.spawn(gitPath, args, {
-        cwd: this.gitRoot,
-        windowsHide: true
-      });
+    return this.gitCommandQueue.run(
+      () =>
+        new Promise<GitCommandResult>((resolve, reject) => {
+          const startedAt = Date.now();
+          const child = cp.spawn(gitPath, args, {
+            cwd: this.gitRoot,
+            windowsHide: true
+          });
 
-      const timer = setTimeout(() => {
-        child.kill();
-        this.logGitDuration(command, startedAt);
-        reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
-      }, timeoutMs);
+          const timer = setTimeout(() => {
+            child.kill();
+            this.logGitDuration(command, startedAt);
+            reject(new Error(`Git command timed out after ${timeoutMs}ms: ${command}`));
+          }, timeoutMs);
 
-      let stdout = '';
-      let stderr = '';
+          let stdout = '';
+          let stderr = '';
 
-      child.stdout.on('data', (chunk) => {
-        stdout += chunk.toString();
-      });
+          child.stdout.on('data', (chunk) => {
+            stdout += chunk.toString();
+          });
 
-      child.stderr.on('data', (chunk) => {
-        stderr += chunk.toString();
-      });
+          child.stderr.on('data', (chunk) => {
+            stderr += chunk.toString();
+          });
 
-      child.on('error', (error) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        reject(error);
-      });
+          child.on('error', (error) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            reject(error);
+          });
 
-      child.on('close', (code) => {
-        clearTimeout(timer);
-        this.logGitDuration(command, startedAt);
-        if (code === 0) {
-          resolve({ stdout, stderr });
-          return;
-        }
+          child.on('close', (code) => {
+            clearTimeout(timer);
+            this.logGitDuration(command, startedAt);
+            if (code === 0) {
+              resolve({ stdout, stderr });
+              return;
+            }
 
-        const error = new Error(stderr || `Git command failed with exit code ${code}: ${command}`);
-        reject(error);
-      });
+            const error = new Error(
+              stderr || `Git command failed with exit code ${code}: ${command}`
+            );
+            reject(error);
+          });
 
-      child.stdin.end(stdin);
-    }));
+          child.stdin.end(stdin);
+        })
+    );
   }
 }
 
@@ -2218,13 +2373,19 @@ function parseGraphRows(raw: string): GraphCommit[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] = line.split(FIELD_SEPARATOR);
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+        line.split(FIELD_SEPARATOR);
       return {
         graph,
         sha,
         shortSha,
         parents: parentsRaw?.split(' ').filter(Boolean) ?? [],
-        refs: refsRaw ? refsRaw.split(',').map((r) => r.trim()).filter(Boolean) : [],
+        refs: refsRaw
+          ? refsRaw
+              .split(',')
+              .map((r) => r.trim())
+              .filter(Boolean)
+          : [],
         author,
         date,
         subject
@@ -2232,7 +2393,9 @@ function parseGraphRows(raw: string): GraphCommit[] {
     });
 }
 
-function parseShortStat(raw: string): { files: number; insertions: number; deletions: number } | undefined {
+function parseShortStat(
+  raw: string
+): { files: number; insertions: number; deletions: number } | undefined {
   const line = raw
     .split('\n')
     .map((value) => value.trim())

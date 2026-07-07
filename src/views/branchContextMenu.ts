@@ -56,7 +56,9 @@ export function renderBranchContextMenu(): string {
 function renderContextMenu(
   id: string,
   label: string,
-  itemsSource: readonly ({ readonly command: string; readonly label: string } | { readonly separator: true })[]
+  itemsSource: readonly (
+    { readonly command: string; readonly label: string } | { readonly separator: true }
+  )[]
 ): string {
   const items = itemsSource
     .map((item) => {

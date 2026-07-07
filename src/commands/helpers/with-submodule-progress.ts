@@ -1,17 +1,20 @@
-import * as vscode from "vscode";
-import { Logger } from "../../logger";
-import type { SubmoduleLogSink } from "../../services/submoduleLogSink";
+import * as vscode from 'vscode';
+import { Logger } from '../../logger';
+import type { SubmoduleLogSink } from '../../services/submoduleLogSink';
 
 interface WithSubmoduleProgressOptions {
   title: string;
   autoShow: boolean;
-  command: string;          // human-readable name for the warning toast, e.g. "Submodule update"
+  command: string; // human-readable name for the warning toast, e.g. "Submodule update"
 }
 
 export async function withSubmoduleProgress(
   logger: Logger,
   options: WithSubmoduleProgressOptions,
-  run: (args: { sink: SubmoduleLogSink; signal: AbortSignal }) => Promise<{ exitCode: number | null }>
+  run: (args: {
+    sink: SubmoduleLogSink;
+    signal: AbortSignal;
+  }) => Promise<{ exitCode: number | null }>
 ): Promise<{ exitCode: number | null; cancelled: boolean }> {
   if (options.autoShow) {
     logger.show(true);
@@ -32,8 +35,12 @@ export async function withSubmoduleProgress(
       });
 
       const sink: SubmoduleLogSink = {
-        header(line) { logger.appendRaw(line); },
-        stdout(line) { logger.appendRaw(line); },
+        header(line) {
+          logger.appendRaw(line);
+        },
+        stdout(line) {
+          logger.appendRaw(line);
+        },
         stderr(line) {
           logger.appendRaw(line);
           progress.report({ message: line });

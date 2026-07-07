@@ -30,10 +30,15 @@ describe('branch/tag search context menus', () => {
       path.join(__dirname, '../../src/views/templates/branchSearchView.hbs'),
       'utf8'
     );
-    const listClickHandler = template.match(/listEl\.addEventListener\('click',[\s\S]*?\n    \}\);/);
+    const listClickHandler = template.match(
+      /listEl\.addEventListener\('click',[\s\S]*?\n    \}\);/
+    );
 
     assert.ok(listClickHandler, 'expected branch search list click handler');
-    assert.match(listClickHandler[0], /openMenu\(rect\.left \+ 28, rect\.bottom \+ 4, name, kind\)/);
+    assert.match(
+      listClickHandler[0],
+      /openMenu\(rect\.left \+ 28, rect\.bottom \+ 4, name, kind\)/
+    );
     assert.doesNotMatch(listClickHandler[0], /postMessage\(\{ type: 'checkout(Tag)?'/);
   });
 });

@@ -18,9 +18,15 @@ export interface RawWorktreeEntry {
 
 export function parseWorktreeListPorcelain(raw: string): RawWorktreeEntry[] {
   const entries: RawWorktreeEntry[] = [];
-  const blocks = raw.split(/\n\n+/).map((b) => b.trim()).filter(Boolean);
+  const blocks = raw
+    .split(/\n\n+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
   for (const block of blocks) {
-    const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+    const lines = block
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
     const entry: Partial<RawWorktreeEntry> = {
       isBare: false,
       isDetached: false,

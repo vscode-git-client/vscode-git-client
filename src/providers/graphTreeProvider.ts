@@ -20,7 +20,6 @@ export class GraphCommitTreeItem extends vscode.TreeItem {
       .filter(Boolean)
       .join('\n');
     this.iconPath = new vscode.ThemeIcon('git-commit');
-
   }
 }
 
@@ -78,7 +77,8 @@ export class LoadMoreTreeItem extends vscode.TreeItem {
   }
 }
 
-type GraphNode = GraphCommitTreeItem | GraphCommitFolderTreeItem | GraphCommitFileTreeItem | LoadMoreTreeItem;
+type GraphNode =
+  GraphCommitTreeItem | GraphCommitFolderTreeItem | GraphCommitFileTreeItem | LoadMoreTreeItem;
 
 function buildFileTree(
   commit: GraphCommit,
@@ -94,7 +94,16 @@ function buildFileTree(
     const relative = basePath ? file.path.slice(basePath.length + 1) : file.path;
     const slashIdx = relative.indexOf('/');
     if (slashIdx === -1) {
-      leaves.push(new GraphCommitFileTreeItem(commit, file.path, file.status, file.oldPath, workspaceRoot, canRevertSelectedChanges));
+      leaves.push(
+        new GraphCommitFileTreeItem(
+          commit,
+          file.path,
+          file.status,
+          file.oldPath,
+          workspaceRoot,
+          canRevertSelectedChanges
+        )
+      );
     } else {
       const segment = relative.slice(0, slashIdx);
       const childPath = basePath ? `${basePath}/${segment}` : segment;
@@ -152,7 +161,13 @@ export class GraphTreeProvider implements vscode.TreeDataProvider<GraphNode> {
 
     if (element instanceof GraphCommitFolderTreeItem) {
       const canRevertSelectedChanges = await this.canRevertSelectedChanges(element.commit.sha);
-      return buildFileTree(element.commit, element.files, element.folderPath, this.git.rootPath, canRevertSelectedChanges);
+      return buildFileTree(
+        element.commit,
+        element.files,
+        element.folderPath,
+        this.git.rootPath,
+        canRevertSelectedChanges
+      );
     }
 
     if (element instanceof LoadMoreTreeItem) {

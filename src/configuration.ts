@@ -13,12 +13,14 @@ type ConfigurationInspect<T> = {
 };
 
 function hasExplicitValue<T>(inspect: ConfigurationInspect<T> | undefined): boolean {
-  return inspect?.globalValue !== undefined
-    || inspect?.workspaceValue !== undefined
-    || inspect?.workspaceFolderValue !== undefined
-    || inspect?.globalLanguageValue !== undefined
-    || inspect?.workspaceLanguageValue !== undefined
-    || inspect?.workspaceFolderLanguageValue !== undefined;
+  return (
+    inspect?.globalValue !== undefined ||
+    inspect?.workspaceValue !== undefined ||
+    inspect?.workspaceFolderValue !== undefined ||
+    inspect?.globalLanguageValue !== undefined ||
+    inspect?.workspaceLanguageValue !== undefined ||
+    inspect?.workspaceFolderLanguageValue !== undefined
+  );
 }
 
 export function getConfigValue<T>(key: string, defaultValue: T): T {
@@ -39,6 +41,8 @@ export function getConfigValue<T>(key: string, defaultValue: T): T {
 }
 
 export function affectsConfig(event: vscode.ConfigurationChangeEvent, key: string): boolean {
-  return event.affectsConfiguration(`${CONFIG_SECTION}.${key}`)
-    || event.affectsConfiguration(`${LEGACY_CONFIG_SECTION}.${key}`);
+  return (
+    event.affectsConfiguration(`${CONFIG_SECTION}.${key}`) ||
+    event.affectsConfiguration(`${LEGACY_CONFIG_SECTION}.${key}`)
+  );
 }

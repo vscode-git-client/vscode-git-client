@@ -7,14 +7,25 @@ import { CommitFilters, GraphCommit } from '../types';
 import { GraphFilterSession } from '../views/graphFilterSession';
 
 function makeCommit(sha: string): GraphCommit {
-  return { graph: '-', sha, shortSha: sha.slice(0, 7), parents: [], refs: [], author: 'A', date: '2024-01-01T00:00:00Z', subject: 'msg' };
+  return {
+    graph: '-',
+    sha,
+    shortSha: sha.slice(0, 7),
+    parents: [],
+    refs: [],
+    author: 'A',
+    date: '2024-01-01T00:00:00Z',
+    subject: 'msg'
+  };
 }
 
 function makeFullPage(size = 200): GraphCommit[] {
   return Array.from({ length: size }, (_, i) => makeCommit(`a${String(i).padStart(39, '0')}`));
 }
 
-function makeStubGit(getGraph: (maxCount: number, skip: number, filters?: CommitFilters) => Promise<GraphCommit[]>): unknown {
+function makeStubGit(
+  getGraph: (maxCount: number, skip: number, filters?: CommitFilters) => Promise<GraphCommit[]>
+): unknown {
   return {
     isRepo: async () => true,
     getLocalBranches: async () => [],
@@ -29,7 +40,7 @@ function makeStubGit(getGraph: (maxCount: number, skip: number, filters?: Commit
     getMergeConflicts: async () => [],
     getWorktrees: async () => [],
     getSubmodules: async () => [],
-    getGraph,
+    getGraph
   };
 }
 
@@ -39,17 +50,25 @@ function makeWorkspaceState(): vscode.Memento {
     keys: () => Array.from(data.keys()) as readonly string[],
     get: <T>(key: string, defaultValue?: T): T | undefined =>
       data.has(key) ? (data.get(key) as T) : defaultValue,
-    update: async (key: string, value: unknown) => { data.set(key, value); },
+    update: async (key: string, value: unknown) => {
+      data.set(key, value);
+    }
   } as vscode.Memento;
 }
 
-const stubLogger = { info: () => {}, warn: () => {}, error: () => {}, debug: () => {}, dispose: () => {} };
+const stubLogger = {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+  debug: () => {},
+  dispose: () => {}
+};
 
 function makeStateStub(graph: GraphCommit[], graphHasMore: boolean): unknown {
   return {
     graph,
     graphHasMore,
-    onDidChange: () => ({ dispose: () => {} }),
+    onDidChange: () => ({ dispose: () => {} })
   };
 }
 
@@ -61,7 +80,12 @@ describe('StateStore graph pagination', () => {
       calls.push({ maxCount, skip });
       return page;
     });
-    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+    const state = new StateStore(
+      stubGit as never,
+      stubLogger as never,
+      { get: () => undefined } as never,
+      makeWorkspaceState()
+    );
 
     await state.loadMoreGraph();
 
@@ -79,7 +103,12 @@ describe('StateStore graph pagination', () => {
       callCount++;
       return callCount === 1 ? makeFullPage(200) : makeFullPage(50);
     });
-    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+    const state = new StateStore(
+      stubGit as never,
+      stubLogger as never,
+      { get: () => undefined } as never,
+      makeWorkspaceState()
+    );
 
     await state.loadMoreGraph();
     await state.loadMoreGraph();
@@ -91,7 +120,12 @@ describe('StateStore graph pagination', () => {
 
   it('loadMoreGraph sets graphHasMore=false on partial page', async () => {
     const stubGit = makeStubGit(async () => makeFullPage(42));
-    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+    const state = new StateStore(
+      stubGit as never,
+      stubLogger as never,
+      { get: () => undefined } as never,
+      makeWorkspaceState()
+    );
 
     await state.loadMoreGraph();
 
@@ -100,7 +134,12 @@ describe('StateStore graph pagination', () => {
 
   it('graphHasMore starts false before any load', () => {
     const stubGit = makeStubGit(async () => []);
-    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+    const state = new StateStore(
+      stubGit as never,
+      stubLogger as never,
+      { get: () => undefined } as never,
+      makeWorkspaceState()
+    );
     assert.strictEqual(state.graphHasMore, false);
   });
 
@@ -112,7 +151,12 @@ describe('StateStore graph pagination', () => {
       // Second call (loadGraph via refreshGraph): partial page → hasMore=false
       return callCount === 1 ? makeFullPage(200) : makeFullPage(10);
     });
-    const state = new StateStore(stubGit as never, stubLogger as never, { get: () => undefined } as never, makeWorkspaceState());
+    const state = new StateStore(
+      stubGit as never,
+      stubLogger as never,
+      { get: () => undefined } as never,
+      makeWorkspaceState()
+    );
 
     await state.loadMoreGraph();
     assert.strictEqual(state.graphHasMore, true, 'should be true after full page');
@@ -151,10 +195,13 @@ describe('GraphFilterSession', () => {
     const masterCommits = [makeCommit('m'.repeat(40))];
     const filteredCommits = [makeCommit('f'.repeat(40))];
     const calls: Array<{ maxCount: number; skip: number; filters?: CommitFilters }> = [];
-    const session = new GraphFilterSession(async (maxCount, skip, filters) => {
-      calls.push({ maxCount, skip, filters });
-      return filteredCommits;
-    }, () => 200);
+    const session = new GraphFilterSession(
+      async (maxCount, skip, filters) => {
+        calls.push({ maxCount, skip, filters });
+        return filteredCommits;
+      },
+      () => 200
+    );
 
     const snapshot = await session.apply({ message: 'fix' });
 
@@ -167,10 +214,13 @@ describe('GraphFilterSession', () => {
     const masterCommits = [makeCommit('a'.repeat(40)), makeCommit('b'.repeat(40))];
     const nextPage = [makeCommit('c'.repeat(40))];
     const calls: Array<{ maxCount: number; skip: number; filters?: CommitFilters }> = [];
-    const session = new GraphFilterSession(async (maxCount, skip, filters) => {
-      calls.push({ maxCount, skip, filters });
-      return nextPage;
-    }, () => 200);
+    const session = new GraphFilterSession(
+      async (maxCount, skip, filters) => {
+        calls.push({ maxCount, skip, filters });
+        return nextPage;
+      },
+      () => 200
+    );
 
     const result = await session.loadMore({ filters: {}, commits: masterCommits, hasMore: true });
 
@@ -188,13 +238,16 @@ describe('GraphFilterSession', () => {
       releaseSlow = resolve;
     });
 
-    const session = new GraphFilterSession(async (_maxCount, _skip, filters) => {
-      if (filters?.branch === 'feature/slow') {
-        await slowGate;
-        return slowCommits;
-      }
-      return fastCommits;
-    }, () => 200);
+    const session = new GraphFilterSession(
+      async (_maxCount, _skip, filters) => {
+        if (filters?.branch === 'feature/slow') {
+          await slowGate;
+          return slowCommits;
+        }
+        return fastCommits;
+      },
+      () => 200
+    );
 
     const slowApply = session.apply({ branch: 'feature/slow' });
     const fastSnapshot = await session.apply({ branch: 'feature/fast' });
@@ -218,16 +271,19 @@ describe('GraphFilterSession', () => {
       releaseLoadMore = resolve;
     });
 
-    const session = new GraphFilterSession(async (_maxCount, skip, filters) => {
-      if (skip > 0) {
-        await loadMoreGate;
-        return stalePage;
-      }
-      if (filters?.message === 'fresh') {
-        return filteredCommits;
-      }
-      return [];
-    }, () => 2);
+    const session = new GraphFilterSession(
+      async (_maxCount, skip, filters) => {
+        if (skip > 0) {
+          await loadMoreGate;
+          return stalePage;
+        }
+        if (filters?.message === 'fresh') {
+          return filteredCommits;
+        }
+        return [];
+      },
+      () => 2
+    );
 
     const loadMore = session.loadMore({ filters: {}, commits: masterCommits, hasMore: true });
     const freshSnapshot = await session.apply({ message: 'fresh' });
@@ -237,7 +293,11 @@ describe('GraphFilterSession', () => {
 
     releaseLoadMore?.();
     const staleResult = await loadMore;
-    const finalSnapshot = session.getSnapshot({ filters: {}, commits: masterCommits, hasMore: true });
+    const finalSnapshot = session.getSnapshot({
+      filters: {},
+      commits: masterCommits,
+      hasMore: true
+    });
 
     assert.deepStrictEqual(staleResult, { commits: [], hasMore: false });
     assert.deepStrictEqual(finalSnapshot.filters, { message: 'fresh' });

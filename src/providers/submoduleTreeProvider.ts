@@ -15,17 +15,32 @@ export class SubmoduleTreeItem extends vscode.TreeItem {
     this.tooltip = buildSubmoduleTooltip(submodule);
 
     const contextParts = ['submoduleEntry'];
-    if (submodule.isDirty) { contextParts.push('submoduleDirty'); }
-    if (!submodule.isInitialized) { contextParts.push('submoduleUninitialized'); }
-    if (submodule.isPointerMismatch) { contextParts.push('submodulePointerChanged'); }
+    if (submodule.isDirty) {
+      contextParts.push('submoduleDirty');
+    }
+    if (!submodule.isInitialized) {
+      contextParts.push('submoduleUninitialized');
+    }
+    if (submodule.isPointerMismatch) {
+      contextParts.push('submodulePointerChanged');
+    }
     this.contextValue = contextParts.join(' ');
 
     if (!submodule.isInitialized) {
-      this.iconPath = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('list.warningForeground'));
+      this.iconPath = new vscode.ThemeIcon(
+        'circle-slash',
+        new vscode.ThemeColor('list.warningForeground')
+      );
     } else if (submodule.isDirty) {
-      this.iconPath = new vscode.ThemeIcon('git-commit', new vscode.ThemeColor('list.warningForeground'));
+      this.iconPath = new vscode.ThemeIcon(
+        'git-commit',
+        new vscode.ThemeColor('list.warningForeground')
+      );
     } else if (submodule.isPointerMismatch) {
-      this.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('list.warningForeground'));
+      this.iconPath = new vscode.ThemeIcon(
+        'warning',
+        new vscode.ThemeColor('list.warningForeground')
+      );
     } else {
       this.iconPath = new vscode.ThemeIcon('folder-library');
     }
@@ -90,10 +105,18 @@ export class SubmoduleTreeProvider implements vscode.TreeDataProvider<SubmoduleN
     );
 
     const sections: SubmoduleSectionNode[] = [];
-    if (attention.length > 0) { sections.push(new SubmoduleSectionNode('attention', attention, attention.length)); }
-    if (clean.length > 0) { sections.push(new SubmoduleSectionNode('clean', clean, clean.length)); }
-    if (uninitialized.length > 0) { sections.push(new SubmoduleSectionNode('uninitialized', uninitialized, uninitialized.length)); }
-    if (nested.length > 0) { sections.push(new SubmoduleSectionNode('nested', nested, nested.length)); }
+    if (attention.length > 0) {
+      sections.push(new SubmoduleSectionNode('attention', attention, attention.length));
+    }
+    if (clean.length > 0) {
+      sections.push(new SubmoduleSectionNode('clean', clean, clean.length));
+    }
+    if (uninitialized.length > 0) {
+      sections.push(new SubmoduleSectionNode('uninitialized', uninitialized, uninitialized.length));
+    }
+    if (nested.length > 0) {
+      sections.push(new SubmoduleSectionNode('nested', nested, nested.length));
+    }
     return sections;
   }
 
@@ -104,12 +127,26 @@ export class SubmoduleTreeProvider implements vscode.TreeDataProvider<SubmoduleN
 
 function buildSubmoduleTooltip(s: SubmoduleEntry): string {
   const lines: string[] = [`Path: ${s.path}`, `URL: ${s.url}`];
-  if (s.branch) { lines.push(`Branch: ${s.branch}`); }
-  if (s.currentSha) { lines.push(`Current SHA: ${s.currentSha.slice(0, 8)}`); }
-  if (s.recordedSha) { lines.push(`Recorded SHA: ${s.recordedSha.slice(0, 8)}`); }
-  if (!s.isInitialized) { lines.push('Not initialized'); }
-  if (s.isDirty) { lines.push('Has uncommitted changes'); }
-  if (s.isPointerMismatch) { lines.push('Pointer differs from recorded SHA'); }
-  if (s.ahead > 0 || s.behind > 0) { lines.push(`Upstream: ↑${s.ahead} ↓${s.behind}`); }
+  if (s.branch) {
+    lines.push(`Branch: ${s.branch}`);
+  }
+  if (s.currentSha) {
+    lines.push(`Current SHA: ${s.currentSha.slice(0, 8)}`);
+  }
+  if (s.recordedSha) {
+    lines.push(`Recorded SHA: ${s.recordedSha.slice(0, 8)}`);
+  }
+  if (!s.isInitialized) {
+    lines.push('Not initialized');
+  }
+  if (s.isDirty) {
+    lines.push('Has uncommitted changes');
+  }
+  if (s.isPointerMismatch) {
+    lines.push('Pointer differs from recorded SHA');
+  }
+  if (s.ahead > 0 || s.behind > 0) {
+    lines.push(`Upstream: ↑${s.ahead} ↓${s.behind}`);
+  }
   return lines.join('\n');
 }

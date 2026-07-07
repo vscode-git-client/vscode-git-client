@@ -28,18 +28,25 @@ function registerController(params: {
   };
 }): Map<string, (...args: unknown[]) => Promise<void>> {
   const commands = new Map<string, (...args: unknown[]) => Promise<void>>();
-  (vscode.commands as unknown as {
-    registerCommand: typeof vscode.commands.registerCommand;
-  }).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
+  (
+    vscode.commands as unknown as {
+      registerCommand: typeof vscode.commands.registerCommand;
+    }
+  ).registerCommand = (command: string, callback: (...args: unknown[]) => Promise<void>) => {
     commands.set(command, callback);
-    return { dispose() { } };
+    return { dispose() {} };
   };
 
   const controller = new CommandController(
     (params.git ?? {}) as never,
-    (params.state ?? { branches: [], conflicts: [], graph: [], refreshAll: async () => undefined }) as never,
+    (params.state ?? {
+      branches: [],
+      conflicts: [],
+      graph: [],
+      refreshAll: async () => undefined
+    }) as never,
     {} as never,
-    { error() { }, warn() { }, info() { } } as never,
+    { error() {}, warn() {}, info() {} } as never,
     (params.commitFilesView ?? {
       getCommitActionContext: () => undefined,
       getAllFileItems: () => [],
@@ -58,9 +65,17 @@ describe('commit details behaviors', () => {
   const originalShowInformationMessage = vscode.window.showInformationMessage;
 
   afterEach(() => {
-    (vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }).registerCommand = originalRegisterCommand;
-    (vscode.window as unknown as { showQuickPick: typeof vscode.window.showQuickPick }).showQuickPick = originalShowQuickPick;
-    (vscode.window as unknown as { showInformationMessage: typeof vscode.window.showInformationMessage }).showInformationMessage = originalShowInformationMessage;
+    (
+      vscode.commands as unknown as { registerCommand: typeof vscode.commands.registerCommand }
+    ).registerCommand = originalRegisterCommand;
+    (
+      vscode.window as unknown as { showQuickPick: typeof vscode.window.showQuickPick }
+    ).showQuickPick = originalShowQuickPick;
+    (
+      vscode.window as unknown as {
+        showInformationMessage: typeof vscode.window.showInformationMessage;
+      }
+    ).showInformationMessage = originalShowInformationMessage;
   });
 
   it('toggles commit details off when opening the same commit again', async () => {
@@ -92,5 +107,4 @@ describe('commit details behaviors', () => {
     await openDetails(sha);
     assert.deepStrictEqual(events, ['clear']);
   });
-
 });
