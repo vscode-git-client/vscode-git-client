@@ -176,221 +176,6 @@ export class CommandController {
   ) { }
 
   register(context: vscode.ExtensionContext): void {
-    const asBranchItem = (value: unknown): BranchTreeItem | undefined => (value instanceof BranchTreeItem ? value : undefined);
-    const asBranchRemoteItem = (value: unknown): BranchRemoteNode | undefined => (value instanceof BranchRemoteNode ? value : undefined);
-    const asTagItem = (value: unknown): TagTreeItem | undefined => (value instanceof TagTreeItem ? value : undefined);
-    const asStashItem = (value: unknown): StashTreeItem | undefined => (value instanceof StashTreeItem ? value : undefined);
-    const asGraphItem = (value: unknown): GraphCommitTreeItem | undefined =>
-      value instanceof GraphCommitTreeItem ? value : undefined;
-    const asGraphFileItem = (value: unknown): GraphCommitFileTreeItem | undefined =>
-      value instanceof GraphCommitFileTreeItem ? value : undefined;
-    const asCommitViewFileItem = (value: unknown): CommitFileTreeItem | undefined =>
-      value instanceof CommitFileTreeItem ? value : undefined;
-    const asCommitRangeFileItem = (
-      value: unknown
-    ): { filePath: string; fromRef: string; toRef: string; fromLabel: string; toLabel: string } | undefined => {
-      if (value instanceof CommitRangeFileTreeItem) {
-        return {
-          filePath: value.filePath,
-          fromRef: value.fromRef,
-          toRef: value.toRef,
-          fromLabel: value.fromLabel,
-          toLabel: value.toLabel
-        };
-      }
-
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        'filePath' in value &&
-        'fromRef' in value &&
-        'toRef' in value
-      ) {
-        const record = value as Record<string, unknown>;
-        if (
-          typeof record.filePath === 'string' &&
-          typeof record.fromRef === 'string' &&
-          typeof record.toRef === 'string'
-        ) {
-          return {
-            filePath: record.filePath,
-            fromRef: record.fromRef,
-            toRef: record.toRef,
-            fromLabel: typeof record.fromLabel === 'string' ? record.fromLabel : record.fromRef,
-            toLabel: typeof record.toLabel === 'string' ? record.toLabel : record.toRef
-          };
-        }
-      }
-
-      return undefined;
-    };
-    const asRevisionViewFileItem = (value: unknown): RevisionFileTreeItem | undefined =>
-      value instanceof RevisionFileTreeItem ? value : undefined;
-    const asWorkingTreeCompareFileItem = (
-      value: unknown
-    ): { filePath: string; ref: string; refLabel: string; status: string } | undefined => {
-      if (value instanceof WorkingTreeCompareFileTreeItem) {
-        return {
-          filePath: value.filePath,
-          ref: value.ref,
-          refLabel: value.refLabel,
-          status: value.status
-        };
-      }
-
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        'filePath' in value &&
-        'ref' in value &&
-        'refLabel' in value &&
-        'status' in value
-      ) {
-        const record = value as Record<string, unknown>;
-        if (
-          typeof record.filePath === 'string' &&
-          typeof record.ref === 'string' &&
-          typeof record.refLabel === 'string' &&
-          typeof record.status === 'string'
-        ) {
-          return {
-            filePath: record.filePath,
-            ref: record.ref,
-            refLabel: record.refLabel,
-            status: record.status
-          };
-        }
-      }
-
-      return undefined;
-    };
-    const asFileResourceUri = (value: unknown): vscode.Uri | undefined => {
-      if (value instanceof vscode.Uri) {
-        return value.scheme === 'file' ? value : undefined;
-      }
-
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        'resourceUri' in value &&
-        (value as { resourceUri?: unknown }).resourceUri instanceof vscode.Uri
-      ) {
-        const uri = (value as { resourceUri: vscode.Uri }).resourceUri;
-        return uri.scheme === 'file' ? uri : undefined;
-      }
-
-      return undefined;
-    };
-    const toExplorerResourceUris = (arg: unknown, selectedArg: unknown): vscode.Uri[] => {
-      const selectedUris = Array.isArray(selectedArg)
-        ? selectedArg.map((item) => asFileResourceUri(item)).filter((uri): uri is vscode.Uri => Boolean(uri))
-        : [];
-      const primary = asFileResourceUri(arg);
-      const combined = primary ? [primary, ...selectedUris] : selectedUris;
-      const uniqueByPath = new Map<string, vscode.Uri>();
-      for (const uri of combined) {
-        uniqueByPath.set(uri.fsPath, uri);
-      }
-      return [...uniqueByPath.values()];
-    };
-    const toBranchName = (value: unknown): string | undefined => {
-      const item = asBranchItem(value);
-      if (item) {
-        return item.branch.name;
-      }
-      if (typeof value !== 'string') {
-        return undefined;
-      }
-      const raw = value.trim();
-      if (!raw) {
-        return undefined;
-      }
-      return this.resolveBranchNameForActionHub(raw) ?? raw;
-    };
-    const toRepoFilePath = (value: unknown): string | undefined => {
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed || undefined;
-      }
-
-      const filePath =
-        asGraphFileItem(value)?.filePath ??
-        asCommitViewFileItem(value)?.filePath ??
-        asRevisionViewFileItem(value)?.filePath;
-      if (filePath) {
-        return filePath;
-      }
-
-      const uri = asFileResourceUri(value);
-      if (!uri) {
-        return undefined;
-      }
-
-      return this.git.toRepoRelative(uri.fsPath);
-    };
-    const toCommitSha = (value: unknown): string | undefined => {
-      if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed || undefined;
-      }
-      if (typeof value === 'object' && value !== null && 'sha' in value && typeof (value as { sha?: unknown }).sha === 'string') {
-        const sha = ((value as { sha: string }).sha ?? '').trim();
-        if (sha) {
-          return sha;
-        }
-      }
-      const tag = asTagItem(value)?.tag;
-      return asGraphItem(value)?.commit.sha ?? tag?.sha ?? tag?.name;
-    };
-    const toCommitSubject = (value: unknown): string | undefined => {
-      if (asGraphItem(value)) {
-        const subject = asGraphItem(value)?.commit.subject?.trim();
-        return subject || undefined;
-      }
-      if (typeof value === 'object' && value !== null && 'subject' in value && typeof (value as { subject?: unknown }).subject === 'string') {
-        const subject = ((value as { subject: string }).subject ?? '').trim();
-        return subject || undefined;
-      }
-      return undefined;
-    };
-    const resolveCommitSubject = (sha: string, argValue: unknown, selectedArgValue: unknown): string => {
-      const candidates = [
-        argValue,
-        ...(Array.isArray(selectedArgValue) ? selectedArgValue : [])
-      ];
-      for (const candidate of candidates) {
-        if (toCommitSha(candidate) !== sha) {
-          continue;
-        }
-        const subject = toCommitSubject(candidate);
-        if (subject) {
-          return subject;
-        }
-      }
-      return this.state.graph.find((commit) => commit.sha === sha)?.subject ?? sha;
-    };
-    const toGraphCommitShas = (arg: unknown, selectedArg: unknown): string[] => {
-      const selectedItems = Array.isArray(selectedArg) ? selectedArg : [];
-      const fromSelected = selectedItems
-        .map((item) => asGraphItem(item)?.commit.sha ?? toCommitSha(item))
-        .map((value) => (typeof value === 'string' ? value.trim() : ''))
-        .filter((value): value is string => Boolean(value));
-      if (fromSelected.length > 0) {
-        return [...new Set(fromSelected)];
-      }
-      const primary = toCommitSha(arg);
-      return primary ? [primary] : [];
-    };
-    const toTagRef = (value: unknown): string | undefined => asTagItem(value)?.tag.name;
-    const toTagRevision = (value: unknown): string | undefined => {
-      const tag = asTagItem(value)?.tag;
-      return tag?.sha ?? tag?.name;
-    };
-
-    const legacyCommandId = (command: string): string | undefined =>
-      command.startsWith('vscodeGitClient.')
-        ? `intelliGit.${command.slice('vscodeGitClient.'.length)}`
-        : undefined;
 
     const register = (command: string, callback: (...args: unknown[]) => Promise<void>): void => {
       const run = async (...args: unknown[]): Promise<void> => {
@@ -402,7 +187,7 @@ export class CommandController {
           void vscode.window.showErrorMessage(`VS Code Git Client: ${message}`);
         }
       };
-      const legacy = legacyCommandId(command);
+      const legacy = this.legacyCommandId(command);
       context.subscriptions.push(
         vscode.commands.registerCommand(command, run),
         ...(legacy ? [vscode.commands.registerCommand(legacy, run)] : [])
@@ -427,7 +212,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.openCommits', async (arg?: unknown) => {
-      const branchName = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to open commits'));
+      const branchName = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to open commits'));
       if (!branchName) {
         return;
       }
@@ -435,40 +220,14 @@ export class CommandController {
       await this.openBranchCommits(branchName);
     });
 
-    register('vscodeGitClient.branch.search', async () => {
-      const searchView = BranchSearchView.open(
-        {
-          checkout: async (name: string) => {
-            await this.git.checkoutBranch(name);
-            await this.state.refreshAll();
-          },
-          checkoutTag: async (name: string) => {
-            await vscode.commands.executeCommand('vscodeGitClient.tag.checkoutNewBranch', name);
-            await this.state.refreshAll();
-          },
-          openActions: async (name: string) => {
-            await vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', name);
-          },
-          refresh: async () => {
-            await this.state.refreshBranches();
-          },
-          runCommand: async (command, name) => {
-            await vscode.commands.executeCommand(command, name);
-          }
-        },
-        () => this.state.branches,
-        () => this.state.tags,
-        (listener) => this.state.onDidChange(listener)
-      );
-      await searchView.refresh();
-    });
+    register('vscodeGitClient.branch.search', this.handleBranchSearch.bind(this));
 
     register('vscodeGitClient.branch.search.refresh', async () => {
       await BranchSearchView.refreshCurrent();
     });
 
     register('vscodeGitClient.branch.checkout', async (arg?: unknown) => {
-      const branchName = toBranchName(arg) ?? (await this.pickBranchName());
+      const branchName = this.toBranchName(arg) ?? (await this.pickBranchName());
       if (!branchName) {
         return;
       }
@@ -478,12 +237,12 @@ export class CommandController {
     });
 
     register('vscodeGitClient.tag.openCommits', async (arg?: unknown) => {
-      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick tag or revision for details'));
+      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick tag or revision for details'));
       if (!revision) {
         return;
       }
 
-      const tagRef = toTagRef(arg) ?? revision;
+      const tagRef = this.toTagRef(arg) ?? revision;
       await this.openRefCommits(`tag:${revision}`, `Tag: ${tagRef}`, revision);
     });
 
@@ -509,7 +268,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.tag.checkoutNewBranch', async (arg?: unknown) => {
-      const baseRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
+      const baseRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
       if (!baseRef) {
         return;
       }
@@ -530,7 +289,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.tag.checkout', async (arg?: unknown) => {
-      const tagRef = toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
+      const tagRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
       if (!tagRef) {
         return;
       }
@@ -549,7 +308,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.tag.copyRevisionNumber', async (arg?: unknown) => {
-      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
+      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
       if (!revision) {
         return;
       }
@@ -559,34 +318,22 @@ export class CommandController {
     });
 
     register('vscodeGitClient.tag.showRepositoryAtRevision', async (arg?: unknown) => {
-      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
-      if (!revision) {
-        return;
-      }
-
+      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
+      if (!revision) { return; }
       await this.editor.showRepositoryAtRevision(revision);
     });
 
     register('vscodeGitClient.tag.compareWithCurrent', async (arg?: unknown) => {
-      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
-      if (!revision) {
-        return;
-      }
-
+      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
+      if (!revision) { return; }
       await this.editor.openCompareFromCommit(revision);
     });
 
     register('vscodeGitClient.tag.createPatch', async (arg?: unknown) => {
-      const revision = toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
-      if (!revision) {
-        return;
-      }
-
+      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
+      if (!revision) { return; }
       const patch = await this.git.getPatchForCommit(revision);
-      const doc = await vscode.workspace.openTextDocument({
-        language: 'diff',
-        content: patch
-      });
+      const doc = await vscode.workspace.openTextDocument({ language: 'diff', content: patch });
       await vscode.window.showTextDocument(doc, { preview: false });
     });
 
@@ -610,33 +357,9 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
     });
 
-    const setRemoteUrlFromItem = async (arg?: unknown): Promise<void> => {
-      const remoteItem = asBranchRemoteItem(arg);
-      const remoteName = remoteItem?.remoteName;
-      if (!remoteName) {
-        return;
-      }
-
-      const currentUrl = remoteItem.branches.find((branch) => Boolean(branch.remoteUrl))?.remoteUrl;
-      const nextUrl = await vscode.window.showInputBox({
-        title: currentUrl ? `Change remote URL for ${remoteName}` : `Set remote URL for ${remoteName}`,
-        value: currentUrl ?? '',
-        placeHolder: 'https://github.com/org/repo.git',
-        validateInput: (value) => (value.trim() ? undefined : 'Remote URL is required')
-      });
-      if (!nextUrl) {
-        return;
-      }
-
-      await this.git.setRemoteUrl(remoteName, nextUrl.trim());
-      const refreshPromise = this.state.refreshBranches();
-      void vscode.window.showInformationMessage(`Remote ${remoteName} URL updated.`);
-      await refreshPromise;
-    };
-
-    register('vscodeGitClient.remote.setUrl', setRemoteUrlFromItem);
-    register('vscodeGitClient.remote.changeUrl', setRemoteUrlFromItem);
-    register('vscodeGitClient.remote.setUrlMissing', setRemoteUrlFromItem);
+    register('vscodeGitClient.remote.setUrl', this.handleSetRemoteUrl.bind(this));
+    register('vscodeGitClient.remote.changeUrl', this.handleSetRemoteUrl.bind(this));
+    register('vscodeGitClient.remote.setUrlMissing', this.handleSetRemoteUrl.bind(this));
 
     register('vscodeGitClient.remote.add', async () => {
       const remoteUrl = await vscode.window.showInputBox({
@@ -663,7 +386,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.remote.delete', async (arg?: unknown) => {
-      const remoteName = asBranchRemoteItem(arg)?.remoteName;
+      const remoteName = this.asBranchRemoteItem(arg)?.remoteName;
       if (!remoteName) {
         return;
       }
@@ -683,7 +406,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.rename', async (arg?: unknown) => {
-      const from = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
+      const from = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
       if (!from) {
         return;
       }
@@ -703,7 +426,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.delete', async (arg?: unknown) => {
-      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
+      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
       if (!branch) {
         return;
       }
@@ -722,7 +445,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.track', async (arg?: unknown) => {
-      const local = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
+      const local = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
       if (!local) {
         return;
       }
@@ -737,7 +460,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.untrack', async (arg?: unknown) => {
-      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
+      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
       if (!branch) {
         return;
       }
@@ -747,7 +470,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.mergeIntoCurrent', async (arg?: unknown) => {
-      const branch = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
+      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
       if (!branch) {
         return;
       }
@@ -765,7 +488,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.branch.rebaseOnto', async (arg?: unknown) => {
-      const onto = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
+      const onto = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
       if (!onto) {
         return;
       }
@@ -782,37 +505,11 @@ export class CommandController {
       await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(onto));
     });
 
-    register('vscodeGitClient.branch.resetCurrentToCommit', async (arg?: unknown) => {
-      const target = toCommitSha(arg) ?? (await this.pickCommitSha('Pick target commit for reset'));
-      if (!target) {
-        return;
-      }
-
-      const mode = await vscode.window.showQuickPick(['soft', 'mixed', 'hard'], {
-        title: 'Reset mode',
-        placeHolder: 'Choose reset mode'
-      });
-
-      if (!mode) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Reset current branch',
-        detail: `Mode: ${mode}\nTarget: ${target}`,
-        acceptLabel: 'Reset'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.resetCurrent(target, mode as 'soft' | 'mixed' | 'hard');
-      await this.state.refreshAll();
-    });
+    register('vscodeGitClient.branch.resetCurrentToCommit', this.handleResetCurrentToCommit.bind(this));
 
     register('vscodeGitClient.branch.compareWithCurrent', async (arg?: unknown) => {
       const current = await this.git.getCurrentBranch();
-      const target = toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
+      const target = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
       if (!target) {
         return;
       }
@@ -820,32 +517,10 @@ export class CommandController {
       await this.editor.openBranchCompare(current, target);
     });
 
-    register('vscodeGitClient.stash.create', async () => {
-      const message = (await vscode.window.showInputBox({
-        title: 'Create stash',
-        placeHolder: 'WIP: short message'
-      }))?.trim();
-
-      if (!message) {
-        return;
-      }
-
-      const includeUntracked =
-        (await vscode.window.showQuickPick(['No', 'Yes'], {
-          title: 'Include untracked files?'
-        })) === 'Yes';
-
-      const keepIndex =
-        (await vscode.window.showQuickPick(['No', 'Yes'], {
-          title: 'Keep staged changes in index?'
-        })) === 'Yes';
-
-      await this.git.createStash(message, { includeUntracked, keepIndex });
-      await this.state.refreshAll();
-    });
+    register('vscodeGitClient.stash.create', this.handleStashCreate.bind(this));
 
     register('vscodeGitClient.stash.unshelve', async (arg?: unknown) => {
-      const item = asStashItem(arg);
+      const item = this.asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to unshelve'));
       if (!ref) {
         return;
@@ -856,30 +531,11 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Unshelved ${ref}.`);
     });
 
-    register('vscodeGitClient.stash.apply', async (arg?: unknown) => {
-      const item = asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to apply'));
-      if (!ref) {
-        return;
-      }
-
-      await this.git.applyStash(ref, false);
-      await this.state.refreshAll();
-    });
-
-    register('vscodeGitClient.stash.pop', async (arg?: unknown) => {
-      const item = asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to pop'));
-      if (!ref) {
-        return;
-      }
-
-      await this.git.applyStash(ref, true);
-      await this.state.refreshAll();
-    });
+    register('vscodeGitClient.stash.apply', async (arg?: unknown) => this.handleStashApplyPop(arg, false));
+    register('vscodeGitClient.stash.pop', async (arg?: unknown) => this.handleStashApplyPop(arg, true));
 
     register('vscodeGitClient.stash.drop', async (arg?: unknown) => {
-      const item = asStashItem(arg);
+      const item = this.asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to drop'));
       if (!ref) {
         return;
@@ -899,7 +555,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.stash.rename', async (arg?: unknown) => {
-      const item = asStashItem(arg);
+      const item = this.asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to rename'));
       if (!ref) {
         return;
@@ -918,7 +574,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.stash.previewPatch', async (arg?: unknown) => {
-      const item = asStashItem(arg);
+      const item = this.asStashItem(arg);
       const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to preview patch'));
       if (!ref) {
         return;
@@ -933,10 +589,10 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.openDetails', async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = toGraphCommitShas(arg, selected);
+      const selectedShas = this.toGraphCommitShas(arg, selected);
       const shouldOpenFirstDiff =
-        asGraphItem(arg) !== undefined ||
-        (Array.isArray(selected) && selected.some((item) => asGraphItem(item) !== undefined));
+        this.asGraphItem(arg) !== undefined ||
+        (Array.isArray(selected) && selected.some((item) => this.asGraphItem(item) !== undefined));
       if (selectedShas.length === 0) {
         const picked = await this.pickCommitSha('Pick commit for details');
         if (!picked) {
@@ -948,12 +604,12 @@ export class CommandController {
       if (!sha) {
         return;
       }
-      const subject = resolveCommitSubject(sha, arg, selected);
+      const subject = this.resolveCommitSubject(sha, arg, selected);
       await this.openCommitDetails(sha, subject, { openFirstDiff: shouldOpenFirstDiff, allowToggle: true });
     });
 
     register('vscodeGitClient.graph.openCommitRangeDetails', async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = toGraphCommitShas(arg, selected);
+      const selectedShas = this.toGraphCommitShas(arg, selected);
       if (selectedShas.length < 2) {
         return;
       }
@@ -961,7 +617,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.copyCommitId', async (arg?: unknown, selected?: unknown) => {
-      const shas = toGraphCommitShas(arg, selected);
+      const shas = this.toGraphCommitShas(arg, selected);
       if (shas.length === 0) {
         return;
       }
@@ -973,7 +629,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.copyCommitMessage', async (arg?: unknown, selected?: unknown) => {
-      const shas = toGraphCommitShas(arg, selected);
+      const shas = this.toGraphCommitShas(arg, selected);
       if (shas.length === 0) {
         return;
       }
@@ -990,38 +646,10 @@ export class CommandController {
       );
     });
 
-    register('vscodeGitClient.graph.openFileDiff', async (arg?: unknown, selected?: unknown) => {
-      if (await this.openSelectedFileDiffs(arg, selected)) {
-        return;
-      }
-
-      const item = asGraphFileItem(arg);
-      if (item) {
-        await this.editor.openCommitFileDiffWithStatus(item.commit.sha, item.filePath, item.status, { oldPath: item.oldPath });
-        return;
-      }
-
-      const rangeItem = asCommitRangeFileItem(arg);
-      if (rangeItem) {
-        await this.editor.openCommitRangeFileDiff(
-          rangeItem.fromRef,
-          rangeItem.toRef,
-          rangeItem.filePath,
-          { fromLabel: rangeItem.fromLabel, toLabel: rangeItem.toLabel }
-        );
-        return;
-      }
-
-      const commitItem = asCommitViewFileItem(arg);
-      if (!commitItem) {
-        return;
-      }
-
-      await this.editor.openCommitFileDiffWithStatus(commitItem.sha, commitItem.filePath, commitItem.status);
-    });
+    register('vscodeGitClient.graph.openFileDiff', this.handleOpenFileDiff.bind(this));
 
     register('vscodeGitClient.workingTreeCompare.openFileDiff', async (arg?: unknown) => {
-      const item = asWorkingTreeCompareFileItem(arg);
+      const item = this.asWorkingTreeCompareFileItem(arg);
       if (!item) {
         return;
       }
@@ -1037,7 +665,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.openRepositoryFileAtRevision', async (arg?: unknown) => {
-      const item = asRevisionViewFileItem(arg);
+      const item = this.asRevisionViewFileItem(arg);
       if (!item) {
         return;
       }
@@ -1046,7 +674,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.checkoutCommit', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to checkout'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to checkout'));
       if (!sha) {
         return;
       }
@@ -1065,7 +693,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.createBranchHere', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new branch'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new branch'));
       if (!sha) {
         return;
       }
@@ -1085,7 +713,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.createTagHere', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new tag'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new tag'));
       if (!sha) {
         return;
       }
@@ -1105,84 +733,7 @@ export class CommandController {
       void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
     });
 
-    register('vscodeGitClient.graph.cherryPick', async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = toGraphCommitShas(arg, selected);
-      if (selectedShas.length === 0) {
-        const picked = await this.pickCommitSha('Pick commit to cherry-pick');
-        if (!picked) {
-          return;
-        }
-        selectedShas.push(picked);
-      }
-
-      const pickedShas: string[] = [];
-      const emptyShas: string[] = [];
-      const failedShas: string[] = [];
-      let conflictSha: string | undefined;
-      let issueMessage: string | undefined;
-
-      for (const sha of selectedShas) {
-        try {
-          await this.git.cherryPick(sha);
-          pickedShas.push(sha);
-        } catch (error) {
-          const issue = this.classifyCherryPickIssue(error);
-          issueMessage = issue.message;
-          if (issue.kind === 'nothingToCherryPick') {
-            emptyShas.push(sha);
-            continue;
-          }
-          if (issue.kind === 'conflict') {
-            conflictSha = sha;
-            break;
-          }
-          failedShas.push(sha);
-          break;
-        }
-      }
-
-      const refreshPromise = this.state.refreshAll();
-
-      if (conflictSha) {
-        await this.handleOperationConflict('cherry-pick', refreshPromise);
-        return;
-      }
-
-      if (failedShas.length > 0) {
-        const detail = issueMessage ? ` ${issueMessage}` : '';
-        const prefix = pickedShas.length > 0
-          ? `Cherry-pick stopped after applying ${pickedShas.length} commit(s).`
-          : 'Cherry-pick failed.';
-        void vscode.window.showErrorMessage(`${prefix}${detail}`);
-        await refreshPromise;
-        return;
-      }
-
-      if (pickedShas.length > 0 && emptyShas.length === 0) {
-        const message = pickedShas.length === 1
-          ? `Cherry-pick succeeded for ${pickedShas[0].slice(0, 8)}.`
-          : `Cherry-pick succeeded for ${pickedShas.length} commit(s).`;
-        void vscode.window.showInformationMessage(message);
-        await refreshPromise;
-        return;
-      }
-
-      if (pickedShas.length === 0 && emptyShas.length > 0) {
-        const message = emptyShas.length === 1
-          ? `Nothing to cherry-pick for ${emptyShas[0].slice(0, 8)} (already applied or empty).`
-          : `Nothing to cherry-pick for ${emptyShas.length} commit(s) (already applied or empty).`;
-        void vscode.window.showInformationMessage(message);
-        await refreshPromise;
-        return;
-      }
-
-      if (pickedShas.length > 0 && emptyShas.length > 0) {
-        void vscode.window.showInformationMessage(
-          `Cherry-pick completed: ${pickedShas.length} applied, ${emptyShas.length} already applied or empty.`
-        );
-        await refreshPromise;
-      }
-    });
+    register('vscodeGitClient.graph.cherryPick', this.handleCherryPick.bind(this));
 
     register('vscodeGitClient.graph.cherryPickRange', async () => {
       const fromExclusive = await this.pickCommitSha('Pick starting point (exclusive)');
@@ -1208,7 +759,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.revert', async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = toGraphCommitShas(arg, selected);
+      const selectedShas = this.toGraphCommitShas(arg, selected);
       if (selectedShas.length === 0) {
         const picked = await this.pickCommitSha('Pick commit to revert');
         if (!picked) {
@@ -1223,155 +774,16 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.commit.revertSelectedChanges', async (arg?: unknown, selected?: unknown) => {
-      const target = await this.resolveSelectedCommitFiles(arg, selected);
-      if (!target) {
-        void vscode.window.showInformationMessage('Select one or more files from a commit first.');
-        return;
-      }
+    register('vscodeGitClient.commit.revertSelectedChanges', this.handleRevertSelectedChanges.bind(this));
 
-      if (!target.canRevert) {
-        void vscode.window.showWarningMessage('Selected files cannot be reverted from the current branch.');
-        return;
-      }
+    register('vscodeGitClient.commit.cherryPickSelectedChanges', this.handleCherryPickSelectedChanges.bind(this));
 
-      const confirmed = await confirmDangerousAction({
-        title: 'Revert selected changes',
-        detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
-        acceptLabel: 'Revert'
-      });
-      if (!confirmed) {
-        return;
-      }
+    register('vscodeGitClient.commit.createPatchSelectedChanges', this.handleCreatePatchSelectedChanges.bind(this));
 
-      if (target.kind === 'commit') {
-        await this.git.revertCommitFiles(target.sha, target.filePaths);
-      } else if (target.kind === 'range') {
-        const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
-        await this.git.reverseApplyPatchToWorkingTree(patch);
-      } else {
-        const patch = await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
-        await this.git.reverseApplyPatchToWorkingTree(patch);
-      }
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Reverted selected changes from ${target.shortLabel} in the current checkout.`);
-    });
-
-    register('vscodeGitClient.commit.cherryPickSelectedChanges', async (arg?: unknown, selected?: unknown) => {
-      const target = await this.resolveSelectedCommitFiles(arg, selected);
-      if (!target) {
-        void vscode.window.showInformationMessage('Select one or more files from a commit first.');
-        return;
-      }
-
-      if (!target.canCherryPick) {
-        void vscode.window.showWarningMessage('Selected files are already available in the current branch.');
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Cherry-pick selected changes',
-        detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
-        acceptLabel: 'Cherry-pick'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      if (target.kind === 'commit') {
-        await this.git.cherryPickCommitFiles(target.sha, target.filePaths);
-        const refreshPromise = this.state.refreshAll();
-        void vscode.window.showInformationMessage(`Cherry-picked selected changes from ${target.shortLabel} into the current checkout.`);
-        await refreshPromise;
-        return;
-      }
-
-      if (target.kind !== 'range') {
-        void vscode.window.showWarningMessage('Selected files are already available in the working tree.');
-        return;
-      }
-
-      const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
-      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
-    });
-
-    register('vscodeGitClient.commit.createPatchSelectedChanges', async (arg?: unknown, selected?: unknown) => {
-      const target = await this.resolveSelectedCommitFiles(arg, selected);
-      if (!target) {
-        void vscode.window.showInformationMessage('Select one or more files from a commit first.');
-        return;
-      }
-
-      if (!target.canCreatePatch) {
-        void vscode.window.showWarningMessage('Selected files cannot be used to create a patch from this view.');
-        return;
-      }
-
-      const patch = target.kind === 'commit'
-        ? await this.git.getPatchForCommitFiles(target.sha, target.filePaths)
-        : target.kind === 'range'
-          ? await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths)
-          : await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
-      if (!patch.trim()) {
-        void vscode.window.showInformationMessage('No patch content generated for the selected files.');
-        return;
-      }
-
-      const output = await this.pickPatchOutputTarget('Create Patch');
-      if (!output) {
-        return;
-      }
-
-      const patchFileName = '@unnamed.patch';
-      if (output === 'clipboard') {
-        await vscode.env.clipboard.writeText(patch);
-      } else {
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-        const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, patchFileName) : undefined;
-        const targetUri = await vscode.window.showSaveDialog({
-          title: 'Save Patch File',
-          saveLabel: 'Save',
-          defaultUri,
-          filters: {
-            Patch: ['patch', 'diff']
-          }
-        });
-        if (!targetUri) {
-          return;
-        }
-        await vscode.workspace.fs.writeFile(targetUri, Buffer.from(patch, 'utf8'));
-      }
-
-      if (target.kind !== 'workingTreeCompare') {
-        await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
-      }
-    });
-
-    register('vscodeGitClient.commit.applyPatch', async () => {
-      const source = await this.pickPatchSource();
-      if (!source) {
-        return;
-      }
-
-      const patch = source.kind === 'clipboard'
-        ? (await vscode.env.clipboard.readText())
-        : (await this.readPatchFromFile());
-      if (patch === undefined) {
-        return;
-      }
-
-      if (!patch.trim()) {
-        void vscode.window.showWarningMessage('Patch content is empty.');
-        return;
-      }
-
-      await this.applyPatchToWorkingTree(patch, {
-        source: source.kind === 'clipboard' ? 'clipboard' : 'patch file'
-      });
-    });
+    register('vscodeGitClient.commit.applyPatch', this.handleApplyPatch.bind(this));
 
     register('vscodeGitClient.graph.compareWithCurrent', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
       if (!sha) {
         return;
       }
@@ -1380,7 +792,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.rebaseInteractiveFromHere', async (arg?: unknown) => {
-      const base = toCommitSha(arg) ?? (await this.pickCommitSha('Pick base commit for interactive rebase'));
+      const base = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick base commit for interactive rebase'));
       if (!base) {
         return;
       }
@@ -1397,59 +809,10 @@ export class CommandController {
       await this.startRebaseOperation(() => this.git.rebaseInteractive(base));
     });
 
-    register('vscodeGitClient.graph.editCommitMessage', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to edit message'));
-      if (!sha) {
-        return;
-      }
-
-      const details = await this.git.getCommitDetails(sha);
-      const currentMessage = details.commit.subject.trim();
-      const nextMessage = await vscode.window.showInputBox({
-        title: `Edit commit message (${sha.slice(0, 8)})`,
-        value: currentMessage,
-        validateInput: (value) => (value.trim() ? undefined : 'Commit message is required')
-      });
-      if (nextMessage === undefined) {
-        return;
-      }
-
-      const trimmedMessage = nextMessage.trim();
-      if (trimmedMessage === currentMessage) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Rewrite commit message',
-        detail: `Commit: ${sha}\nThis rewrites commit history and may require force push.`,
-        acceptLabel: 'Rewrite'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      const parent = await this.git.getParentCommit(sha);
-      if (!parent) {
-        void vscode.window.showWarningMessage('Cannot edit the root commit message from this action.');
-        return;
-      }
-
-      const escapedSha = sha.replace(/'/g, `'\"'\"'`);
-      const escapedMessage = trimmedMessage.replace(/'/g, `'\"'\"'`);
-      const sequenceEditor = `sh -c 'TODO_FILE=\"$1\"; sed -i.bak -e \"s/^pick ${escapedSha}/reword ${escapedSha}/\" \"$TODO_FILE\"; rm -f \"$TODO_FILE.bak\"' --`;
-      const editor = `sh -c 'printf %s \"${escapedMessage}\" > \"$1\"' --`;
-
-      await this.startRebaseOperation(async () => {
-        await this.git.runGit([
-          '-c', `sequence.editor=${sequenceEditor}`,
-          '-c', `core.editor=${editor}`,
-          'rebase', '-i', parent
-        ]);
-      });
-    });
+    register('vscodeGitClient.graph.editCommitMessage', this.handleEditCommitMessage.bind(this));
 
     register('vscodeGitClient.graph.goToParentCommit', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
       if (!sha) {
         return;
       }
@@ -1470,7 +833,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.goToChildCommit', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
       if (!sha) {
         return;
       }
@@ -1504,48 +867,10 @@ export class CommandController {
       }
     });
 
-    register('vscodeGitClient.graph.pushAllUpToHere', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to push up to'));
-      if (!sha) {
-        return;
-      }
-
-      const current = (await this.git.runGit(['rev-parse', 'HEAD'])).stdout.trim();
-      if (current === sha) {
-        await vscode.commands.executeCommand('vscodeGitClient.git.pushWithPreview');
-        return;
-      }
-
-      let isAncestor = true;
-      try {
-        await this.git.runGit(['merge-base', '--is-ancestor', sha, 'HEAD']);
-      } catch {
-        isAncestor = false;
-      }
-      if (!isAncestor) {
-        void vscode.window.showWarningMessage('Selected commit is not an ancestor of current HEAD.');
-        return;
-      }
-
-      const preview = await this.git.runGit(['log', '--oneline', `${sha}..HEAD`]);
-      const outgoingLines = preview.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
-      const detailLines = outgoingLines.slice(0, 10).join('\n') || 'none';
-
-      const confirmed = await confirmDangerousAction({
-        title: `Push all up to ${sha.slice(0, 8)}`,
-        detail: `Commits to push:\n${detailLines}`,
-        acceptLabel: 'Push'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.push();
-      await this.state.refreshAll();
-    });
+    register('vscodeGitClient.graph.pushAllUpToHere', this.handlePushAllUpToHere.bind(this));
 
     register('vscodeGitClient.graph.createPatch', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to export patch'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to export patch'));
       if (!sha) {
         return;
       }
@@ -1559,7 +884,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.createPatchForRange', async (arg?: unknown, selected?: unknown) => {
-      const shas = toGraphCommitShas(arg, selected);
+      const shas = this.toGraphCommitShas(arg, selected);
       if (shas.length < 2) {
         return;
       }
@@ -1573,7 +898,7 @@ export class CommandController {
     });
 
     register('vscodeGitClient.graph.showRepositoryAtRevision', async (arg?: unknown) => {
-      const sha = toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));
+      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));
       if (!sha) {
         return;
       }
@@ -1581,43 +906,7 @@ export class CommandController {
       await this.editor.showRepositoryAtRevision(sha);
     });
 
-    register('vscodeGitClient.graph.filter', async () => {
-      const filterSession = new GraphFilterSession(
-        (maxCount, skip, filters) => this.git.getGraph(maxCount, skip, filters),
-        () => getConfigValue<number>('maxGraphCommits', 200)
-      );
-      const getMasterSnapshot = () => ({
-        filters: {},
-        branches: this.state.branches,
-        commits: this.state.graph,
-        hasMore: this.state.graphHasMore
-      });
-      GraphFilterView.open(
-        {
-          apply: async (filters) => {
-            const snapshot = await filterSession.apply(filters);
-            const isActive = Object.values(filters).some(Boolean);
-            await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', isActive);
-            return snapshot;
-          },
-          clear: async () => {
-            await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
-            return filterSession.clear(getMasterSnapshot());
-          },
-          openCommitDetails: async (sha, subject) => this.openCommitDetails(sha, subject, { allowToggle: true }),
-          openCommitRangeDetails: async (shas) => this.editor.openCommitRangeDetails(shas),
-          getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
-          openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
-          loadMore: async () => {
-            return filterSession.loadMore(getMasterSnapshot());
-          }
-        },
-        () => ({
-          ...filterSession.getSnapshot(getMasterSnapshot()),
-          branches: this.state.branches
-        })
-      );
-    });
+    register('vscodeGitClient.graph.filter', this.handleGraphFilter.bind(this));
 
     register('vscodeGitClient.graph.clearFilter', async () => {
       await GraphFilterView.clearCurrentFilters();
@@ -1679,96 +968,13 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.conflict.acceptOurs', async (arg?: unknown) => {
-      const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Yours (ours) for which file?'));
-      if (!path) { return; }
-      await this.git.resolveConflictOurs(path);
-      await this.state.refreshChanges();
-      void vscode.window.showInformationMessage(`Accepted yours: ${path}`);
-    });
+    register('vscodeGitClient.conflict.acceptOurs', async (arg?: unknown) => this.handleConflictResolve(arg, 'ours'));
+    register('vscodeGitClient.conflict.acceptTheirs', async (arg?: unknown) => this.handleConflictResolve(arg, 'theirs'));
+    register('vscodeGitClient.conflict.acceptBoth', async (arg?: unknown) => this.handleConflictResolve(arg, 'both'));
 
-    register('vscodeGitClient.conflict.acceptTheirs', async (arg?: unknown) => {
-      const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Theirs for which file?'));
-      if (!path) { return; }
-      await this.git.resolveConflictTheirs(path);
-      await this.state.refreshChanges();
-      void vscode.window.showInformationMessage(`Accepted theirs: ${path}`);
-    });
+    register('vscodeGitClient.operation.abort', this.handleOperationAbort.bind(this));
 
-    register('vscodeGitClient.conflict.acceptBoth', async (arg?: unknown) => {
-      const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath('Accept Both: open merge editor for which file?'));
-      if (!path) { return; }
-      await this.editor.openMergeConflict(path);
-    });
-
-    register('vscodeGitClient.operation.abort', async () => {
-      const state = await this.git.getOperationState();
-      if (state.kind === 'none') {
-        void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
-        return;
-      }
-      const confirmed = await confirmDangerousAction({
-        title: `Abort ${state.kind}`,
-        detail: 'This will reset the working tree to before the operation started.',
-        acceptLabel: 'Abort'
-      });
-      if (!confirmed) { return; }
-      try {
-        if (state.kind === 'merge') { await this.git.mergeAbort(); }
-        else if (state.kind === 'rebase') { await this.git.rebaseAbort(); }
-        else if (state.kind === 'cherry-pick') { await this.git.cherryPickAbort(); }
-        else if (state.kind === 'revert') { await this.git.revertAbort(); }
-      } finally {
-        await this.state.refreshAll();
-      }
-    });
-
-    register('vscodeGitClient.operation.continue', async () => {
-      const state = await this.git.getOperationState();
-      if (state.kind === 'none') {
-        void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
-        return;
-      }
-      const conflicts = await this.git.getMergeConflicts();
-      if (conflicts.length > 0) {
-        if (state.kind === 'rebase') {
-          await this.handleRebaseConflict();
-          return;
-        }
-        void vscode.window.showWarningMessage(`Resolve all conflicts before continuing (${conflicts.length} remaining).`);
-        return;
-      }
-      try {
-        if (state.kind === 'merge') {
-          await vscode.commands.executeCommand('vscodeGitClient.merge.finalize');
-          return;
-        }
-        if (state.kind === 'rebase') {
-          try {
-            await this.git.rebaseContinue();
-          } catch (error) {
-            const issue = this.classifyRebaseIssue(error);
-            if (issue.kind === 'conflict') {
-              await this.handleOperationConflict('rebase', this.state.refreshAll());
-              return;
-            }
-            throw error;
-          }
-          await this.state.refreshAll();
-          await this.showRebaseProgressFeedback();
-          return;
-        }
-        if (state.kind === 'cherry-pick') {
-          await this.git.cherryPickContinue();
-        } else if (state.kind === 'revert') {
-          await this.git.revertContinue();
-        }
-      } finally {
-        if (state.kind !== 'rebase') {
-          await this.state.refreshAll();
-        }
-      }
-    });
+    register('vscodeGitClient.operation.continue', this.handleOperationContinue.bind(this));
 
     register('vscodeGitClient.operation.skip', async () => {
       const state = await this.git.getOperationState();
@@ -1875,35 +1081,7 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.scm.shelveResource', async (arg?: unknown) => {
-      const filePath = toRepoFilePath(arg);
-      if (!filePath) {
-        void vscode.window.showWarningMessage('Select a Source Control file to shelve.');
-        return;
-      }
-
-      const defaultMessage = `Shelve ${filePath}`;
-      const rawMessage = await vscode.window.showInputBox({
-        title: 'Shelve selected change',
-        value: defaultMessage,
-        placeHolder: 'Shelve message'
-      });
-      if (rawMessage === undefined) {
-        return;
-      }
-
-      const message = rawMessage.trim() || defaultMessage;
-      const changes = await this.git.getChangedFiles();
-      const includeUntracked = changes.some((item) => item.path === filePath && item.status.trim() === '??');
-
-      await this.git.stashFiles([filePath], message, {
-        keepIndex: true,
-        includeUntracked
-      });
-
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Shelved ${filePath}.`);
-    });
+    register('vscodeGitClient.scm.shelveResource', this.handleShelveResource.bind(this));
 
     register('vscodeGitClient.unstage.file', async () => {
       const changed = await this.git.getChangedFiles();
@@ -1945,189 +1123,15 @@ export class CommandController {
       await this.state.refreshAll();
     });
 
-    register('vscodeGitClient.scm.commitTemplate', async () => {
-      const repository = await this.getBuiltInGitRepository();
-      if (!repository) {
-        void vscode.window.showWarningMessage('Git repository context not available.');
-        return;
-      }
+    register('vscodeGitClient.scm.commitTemplate', this.handleCommitTemplate.bind(this));
 
-      const templates = loadTemplates();
-      if (templates.length === 0) {
-        void vscode.window.showInformationMessage('No commit templates configured.');
-        return;
-      }
+    register('vscodeGitClient.scm.generateCommitMessage', this.handleGenerateCommitMessage.bind(this));
 
-      const picked = await vscode.window.showQuickPick(
-        templates.map((template) => ({
-          label: template.label,
-          description: template.template,
-          template: template.template
-        })),
-        {
-          title: 'Insert commit message template',
-          placeHolder: 'Pick a template'
-        }
-      );
-      if (!picked) {
-        return;
-      }
+    register('vscodeGitClient.scm.amendFromInput', this.handleScmAmendFromInput.bind(this));
 
-      let branch = '';
-      try {
-        branch = await this.git.getCurrentBranch();
-      } catch {
-        // ignore: branch placeholder will stay empty
-      }
+    register('vscodeGitClient.compareWithRevision', this.handleCompareWithRevision.bind(this));
 
-      const expanded = expandTemplate(picked.template, { branch }).text;
-      repository.inputBox.value = expanded;
-    });
-
-    register('vscodeGitClient.scm.generateCommitMessage', async () => {
-      const repository = await this.getBuiltInGitRepository();
-      if (!repository) {
-        void vscode.window.showWarningMessage('Git repository context not available.');
-        return;
-      }
-
-      const timeoutMs = getConfigValue<number>('aiGenerateTimeoutMs', 5000);
-      const cts = new vscode.CancellationTokenSource();
-      const timer = setTimeout(() => cts.cancel(), timeoutMs);
-
-      try {
-        const generated = await this.git.generateCommitMessage(cts.token);
-        repository.inputBox.value = generated;
-      } catch (error) {
-        const message = cts.token.isCancellationRequested
-          ? `AI generation timed out after ${timeoutMs / 1000}s.`
-          : String(error);
-        void vscode.window.showErrorMessage(message);
-      } finally {
-        clearTimeout(timer);
-        cts.dispose();
-      }
-    });
-
-    register('vscodeGitClient.scm.amendFromInput', async () => {
-      const repository = await this.getBuiltInGitRepository();
-      if (!repository) {
-        void vscode.window.showWarningMessage('Git repository context not available.');
-        return;
-      }
-
-      const commitMessage = repository.inputBox.value.trim();
-      const confirmed = await confirmDangerousAction({
-        title: 'Amend last commit',
-        detail: commitMessage
-          ? 'Use the current Source Control commit message and amend the last commit.'
-          : 'Amend the last commit without changing its message.',
-        acceptLabel: 'Amend'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.amendCommit(commitMessage || undefined);
-      repository.inputBox.value = '';
-      await this.state.refreshAll();
-    });
-
-    register('vscodeGitClient.compareWithRevision', async (arg?: unknown, selected?: unknown) => {
-      const targetUris = toExplorerResourceUris(arg, selected);
-      if (targetUris.length === 0) {
-        void vscode.window.showWarningMessage('Right-click a file or folder in the Explorer to compare.');
-        return;
-      }
-
-      if (!(await this.git.isRepo())) {
-        void vscode.window.showErrorMessage('Not inside a Git repository');
-        return;
-      }
-
-      const gitRoot = await this.git.getGitRoot();
-      const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
-      const targets: Array<{ repoRelative: string; isDirectory: boolean }> = [];
-      for (const uri of targetUris) {
-        const normalizedTarget = uri.fsPath.replace(/[\\/]+$/, '');
-        const repoRelative = normalizedTarget === normalizedRoot
-          ? ''
-          : this.git.toRepoRelative(uri.fsPath);
-        if (repoRelative === undefined) {
-          void vscode.window.showErrorMessage('Not inside a Git repository');
-          return;
-        }
-
-        let stat: vscode.FileStat;
-        try {
-          stat = await vscode.workspace.fs.stat(uri);
-        } catch {
-          void vscode.window.showErrorMessage('Selected path is no longer available.');
-          return;
-        }
-        targets.push({
-          repoRelative,
-          isDirectory: (stat.type & vscode.FileType.Directory) !== 0
-        });
-      }
-
-      const selection = await pickRevisionToCompare(
-        this.git,
-        () => this.state.branches,
-        () => this.state.tags,
-        () => this.state.refreshBranches()
-      );
-      if (!selection) {
-        return;
-      }
-
-      for (const target of targets) {
-        if (target.isDirectory) {
-          await this.editor.openCompareWithRevisionForFolder(target.repoRelative, selection.ref, selection.label);
-        } else {
-          await this.editor.openCompareWithRevisionForFile(target.repoRelative, selection.ref, selection.label);
-        }
-      }
-    });
-
-    register('vscodeGitClient.directoryTimeline.open', async (arg?: unknown) => {
-      const targetUri = asFileResourceUri(arg);
-      if (!targetUri) {
-        void vscode.window.showWarningMessage('Right-click a folder in the Explorer to view its timeline.');
-        return;
-      }
-
-      if (!(await this.git.isRepo())) {
-        void vscode.window.showErrorMessage('Not inside a Git repository');
-        return;
-      }
-
-      let stat: vscode.FileStat;
-      try {
-        stat = await vscode.workspace.fs.stat(targetUri);
-      } catch {
-        void vscode.window.showErrorMessage('Selected folder is no longer available.');
-        return;
-      }
-
-      if ((stat.type & vscode.FileType.Directory) === 0) {
-        void vscode.window.showWarningMessage('Select a folder in the Explorer to view its timeline.');
-        return;
-      }
-
-      const gitRoot = await this.git.getGitRoot();
-      const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
-      const normalizedTarget = targetUri.fsPath.replace(/[\\/]+$/, '');
-      const repoRelative = normalizedTarget === normalizedRoot
-        ? ''
-        : this.git.toRepoRelative(targetUri.fsPath);
-      if (repoRelative === undefined) {
-        void vscode.window.showErrorMessage('Not inside a Git repository');
-        return;
-      }
-
-      await this.openDirectoryTimeline(repoRelative);
-    });
+    register('vscodeGitClient.directoryTimeline.open', this.handleDirectoryTimelineOpen.bind(this));
 
     register('vscodeGitClient.fileBlame.open', async () => {
       const file = this.getActiveFilePath();
@@ -3788,6 +2792,1068 @@ export class CommandController {
     if (openedCount < conflicts.length) {
       await vscode.commands.executeCommand('workbench.view.scm');
     }
+  }
+
+  // ── Promoted type guard methods (Phase 1) ──────────────────────────────
+
+  private asBranchItem(value: unknown): BranchTreeItem | undefined {
+    return value instanceof BranchTreeItem ? value : undefined;
+  }
+
+  private asBranchRemoteItem(value: unknown): BranchRemoteNode | undefined {
+    return value instanceof BranchRemoteNode ? value : undefined;
+  }
+
+  private asTagItem(value: unknown): TagTreeItem | undefined {
+    return value instanceof TagTreeItem ? value : undefined;
+  }
+
+  private asStashItem(value: unknown): StashTreeItem | undefined {
+    return value instanceof StashTreeItem ? value : undefined;
+  }
+
+  private asGraphItem(value: unknown): GraphCommitTreeItem | undefined {
+    return value instanceof GraphCommitTreeItem ? value : undefined;
+  }
+
+  private asGraphFileItem(value: unknown): GraphCommitFileTreeItem | undefined {
+    return value instanceof GraphCommitFileTreeItem ? value : undefined;
+  }
+
+  private asCommitViewFileItem(value: unknown): CommitFileTreeItem | undefined {
+    return value instanceof CommitFileTreeItem ? value : undefined;
+  }
+
+  private asRevisionViewFileItem(value: unknown): RevisionFileTreeItem | undefined {
+    return value instanceof RevisionFileTreeItem ? value : undefined;
+  }
+
+  private legacyCommandId(command: string): string | undefined {
+    return command.startsWith('vscodeGitClient.')
+      ? `intelliGit.${command.slice('vscodeGitClient.'.length)}`
+      : undefined;
+  }
+
+  private asCommitRangeFileItem(
+    value: unknown
+  ): { filePath: string; fromRef: string; toRef: string; fromLabel: string; toLabel: string } | undefined {
+    if (value instanceof CommitRangeFileTreeItem) {
+      return {
+        filePath: value.filePath,
+        fromRef: value.fromRef,
+        toRef: value.toRef,
+        fromLabel: value.fromLabel,
+        toLabel: value.toLabel
+      };
+    }
+
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'filePath' in value &&
+      'fromRef' in value &&
+      'toRef' in value
+    ) {
+      const record = value as Record<string, unknown>;
+      if (
+        typeof record.filePath === 'string' &&
+        typeof record.fromRef === 'string' &&
+        typeof record.toRef === 'string'
+      ) {
+        return {
+          filePath: record.filePath,
+          fromRef: record.fromRef,
+          toRef: record.toRef,
+          fromLabel: typeof record.fromLabel === 'string' ? record.fromLabel : record.fromRef,
+          toLabel: typeof record.toLabel === 'string' ? record.toLabel : record.toRef
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  private asWorkingTreeCompareFileItem(
+    value: unknown
+  ): { filePath: string; ref: string; refLabel: string; status: string } | undefined {
+    if (value instanceof WorkingTreeCompareFileTreeItem) {
+      return {
+        filePath: value.filePath,
+        ref: value.ref,
+        refLabel: value.refLabel,
+        status: value.status
+      };
+    }
+
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'filePath' in value &&
+      'ref' in value &&
+      'refLabel' in value &&
+      'status' in value
+    ) {
+      const record = value as Record<string, unknown>;
+      if (
+        typeof record.filePath === 'string' &&
+        typeof record.ref === 'string' &&
+        typeof record.refLabel === 'string' &&
+        typeof record.status === 'string'
+      ) {
+        return {
+          filePath: record.filePath,
+          ref: record.ref,
+          refLabel: record.refLabel,
+          status: record.status
+        };
+      }
+    }
+
+    return undefined;
+  }
+
+  private asFileResourceUri(value: unknown): vscode.Uri | undefined {
+    if (value instanceof vscode.Uri) {
+      return value.scheme === 'file' ? value : undefined;
+    }
+
+    if (
+      typeof value === 'object' &&
+      value !== null &&
+      'resourceUri' in value &&
+      (value as { resourceUri?: unknown }).resourceUri instanceof vscode.Uri
+    ) {
+      const uri = (value as { resourceUri: vscode.Uri }).resourceUri;
+      return uri.scheme === 'file' ? uri : undefined;
+    }
+
+    return undefined;
+  }
+
+  private toExplorerResourceUris(arg: unknown, selectedArg: unknown): vscode.Uri[] {
+    const selectedUris = Array.isArray(selectedArg)
+      ? selectedArg.map((item) => this.asFileResourceUri(item)).filter((uri): uri is vscode.Uri => Boolean(uri))
+      : [];
+    const primary = this.asFileResourceUri(arg);
+    const combined = primary ? [primary, ...selectedUris] : selectedUris;
+    const uniqueByPath = new Map<string, vscode.Uri>();
+    for (const uri of combined) {
+      uniqueByPath.set(uri.fsPath, uri);
+    }
+    return [...uniqueByPath.values()];
+  }
+
+  private toBranchName(value: unknown): string | undefined {
+    const item = this.asBranchItem(value);
+    if (item) {
+      return item.branch.name;
+    }
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+    const raw = value.trim();
+    if (!raw) {
+      return undefined;
+    }
+    return this.resolveBranchNameForActionHub(raw) ?? raw;
+  }
+
+  private toRepoFilePath(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed || undefined;
+    }
+
+    const filePath =
+      this.asGraphFileItem(value)?.filePath ??
+      this.asCommitViewFileItem(value)?.filePath ??
+      this.asRevisionViewFileItem(value)?.filePath;
+    if (filePath) {
+      return filePath;
+    }
+
+    const uri = this.asFileResourceUri(value);
+    if (!uri) {
+      return undefined;
+    }
+
+    return this.git.toRepoRelative(uri.fsPath);
+  }
+
+  private toCommitSha(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed || undefined;
+    }
+    if (typeof value === 'object' && value !== null && 'sha' in value && typeof (value as { sha?: unknown }).sha === 'string') {
+      const sha = ((value as { sha: string }).sha ?? '').trim();
+      if (sha) {
+        return sha;
+      }
+    }
+    const tag = this.asTagItem(value)?.tag;
+    return this.asGraphItem(value)?.commit.sha ?? tag?.sha ?? tag?.name;
+  }
+
+  private toCommitSubject(value: unknown): string | undefined {
+    if (this.asGraphItem(value)) {
+      const subject = this.asGraphItem(value)?.commit.subject?.trim();
+      return subject || undefined;
+    }
+    if (typeof value === 'object' && value !== null && 'subject' in value && typeof (value as { subject?: unknown }).subject === 'string') {
+      const subject = ((value as { subject: string }).subject ?? '').trim();
+      return subject || undefined;
+    }
+    return undefined;
+  }
+
+  private resolveCommitSubject(sha: string, argValue: unknown, selectedArgValue: unknown): string {
+    const candidates = [
+      argValue,
+      ...(Array.isArray(selectedArgValue) ? selectedArgValue : [])
+    ];
+    for (const candidate of candidates) {
+      if (this.toCommitSha(candidate) !== sha) {
+        continue;
+      }
+      const subject = this.toCommitSubject(candidate);
+      if (subject) {
+        return subject;
+      }
+    }
+    return this.state.graph.find((commit) => commit.sha === sha)?.subject ?? sha;
+  }
+
+  private toGraphCommitShas(arg: unknown, selectedArg: unknown): string[] {
+    const selectedItems = Array.isArray(selectedArg) ? selectedArg : [];
+    const fromSelected = selectedItems
+      .map((item) => this.asGraphItem(item)?.commit.sha ?? this.toCommitSha(item))
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter((value): value is string => Boolean(value));
+    if (fromSelected.length > 0) {
+      return [...new Set(fromSelected)];
+    }
+    const primary = this.toCommitSha(arg);
+    return primary ? [primary] : [];
+  }
+
+  private toTagRef(value: unknown): string | undefined {
+    return this.asTagItem(value)?.tag.name;
+  }
+
+  private toTagRevision(value: unknown): string | undefined {
+    const tag = this.asTagItem(value)?.tag;
+    return tag?.sha ?? tag?.name;
+  }
+
+  // ── Command handler methods (Phase 2) ─────────────────────────────────
+
+  private async handleCherryPick(arg?: unknown, selected?: unknown): Promise<void> {
+    const selectedShas = this.toGraphCommitShas(arg, selected);
+    if (selectedShas.length === 0) {
+      const picked = await this.pickCommitSha('Pick commit to cherry-pick');
+      if (!picked) {
+        return;
+      }
+      selectedShas.push(picked);
+    }
+
+    const pickedShas: string[] = [];
+    const emptyShas: string[] = [];
+    const failedShas: string[] = [];
+    let conflictSha: string | undefined;
+    let issueMessage: string | undefined;
+
+    for (const sha of selectedShas) {
+      try {
+        await this.git.cherryPick(sha);
+        pickedShas.push(sha);
+      } catch (error) {
+        const issue = this.classifyCherryPickIssue(error);
+        issueMessage = issue.message;
+        if (issue.kind === 'nothingToCherryPick') {
+          emptyShas.push(sha);
+          continue;
+        }
+        if (issue.kind === 'conflict') {
+          conflictSha = sha;
+          break;
+        }
+        failedShas.push(sha);
+        break;
+      }
+    }
+
+    const refreshPromise = this.state.refreshAll();
+
+    if (conflictSha) {
+      await this.handleOperationConflict('cherry-pick', refreshPromise);
+      return;
+    }
+
+    if (failedShas.length > 0) {
+      const detail = issueMessage ? ` ${issueMessage}` : '';
+      const prefix = pickedShas.length > 0
+        ? `Cherry-pick stopped after applying ${pickedShas.length} commit(s).`
+        : 'Cherry-pick failed.';
+      void vscode.window.showErrorMessage(`${prefix}${detail}`);
+      await refreshPromise;
+      return;
+    }
+
+    if (pickedShas.length > 0 && emptyShas.length === 0) {
+      const message = pickedShas.length === 1
+        ? `Cherry-pick succeeded for ${pickedShas[0].slice(0, 8)}.`
+        : `Cherry-pick succeeded for ${pickedShas.length} commit(s).`;
+      void vscode.window.showInformationMessage(message);
+      await refreshPromise;
+      return;
+    }
+
+    if (pickedShas.length === 0 && emptyShas.length > 0) {
+      const message = emptyShas.length === 1
+        ? `Nothing to cherry-pick for ${emptyShas[0].slice(0, 8)} (already applied or empty).`
+        : `Nothing to cherry-pick for ${emptyShas.length} commit(s) (already applied or empty).`;
+      void vscode.window.showInformationMessage(message);
+      await refreshPromise;
+      return;
+    }
+
+    if (pickedShas.length > 0 && emptyShas.length > 0) {
+      void vscode.window.showInformationMessage(
+        `Cherry-pick completed: ${pickedShas.length} applied, ${emptyShas.length} already applied or empty.`
+      );
+      await refreshPromise;
+    }
+  }
+
+  private async handleOpenFileDiff(arg?: unknown, selected?: unknown): Promise<void> {
+    if (await this.openSelectedFileDiffs(arg, selected)) {
+      return;
+    }
+
+    const item = this.asGraphFileItem(arg);
+    if (item) {
+      await this.editor.openCommitFileDiffWithStatus(item.commit.sha, item.filePath, item.status, { oldPath: item.oldPath });
+      return;
+    }
+
+    const rangeItem = this.asCommitRangeFileItem(arg);
+    if (rangeItem) {
+      await this.editor.openCommitRangeFileDiff(
+        rangeItem.fromRef,
+        rangeItem.toRef,
+        rangeItem.filePath,
+        { fromLabel: rangeItem.fromLabel, toLabel: rangeItem.toLabel }
+      );
+      return;
+    }
+
+    const commitItem = this.asCommitViewFileItem(arg);
+    if (!commitItem) {
+      return;
+    }
+
+    await this.editor.openCommitFileDiffWithStatus(commitItem.sha, commitItem.filePath, commitItem.status);
+  }
+
+  private async handleCherryPickSelectedChanges(arg?: unknown, selected?: unknown): Promise<void> {
+    const target = await this.resolveSelectedCommitFiles(arg, selected);
+    if (!target) {
+      void vscode.window.showInformationMessage('Select one or more files from a commit first.');
+      return;
+    }
+
+    if (!target.canCherryPick) {
+      void vscode.window.showWarningMessage('Selected files are already available in the current branch.');
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Cherry-pick selected changes',
+      detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
+      acceptLabel: 'Cherry-pick'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    if (target.kind === 'commit') {
+      await this.git.cherryPickCommitFiles(target.sha, target.filePaths);
+      const refreshPromise = this.state.refreshAll();
+      void vscode.window.showInformationMessage(`Cherry-picked selected changes from ${target.shortLabel} into the current checkout.`);
+      await refreshPromise;
+      return;
+    }
+
+    if (target.kind !== 'range') {
+      void vscode.window.showWarningMessage('Selected files are already available in the working tree.');
+      return;
+    }
+
+    const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+    await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
+  }
+
+  private async handleCreatePatchSelectedChanges(arg?: unknown, selected?: unknown): Promise<void> {
+    const target = await this.resolveSelectedCommitFiles(arg, selected);
+    if (!target) {
+      void vscode.window.showInformationMessage('Select one or more files from a commit first.');
+      return;
+    }
+
+    if (!target.canCreatePatch) {
+      void vscode.window.showWarningMessage('Selected files cannot be used to create a patch from this view.');
+      return;
+    }
+
+    const patch = target.kind === 'commit'
+      ? await this.git.getPatchForCommitFiles(target.sha, target.filePaths)
+      : target.kind === 'range'
+        ? await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths)
+        : await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
+    if (!patch.trim()) {
+      void vscode.window.showInformationMessage('No patch content generated for the selected files.');
+      return;
+    }
+
+    const output = await this.pickPatchOutputTarget('Create Patch');
+    if (!output) {
+      return;
+    }
+
+    const patchFileName = '@unnamed.patch';
+    if (output === 'clipboard') {
+      await vscode.env.clipboard.writeText(patch);
+    } else {
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
+      const defaultUri = workspaceRoot ? vscode.Uri.joinPath(workspaceRoot, patchFileName) : undefined;
+      const targetUri = await vscode.window.showSaveDialog({
+        title: 'Save Patch File',
+        saveLabel: 'Save',
+        defaultUri,
+        filters: {
+          Patch: ['patch', 'diff']
+        }
+      });
+      if (!targetUri) {
+        return;
+      }
+      await vscode.workspace.fs.writeFile(targetUri, Buffer.from(patch, 'utf8'));
+    }
+
+    if (target.kind !== 'workingTreeCompare') {
+      await this.applyPatchToWorkingTree(patch, { source: `selected changes from ${target.shortLabel}` });
+    }
+  }
+
+  private async handleRevertSelectedChanges(arg?: unknown, selected?: unknown): Promise<void> {
+    const target = await this.resolveSelectedCommitFiles(arg, selected);
+    if (!target) {
+      void vscode.window.showInformationMessage('Select one or more files from a commit first.');
+      return;
+    }
+
+    if (!target.canRevert) {
+      void vscode.window.showWarningMessage('Selected files cannot be reverted from the current branch.');
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Revert selected changes',
+      detail: `${target.detailLabel}\nFiles: ${target.filePaths.length}\n${target.filePaths.map((path) => `- ${path}`).join('\n')}`,
+      acceptLabel: 'Revert'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    if (target.kind === 'commit') {
+      await this.git.revertCommitFiles(target.sha, target.filePaths);
+    } else if (target.kind === 'range') {
+      const patch = await this.git.getPatchBetweenRefsForFiles(target.fromRef, target.toRef, target.filePaths);
+      await this.git.reverseApplyPatchToWorkingTree(patch);
+    } else {
+      const patch = await this.git.getPatchBetweenWorkingTreeAndRefForFiles(target.ref, target.filePaths);
+      await this.git.reverseApplyPatchToWorkingTree(patch);
+    }
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage(`Reverted selected changes from ${target.shortLabel} in the current checkout.`);
+  }
+
+  private async handleApplyPatch(): Promise<void> {
+    const source = await this.pickPatchSource();
+    if (!source) {
+      return;
+    }
+
+    const patch = source.kind === 'clipboard'
+      ? (await vscode.env.clipboard.readText())
+      : (await this.readPatchFromFile());
+    if (patch === undefined) {
+      return;
+    }
+
+    if (!patch.trim()) {
+      void vscode.window.showWarningMessage('Patch content is empty.');
+      return;
+    }
+
+    await this.applyPatchToWorkingTree(patch, {
+      source: source.kind === 'clipboard' ? 'clipboard' : 'patch file'
+    });
+  }
+
+  // ── Extracted command handlers (Phase 2 continued) ────────────────────
+
+  private async handleEditCommitMessage(arg?: unknown): Promise<void> {
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to edit message'));
+    if (!sha) {
+      return;
+    }
+
+    const details = await this.git.getCommitDetails(sha);
+    const currentMessage = details.commit.subject.trim();
+    const nextMessage = await vscode.window.showInputBox({
+      title: `Edit commit message (${sha.slice(0, 8)})`,
+      value: currentMessage,
+      validateInput: (value) => (value.trim() ? undefined : 'Commit message is required')
+    });
+    if (nextMessage === undefined) {
+      return;
+    }
+
+    const trimmedMessage = nextMessage.trim();
+    if (trimmedMessage === currentMessage) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Rewrite commit message',
+      detail: `Commit: ${sha}\nThis rewrites commit history and may require force push.`,
+      acceptLabel: 'Rewrite'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    const parent = await this.git.getParentCommit(sha);
+    if (!parent) {
+      void vscode.window.showWarningMessage('Cannot edit the root commit message from this action.');
+      return;
+    }
+
+    const escapedSha = sha.replace(/'/g, `'\"'\"'`);
+    const escapedMessage = trimmedMessage.replace(/'/g, `'\"'\"'`);
+    const sequenceEditor = `sh -c 'TODO_FILE=\"$1\"; sed -i.bak -e \"s/^pick ${escapedSha}/reword ${escapedSha}/\" \"$TODO_FILE\"; rm -f \"$TODO_FILE.bak\"' --`;
+    const editor = `sh -c 'printf %s \"${escapedMessage}\" > \"$1\"' --`;
+
+    await this.startRebaseOperation(async () => {
+      await this.git.runGit([
+        '-c', `sequence.editor=${sequenceEditor}`,
+        '-c', `core.editor=${editor}`,
+        'rebase', '-i', parent
+      ]);
+    });
+  }
+
+  private async handlePushAllUpToHere(arg?: unknown): Promise<void> {
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to push up to'));
+    if (!sha) {
+      return;
+    }
+
+    const current = (await this.git.runGit(['rev-parse', 'HEAD'])).stdout.trim();
+    if (current === sha) {
+      await vscode.commands.executeCommand('vscodeGitClient.git.pushWithPreview');
+      return;
+    }
+
+    let isAncestor = true;
+    try {
+      await this.git.runGit(['merge-base', '--is-ancestor', sha, 'HEAD']);
+    } catch {
+      isAncestor = false;
+    }
+    if (!isAncestor) {
+      void vscode.window.showWarningMessage('Selected commit is not an ancestor of current HEAD.');
+      return;
+    }
+
+    const preview = await this.git.runGit(['log', '--oneline', `${sha}..HEAD`]);
+    const outgoingLines = preview.stdout.split('\n').map((line) => line.trim()).filter(Boolean);
+    const detailLines = outgoingLines.slice(0, 10).join('\n') || 'none';
+
+    const confirmed = await confirmDangerousAction({
+      title: `Push all up to ${sha.slice(0, 8)}`,
+      detail: `Commits to push:\n${detailLines}`,
+      acceptLabel: 'Push'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.push();
+    await this.state.refreshAll();
+  }
+
+  private async handleOperationAbort(): Promise<void> {
+    const state = await this.git.getOperationState();
+    if (state.kind === 'none') {
+      void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
+      return;
+    }
+    const confirmed = await confirmDangerousAction({
+      title: `Abort ${state.kind}`,
+      detail: 'This will reset the working tree to before the operation started.',
+      acceptLabel: 'Abort'
+    });
+    if (!confirmed) { return; }
+    try {
+      if (state.kind === 'merge') { await this.git.mergeAbort(); }
+      else if (state.kind === 'rebase') { await this.git.rebaseAbort(); }
+      else if (state.kind === 'cherry-pick') { await this.git.cherryPickAbort(); }
+      else if (state.kind === 'revert') { await this.git.revertAbort(); }
+    } finally {
+      await this.state.refreshAll();
+    }
+  }
+
+  private async handleOperationContinue(): Promise<void> {
+    const state = await this.git.getOperationState();
+    if (state.kind === 'none') {
+      void vscode.window.showInformationMessage('No merge/rebase/cherry-pick/revert in progress.');
+      return;
+    }
+    const conflicts = await this.git.getMergeConflicts();
+    if (conflicts.length > 0) {
+      if (state.kind === 'rebase') {
+        await this.handleRebaseConflict();
+        return;
+      }
+      void vscode.window.showWarningMessage(`Resolve all conflicts before continuing (${conflicts.length} remaining).`);
+      return;
+    }
+    try {
+      if (state.kind === 'merge') {
+        await vscode.commands.executeCommand('vscodeGitClient.merge.finalize');
+        return;
+      }
+      if (state.kind === 'rebase') {
+        try {
+          await this.git.rebaseContinue();
+        } catch (error) {
+          const issue = this.classifyRebaseIssue(error);
+          if (issue.kind === 'conflict') {
+            await this.handleOperationConflict('rebase', this.state.refreshAll());
+            return;
+          }
+          throw error;
+        }
+        await this.state.refreshAll();
+        await this.showRebaseProgressFeedback();
+        return;
+      }
+      if (state.kind === 'cherry-pick') {
+        await this.git.cherryPickContinue();
+      } else if (state.kind === 'revert') {
+        await this.git.revertContinue();
+      }
+    } finally {
+      if (state.kind !== 'rebase') {
+        await this.state.refreshAll();
+      }
+    }
+  }
+
+  private async handleShelveResource(arg?: unknown): Promise<void> {
+    const filePath = this.toRepoFilePath(arg);
+    if (!filePath) {
+      void vscode.window.showWarningMessage('Select a Source Control file to shelve.');
+      return;
+    }
+
+    const defaultMessage = `Shelve ${filePath}`;
+    const rawMessage = await vscode.window.showInputBox({
+      title: 'Shelve selected change',
+      value: defaultMessage,
+      placeHolder: 'Shelve message'
+    });
+    if (rawMessage === undefined) {
+      return;
+    }
+
+    const message = rawMessage.trim() || defaultMessage;
+    const changes = await this.git.getChangedFiles();
+    const includeUntracked = changes.some((item) => item.path === filePath && item.status.trim() === '??');
+
+    await this.git.stashFiles([filePath], message, {
+      keepIndex: true,
+      includeUntracked
+    });
+
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage(`Shelved ${filePath}.`);
+  }
+
+  private async handleCommitTemplate(): Promise<void> {
+    const repository = await this.getBuiltInGitRepository();
+    if (!repository) {
+      void vscode.window.showWarningMessage('Git repository context not available.');
+      return;
+    }
+
+    const templates = loadTemplates();
+    if (templates.length === 0) {
+      void vscode.window.showInformationMessage('No commit templates configured.');
+      return;
+    }
+
+    const picked = await vscode.window.showQuickPick(
+      templates.map((template) => ({
+        label: template.label,
+        description: template.template,
+        template: template.template
+      })),
+      {
+        title: 'Insert commit message template',
+        placeHolder: 'Pick a template'
+      }
+    );
+    if (!picked) {
+      return;
+    }
+
+    let branch = '';
+    try {
+      branch = await this.git.getCurrentBranch();
+    } catch {
+      // ignore: branch placeholder will stay empty
+    }
+
+    const expanded = expandTemplate(picked.template, { branch }).text;
+    repository.inputBox.value = expanded;
+  }
+
+  private async handleGenerateCommitMessage(): Promise<void> {
+    const repository = await this.getBuiltInGitRepository();
+    if (!repository) {
+      void vscode.window.showWarningMessage('Git repository context not available.');
+      return;
+    }
+
+    const timeoutMs = getConfigValue<number>('aiGenerateTimeoutMs', 5000);
+    const cts = new vscode.CancellationTokenSource();
+    const timer = setTimeout(() => cts.cancel(), timeoutMs);
+
+    try {
+      const generated = await this.git.generateCommitMessage(cts.token);
+      repository.inputBox.value = generated;
+    } catch (error) {
+      const message = cts.token.isCancellationRequested
+        ? `AI generation timed out after ${timeoutMs / 1000}s.`
+        : String(error);
+      void vscode.window.showErrorMessage(message);
+    } finally {
+      clearTimeout(timer);
+      cts.dispose();
+    }
+  }
+
+  private async handleScmAmendFromInput(): Promise<void> {
+    const repository = await this.getBuiltInGitRepository();
+    if (!repository) {
+      void vscode.window.showWarningMessage('Git repository context not available.');
+      return;
+    }
+
+    const commitMessage = repository.inputBox.value.trim();
+    const confirmed = await confirmDangerousAction({
+      title: 'Amend last commit',
+      detail: commitMessage
+        ? 'Use the current Source Control commit message and amend the last commit.'
+        : 'Amend the last commit without changing its message.',
+      acceptLabel: 'Amend'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.amendCommit(commitMessage || undefined);
+    repository.inputBox.value = '';
+    await this.state.refreshAll();
+  }
+
+  private async handleDirectoryTimelineOpen(arg?: unknown): Promise<void> {
+    const targetUri = this.asFileResourceUri(arg);
+    if (!targetUri) {
+      void vscode.window.showWarningMessage('Right-click a folder in the Explorer to view its timeline.');
+      return;
+    }
+
+    if (!(await this.git.isRepo())) {
+      void vscode.window.showErrorMessage('Not inside a Git repository');
+      return;
+    }
+
+    let stat: vscode.FileStat;
+    try {
+      stat = await vscode.workspace.fs.stat(targetUri);
+    } catch {
+      void vscode.window.showErrorMessage('Selected folder is no longer available.');
+      return;
+    }
+
+    if ((stat.type & vscode.FileType.Directory) === 0) {
+      void vscode.window.showWarningMessage('Select a folder in the Explorer to view its timeline.');
+      return;
+    }
+
+    const gitRoot = await this.git.getGitRoot();
+    const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
+    const normalizedTarget = targetUri.fsPath.replace(/[\\/]+$/, '');
+    const repoRelative = normalizedTarget === normalizedRoot
+      ? ''
+      : this.git.toRepoRelative(targetUri.fsPath);
+    if (repoRelative === undefined) {
+      void vscode.window.showErrorMessage('Not inside a Git repository');
+      return;
+    }
+
+    await this.openDirectoryTimeline(repoRelative);
+  }
+
+  private async handleCompareWithRevision(arg?: unknown, selected?: unknown): Promise<void> {
+    const targetUris = this.toExplorerResourceUris(arg, selected);
+    if (targetUris.length === 0) {
+      void vscode.window.showWarningMessage('Right-click a file or folder in the Explorer to compare.');
+      return;
+    }
+
+    if (!(await this.git.isRepo())) {
+      void vscode.window.showErrorMessage('Not inside a Git repository');
+      return;
+    }
+
+    const gitRoot = await this.git.getGitRoot();
+    const normalizedRoot = gitRoot.replace(/[\\/]+$/, '');
+    const targets: Array<{ repoRelative: string; isDirectory: boolean }> = [];
+    for (const uri of targetUris) {
+      const normalizedTarget = uri.fsPath.replace(/[\\/]+$/, '');
+      const repoRelative = normalizedTarget === normalizedRoot
+        ? ''
+        : this.git.toRepoRelative(uri.fsPath);
+      if (repoRelative === undefined) {
+        void vscode.window.showErrorMessage('Not inside a Git repository');
+        return;
+      }
+
+      let stat: vscode.FileStat;
+      try {
+        stat = await vscode.workspace.fs.stat(uri);
+      } catch {
+        void vscode.window.showErrorMessage('Selected path is no longer available.');
+        return;
+      }
+      targets.push({
+        repoRelative,
+        isDirectory: (stat.type & vscode.FileType.Directory) !== 0
+      });
+    }
+
+    const selection = await pickRevisionToCompare(
+      this.git,
+      () => this.state.branches,
+      () => this.state.tags,
+      () => this.state.refreshBranches()
+    );
+    if (!selection) {
+      return;
+    }
+
+    for (const target of targets) {
+      if (target.isDirectory) {
+        await this.editor.openCompareWithRevisionForFolder(target.repoRelative, selection.ref, selection.label);
+      } else {
+        await this.editor.openCompareWithRevisionForFile(target.repoRelative, selection.ref, selection.label);
+      }
+    }
+  }
+
+  private async handleResetCurrentToCommit(arg?: unknown): Promise<void> {
+    const target = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick target commit for reset'));
+    if (!target) {
+      return;
+    }
+
+    const mode = await vscode.window.showQuickPick(['soft', 'mixed', 'hard'], {
+      title: 'Reset mode',
+      placeHolder: 'Choose reset mode'
+    });
+
+    if (!mode) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Reset current branch',
+      detail: `Mode: ${mode}\nTarget: ${target}`,
+      acceptLabel: 'Reset'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.resetCurrent(target, mode as 'soft' | 'mixed' | 'hard');
+    await this.state.refreshAll();
+  }
+
+  private async handleStashCreate(): Promise<void> {
+    const message = (await vscode.window.showInputBox({
+      title: 'Create stash',
+      placeHolder: 'WIP: short message'
+    }))?.trim();
+
+    if (!message) {
+      return;
+    }
+
+    const includeUntracked =
+      (await vscode.window.showQuickPick(['No', 'Yes'], {
+        title: 'Include untracked files?'
+      })) === 'Yes';
+
+    const keepIndex =
+      (await vscode.window.showQuickPick(['No', 'Yes'], {
+        title: 'Keep staged changes in index?'
+      })) === 'Yes';
+
+    await this.git.createStash(message, { includeUntracked, keepIndex });
+    await this.state.refreshAll();
+  }
+
+  private async handleBranchSearch(): Promise<void> {
+    const searchView = BranchSearchView.open(
+      {
+        checkout: async (name: string) => {
+          await this.git.checkoutBranch(name);
+          await this.state.refreshAll();
+        },
+        checkoutTag: async (name: string) => {
+          await vscode.commands.executeCommand('vscodeGitClient.tag.checkoutNewBranch', name);
+          await this.state.refreshAll();
+        },
+        openActions: async (name: string) => {
+          await vscode.commands.executeCommand('vscodeGitClient.branch.actionHub', name);
+        },
+        refresh: async () => {
+          await this.state.refreshBranches();
+        },
+        runCommand: async (command, name) => {
+          await vscode.commands.executeCommand(command, name);
+        }
+      },
+      () => this.state.branches,
+      () => this.state.tags,
+      (listener) => this.state.onDidChange(listener)
+    );
+    await searchView.refresh();
+  }
+
+  private async handleGraphFilter(): Promise<void> {
+    const filterSession = new GraphFilterSession(
+      (maxCount, skip, filters) => this.git.getGraph(maxCount, skip, filters),
+      () => getConfigValue<number>('maxGraphCommits', 200)
+    );
+    const getMasterSnapshot = () => ({
+      filters: {},
+      branches: this.state.branches,
+      commits: this.state.graph,
+      hasMore: this.state.graphHasMore
+    });
+    GraphFilterView.open(
+      {
+        apply: async (filters) => {
+          const snapshot = await filterSession.apply(filters);
+          const isActive = Object.values(filters).some(Boolean);
+          await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', isActive);
+          return snapshot;
+        },
+        clear: async () => {
+          await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
+          return filterSession.clear(getMasterSnapshot());
+        },
+        openCommitDetails: async (sha, subject) => this.openCommitDetails(sha, subject, { allowToggle: true }),
+        openCommitRangeDetails: async (shas) => this.editor.openCommitRangeDetails(shas),
+        getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
+        openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
+        loadMore: async () => {
+          return filterSession.loadMore(getMasterSnapshot());
+        }
+      },
+      () => ({
+        ...filterSession.getSnapshot(getMasterSnapshot()),
+        branches: this.state.branches
+      })
+    );
+  }
+
+  private async handleSetRemoteUrl(arg?: unknown): Promise<void> {
+    const remoteItem = this.asBranchRemoteItem(arg);
+    const remoteName = remoteItem?.remoteName;
+    if (!remoteName) {
+      return;
+    }
+
+    const currentUrl = remoteItem.branches.find((branch) => Boolean(branch.remoteUrl))?.remoteUrl;
+    const nextUrl = await vscode.window.showInputBox({
+      title: currentUrl ? `Change remote URL for ${remoteName}` : `Set remote URL for ${remoteName}`,
+      value: currentUrl ?? '',
+      placeHolder: 'https://github.com/org/repo.git',
+      validateInput: (value) => (value.trim() ? undefined : 'Remote URL is required')
+    });
+    if (!nextUrl) {
+      return;
+    }
+
+    await this.git.setRemoteUrl(remoteName, nextUrl.trim());
+    const refreshPromise = this.state.refreshBranches();
+    void vscode.window.showInformationMessage(`Remote ${remoteName} URL updated.`);
+    await refreshPromise;
+  }
+
+  private async handleConflictResolve(arg?: unknown, mode?: 'ours' | 'theirs' | 'both'): Promise<void> {
+    const pickTitles: Record<'ours' | 'theirs' | 'both', string> = {
+      ours: 'Accept Yours (ours) for which file?',
+      theirs: 'Accept Theirs for which file?',
+      both: 'Accept Both: open merge editor for which file?',
+    };
+    const path = this.pickConflictPathArg(arg) ?? (await this.pickConflictPath(pickTitles[mode ?? 'ours']));
+    if (!path) { return; }
+
+    switch (mode) {
+      case 'ours':
+        await this.git.resolveConflictOurs(path);
+        await this.state.refreshChanges();
+        void vscode.window.showInformationMessage(`Accepted yours: ${path}`);
+        break;
+      case 'theirs':
+        await this.git.resolveConflictTheirs(path);
+        await this.state.refreshChanges();
+        void vscode.window.showInformationMessage(`Accepted theirs: ${path}`);
+        break;
+      case 'both':
+        await this.editor.openMergeConflict(path);
+        break;
+    }
+  }
+
+  private async handleStashApplyPop(arg?: unknown, pop?: boolean): Promise<void> {
+    const item = this.asStashItem(arg);
+    const ref = item?.stash.ref ?? (await this.pickStashRef(pop ? 'Pick stash to pop' : 'Pick stash to apply'));
+    if (!ref) { return; }
+    await this.git.applyStash(ref, !!pop);
+    await this.state.refreshAll();
   }
 
 }
