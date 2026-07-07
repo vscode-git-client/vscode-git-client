@@ -126,7 +126,34 @@ export enum GitCommand {
   SubmoduleDiffPointer = 'vscodeGitClient.submodule.diffPointer',
   SubmoduleStagePointerChange = 'vscodeGitClient.submodule.stagePointerChange',
   SubmoduleDeinit = 'vscodeGitClient.submodule.deinit',
-  TextCompareOpen = 'vscodeGitClient.textCompare.open'
+  TextCompareOpen = 'vscodeGitClient.textCompare.open',
+  // View IDs
+  BranchesView = 'vscodeGitClient.branches',
+  StashesView = 'vscodeGitClient.stashes',
+  GraphView = 'vscodeGitClient.graph',
+  CommitViewView = 'vscodeGitClient.commitView',
+  WorktreesView = 'vscodeGitClient.worktrees',
+  SubmodulesView = 'vscodeGitClient.submodules',
+  // Webview panel IDs
+  CommitList = 'vscodeGitClient.commitList',
+  BranchSearchView = 'vscodeGitClient.branchSearch',
+  BranchCompare = 'vscodeGitClient.branchCompare',
+  GraphFilterView = 'vscodeGitClient.graphFilter',
+  // Context keys
+  CommitViewVisible = 'vscodeGitClient.commitViewVisible',
+  CommitViewCanRevertSelected = 'vscodeGitClient.commitViewCanRevertSelected',
+  CommitViewCanCherryPickSelected = 'vscodeGitClient.commitViewCanCherryPickSelected',
+  CommitViewCanCreatePatchSelected = 'vscodeGitClient.commitViewCanCreatePatchSelected',
+  GraphMultiCommitSelection = 'vscodeGitClient.graphMultiCommitSelection',
+  RemoteHasUrl = 'vscodeGitClient.remoteHasUrl',
+  GraphFilterActive = 'vscodeGitClient.graphFilterActive',
+  HasSubmodules = 'vscodeGitClient.hasSubmodules',
+  OperationState = 'vscodeGitClient.operation',
+  HasConflicts = 'vscodeGitClient.hasConflicts',
+  // State keys
+  ChangelistsStateKey = 'vscodeGitClient.changelists',
+  RecentComparePairsKey = 'vscodeGitClient.recentComparePairs',
+  CompareViewModeKey = 'vscodeGitClient.compareViewMode'
 }
 
 export const GIT_COMMAND_PREFIX = 'vscodeGitClient.';

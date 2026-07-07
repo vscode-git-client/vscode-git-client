@@ -2776,7 +2776,7 @@ export class CommandController {
           const isActive = Object.values(filters).some(Boolean);
           await vscode.commands.executeCommand(
             'setContext',
-            'vscodeGitClient.graphFilterActive',
+            GitCommand.GraphFilterActive,
             isActive
           );
           return snapshot;
@@ -2784,7 +2784,7 @@ export class CommandController {
         clear: async () => {
           await vscode.commands.executeCommand(
             'setContext',
-            'vscodeGitClient.graphFilterActive',
+            GitCommand.GraphFilterActive,
             false
           );
           return filterSession.clear(getMasterSnapshot());
@@ -3605,7 +3605,7 @@ export class CommandController {
   }
   private async handleGraphClearFilter(): Promise<void> {
     await GraphFilterView.clearCurrentFilters();
-    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
+    await vscode.commands.executeCommand('setContext', GitCommand.GraphFilterActive, false);
   }
   private async handleGraphShowRepositoryAtRevision(arg?: unknown): Promise<void> {
     const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));

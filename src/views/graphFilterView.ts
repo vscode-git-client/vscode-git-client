@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import {
   handleCommitAction,
@@ -49,7 +50,7 @@ export class GraphFilterView {
     }
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'vscodeGitClient.graphFilter',
+      GitCommand.GraphFilterView,
       'VS Code Git Client: Filter Graph',
       vscode.ViewColumn.Active,
       {
@@ -232,7 +233,7 @@ export class GraphFilterView {
     if (GraphFilterView.current === this) {
       GraphFilterView.current = undefined;
     }
-    void vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
+    void vscode.commands.executeCommand('setContext', GitCommand.GraphFilterActive, false);
   }
 }
 

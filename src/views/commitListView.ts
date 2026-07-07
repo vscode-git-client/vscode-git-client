@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import {
   handleCommitAction,
@@ -42,7 +43,7 @@ export class CommitListView {
     private readonly handlers: CommitListHandlers
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'vscodeGitClient.commitList',
+      GitCommand.CommitList,
       `VS Code Git Client: ${options.title}`,
       vscode.ViewColumn.Active,
       {

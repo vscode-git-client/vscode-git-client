@@ -44,7 +44,7 @@ export class BranchSearchView {
     onStateChange: (listener: () => void) => vscode.Disposable
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'vscodeGitClient.branchSearch',
+      GitCommand.BranchSearchView,
       'VS Code Git Client: Search Branches & Tags',
       vscode.ViewColumn.Active,
       {

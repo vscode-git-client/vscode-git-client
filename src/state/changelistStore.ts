@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 
 export type Changelist = {
   id: string;
@@ -6,7 +7,7 @@ export type Changelist = {
   paths: string[];
 };
 
-const STATE_KEY = 'vscodeGitClient.changelists';
+const STATE_KEY = GitCommand.ChangelistsStateKey;
 const LEGACY_STATE_KEY = 'intelliGit.changelists';
 const DEFAULT_ID = 'default';
 

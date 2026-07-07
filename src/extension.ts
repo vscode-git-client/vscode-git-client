@@ -48,28 +48,28 @@ type GitBaseExtensionExports = {
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const logger = new Logger();
   context.subscriptions.push({ dispose: () => logger.dispose() });
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.commitViewVisible', false);
+  await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, false);
   await vscode.commands.executeCommand(
     'setContext',
-    'vscodeGitClient.commitViewCanRevertSelected',
+    GitCommand.CommitViewCanRevertSelected,
     false
   );
   await vscode.commands.executeCommand(
     'setContext',
-    'vscodeGitClient.commitViewCanCherryPickSelected',
+    GitCommand.CommitViewCanCherryPickSelected,
     false
   );
   await vscode.commands.executeCommand(
     'setContext',
-    'vscodeGitClient.commitViewCanCreatePatchSelected',
+    GitCommand.CommitViewCanCreatePatchSelected,
     false
   );
   await vscode.commands.executeCommand(
     'setContext',
-    'vscodeGitClient.graphMultiCommitSelection',
+    GitCommand.GraphMultiCommitSelection,
     false
   );
-  await vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', false);
+  await vscode.commands.executeCommand('setContext', GitCommand.RemoteHasUrl, false);
 
   const configuration = vscode.workspace.getConfiguration('vscodeGitClient');
 
@@ -101,28 +101,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(
       ...compactTreeViews([
         createTreeViewSafely(
-          'vscodeGitClient.branches',
+          GitCommand.BranchesView,
           { treeDataProvider: emptyProvider },
           logger
         ),
         createTreeViewSafely(
-          'vscodeGitClient.stashes',
+          GitCommand.StashesView,
           { treeDataProvider: emptyProvider },
           logger
         ),
-        createTreeViewSafely('vscodeGitClient.graph', { treeDataProvider: emptyProvider }, logger),
+        createTreeViewSafely(GitCommand.GraphView, { treeDataProvider: emptyProvider }, logger),
         createTreeViewSafely(
-          'vscodeGitClient.commitView',
-          { treeDataProvider: emptyProvider },
-          logger
-        ),
-        createTreeViewSafely(
-          'vscodeGitClient.worktrees',
+          GitCommand.CommitViewView,
           { treeDataProvider: emptyProvider },
           logger
         ),
         createTreeViewSafely(
-          'vscodeGitClient.submodules',
+          GitCommand.WorktreesView,
+          { treeDataProvider: emptyProvider },
+          logger
+        ),
+        createTreeViewSafely(
+          GitCommand.SubmodulesView,
           { treeDataProvider: emptyProvider },
           logger
         )
@@ -148,7 +148,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const submoduleProvider = new SubmoduleTreeProvider(stateStore);
 
   const branchView = createTreeViewSafely(
-    'vscodeGitClient.branches',
+    GitCommand.BranchesView,
     {
       treeDataProvider: branchProvider,
       showCollapseAll: true
@@ -156,7 +156,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logger
   );
   const stashView = createTreeViewSafely(
-    'vscodeGitClient.stashes',
+    GitCommand.StashesView,
     {
       treeDataProvider: stashProvider,
       dragAndDropController: new StashTreeDragAndDropController(gitService, stateStore),
@@ -165,7 +165,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logger
   );
   const graphView = createTreeViewSafely(
-    'vscodeGitClient.graph',
+    GitCommand.GraphView,
     {
       treeDataProvider: graphProvider,
       showCollapseAll: true,
@@ -174,7 +174,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logger
   );
   const worktreeView = createTreeViewSafely(
-    'vscodeGitClient.worktrees',
+    GitCommand.WorktreesView,
     {
       treeDataProvider: worktreeProvider,
       showCollapseAll: true
@@ -182,7 +182,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logger
   );
   const submoduleView = createTreeViewSafely(
-    'vscodeGitClient.submodules',
+    GitCommand.SubmodulesView,
     {
       treeDataProvider: submoduleProvider,
       showCollapseAll: true
@@ -192,7 +192,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const commitFilesProvider = new CommitFilesTreeProvider(gitService);
   const commitDecorationProvider = new CommitFileDecorationProvider(commitFilesProvider);
   const commitView = createTreeViewSafely(
-    'vscodeGitClient.commitView',
+    GitCommand.CommitViewView,
     {
       treeDataProvider: commitFilesProvider,
       showCollapseAll: true,
@@ -224,7 +224,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ).length;
         void vscode.commands.executeCommand(
           'setContext',
-          'vscodeGitClient.graphMultiCommitSelection',
+          GitCommand.GraphMultiCommitSelection,
           selectedCommitCount > 1
         );
       })
@@ -240,7 +240,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const hasUrl = Boolean(
           selectedRemote?.branches.some((branch) => Boolean(branch.remoteUrl))
         );
-        void vscode.commands.executeCommand('setContext', 'vscodeGitClient.remoteHasUrl', hasUrl);
+        void vscode.commands.executeCommand('setContext', GitCommand.RemoteHasUrl, hasUrl);
       })
     );
   }

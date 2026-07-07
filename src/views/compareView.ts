@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import XLSX from 'xlsx';
 import { getConfigValue } from '../configuration';
 import { renderTemplate } from './templateRenderer';
@@ -87,7 +88,7 @@ export class CompareView {
     private readonly onRefresh: (leftRef: string, rightRef: string) => Promise<void>
   ) {
     this.panel = vscode.window.createWebviewPanel(
-      'vscodeGitClient.branchCompare',
+      GitCommand.BranchCompare,
       'VS Code Git Client: Branch Comparison',
       vscode.ViewColumn.Active,
       {

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { getConfigValue } from '../configuration';
 import { Logger } from '../logger';
 import { GitService } from '../services/gitService';
@@ -22,9 +23,9 @@ import { mapChangeSetToScopes } from './gitEventRouter';
 
 export type { RefreshScope } from './refreshScheduler';
 
-const RECENT_COMPARE_PAIRS_KEY = 'vscodeGitClient.recentComparePairs';
+const RECENT_COMPARE_PAIRS_KEY = GitCommand.RecentComparePairsKey;
 const LEGACY_RECENT_COMPARE_PAIRS_KEY = 'intelliGit.recentComparePairs';
-const COMPARE_VIEW_MODE_KEY = 'vscodeGitClient.compareViewMode';
+const COMPARE_VIEW_MODE_KEY = GitCommand.CompareViewModeKey;
 
 export type CompareViewMode = 'list' | 'graph';
 
@@ -384,7 +385,7 @@ export class StateStore {
     this._submodulesLoaded = true;
     void vscode.commands.executeCommand(
       'setContext',
-      'vscodeGitClient.hasSubmodules',
+      GitCommand.HasSubmodules,
       this._submodules.length > 0
     );
   }
@@ -400,12 +401,12 @@ export class StateStore {
     this._conflicts = conflicts;
     void vscode.commands.executeCommand(
       'setContext',
-      'vscodeGitClient.operation',
+      GitCommand.OperationState,
       operationState.kind
     );
     void vscode.commands.executeCommand(
       'setContext',
-      'vscodeGitClient.hasConflicts',
+      GitCommand.HasConflicts,
       conflicts.length > 0
     );
   }
