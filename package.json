@@ -33,6 +33,13 @@
     "onCommand:vscodeGitClient.scm.amendFromInput",
     "onCommand:vscodeGitClient.textCompare.open"
   ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@vscode/vsce-sign",
+      "esbuild",
+      "keytar"
+    ]
+  },
   "scripts": {
     "clean": "node scripts/clean-dist.js",
     "compile": "npm run clean && tsc -p . && node scripts/copy-templates.js",
