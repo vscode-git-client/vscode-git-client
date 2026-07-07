@@ -195,585 +195,104 @@ export class CommandController {
       );
     };
 
-    register(GitCommand.Refresh, async () => {
-      await this.state.refreshVisible();
-      void vscode.window.setStatusBarMessage('VS Code Git Client refreshed', 1500);
-    });
+    register(GitCommand.Refresh, this.handleRefresh.bind(this));
 
-    register(GitCommand.CommitViewClose, async () => {
-      await this.commitFilesView.clear();
-    });
+    register(GitCommand.CommitViewClose, this.handleCommitViewClose.bind(this));
 
-    register(GitCommand.QuickActions, async () => {
-      await this.openQuickActions();
-    });
+    register(GitCommand.QuickActions, this.handleQuickActions.bind(this));
 
-    register(GitCommand.BranchActionHub, async (arg?: unknown) => {
-      await this.openBranchActionHub(arg);
-    });
+    register(GitCommand.BranchActionHub, this.handleBranchActionHub.bind(this));
 
-    register(GitCommand.BranchOpenCommits, async (arg?: unknown) => {
-      const branchName = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to open commits'));
-      if (!branchName) {
-        return;
-      }
-
-      await this.openBranchCommits(branchName);
-    });
+    register(GitCommand.BranchOpenCommits, this.handleBranchOpenCommits.bind(this));
 
     register(GitCommand.BranchSearch, this.handleBranchSearch.bind(this));
 
-    register(GitCommand.BranchSearchRefresh, async () => {
-      await BranchSearchView.refreshCurrent();
-    });
+    register(GitCommand.BranchSearchRefresh, this.handleBranchSearchRefresh.bind(this));
 
-    register(GitCommand.BranchCheckout, async (arg?: unknown) => {
-      const branchName = this.toBranchName(arg) ?? (await this.pickBranchName());
-      if (!branchName) {
-        return;
-      }
+    register(GitCommand.BranchCheckout, this.handleBranchCheckout.bind(this));
 
-      await this.git.checkoutBranch(branchName);
-      await this.state.refreshAll();
-    });
+    register(GitCommand.TagOpenCommits, this.handleTagOpenCommits.bind(this));
 
-    register(GitCommand.TagOpenCommits, async (arg?: unknown) => {
-      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick tag or revision for details'));
-      if (!revision) {
-        return;
-      }
+    register(GitCommand.BranchCreate, this.handleBranchCreate.bind(this));
 
-      const tagRef = this.toTagRef(arg) ?? revision;
-      await this.openRefCommits(`tag:${revision}`, `Tag: ${tagRef}`, revision);
-    });
+    register(GitCommand.TagCheckoutNewBranch, this.handleTagCheckoutNewBranch.bind(this));
 
-    register(GitCommand.BranchCreate, async () => {
-      const baseBranch = await this.pickBranchName('Pick base branch for new branch');
-      if (!baseBranch) {
-        return;
-      }
+    register(GitCommand.TagCheckout, this.handleTagCheckout.bind(this));
 
-      const branchName = await vscode.window.showInputBox({
-        title: 'Create branch',
-        placeHolder: 'feature/my-branch',
-        validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
-      });
+    register(GitCommand.TagCopyRevisionNumber, this.handleTagCopyRevisionNumber.bind(this));
 
-      if (!branchName) {
-        return;
-      }
+    register(GitCommand.TagShowRepositoryAtRevision, this.handleTagShowRepositoryAtRevision.bind(this));
 
-      await this.git.createBranch(branchName.trim(), baseBranch);
-      await this.git.checkoutBranch(branchName.trim());
-      await this.state.refreshAll();
-    });
+    register(GitCommand.TagCompareWithCurrent, this.handleTagCompareWithCurrent.bind(this));
 
-    register(GitCommand.TagCheckoutNewBranch, async (arg?: unknown) => {
-      const baseRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
-      if (!baseRef) {
-        return;
-      }
+    register(GitCommand.TagCreatePatch, this.handleTagCreatePatch.bind(this));
 
-      const branchName = await vscode.window.showInputBox({
-        title: `Checkout new branch from ${baseRef}`,
-        placeHolder: 'feature/new-branch',
-        validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
-      });
-
-      if (!branchName) {
-        return;
-      }
-
-      await this.git.createBranch(branchName.trim(), baseRef);
-      await this.git.checkoutBranch(branchName.trim());
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.TagCheckout, async (arg?: unknown) => {
-      const tagRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
-      if (!tagRef) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Checkout revision',
-        detail: `Revision: ${tagRef}`,
-        acceptLabel: 'Checkout'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.checkoutCommit(tagRef);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.TagCopyRevisionNumber, async (arg?: unknown) => {
-      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
-      if (!revision) {
-        return;
-      }
-
-      await vscode.env.clipboard.writeText(revision);
-      void vscode.window.setStatusBarMessage(`Copied ${revision}`, 1500);
-    });
-
-    register(GitCommand.TagShowRepositoryAtRevision, async (arg?: unknown) => {
-      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
-      if (!revision) { return; }
-      await this.editor.showRepositoryAtRevision(revision);
-    });
-
-    register(GitCommand.TagCompareWithCurrent, async (arg?: unknown) => {
-      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
-      if (!revision) { return; }
-      await this.editor.openCompareFromCommit(revision);
-    });
-
-    register(GitCommand.TagCreatePatch, async (arg?: unknown) => {
-      const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
-      if (!revision) { return; }
-      const patch = await this.git.getPatchForCommit(revision);
-      const doc = await vscode.workspace.openTextDocument({ language: 'diff', content: patch });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    });
-
-    register(GitCommand.TagCreateCurrent, async () => {
-      const sha = await this.git.getCurrentHeadSha();
-      if (!sha) {
-        return;
-      }
-
-      const name = await vscode.window.showInputBox({
-        title: `Create tag at ${sha.slice(0, 8)}`,
-        placeHolder: 'v1.2.3',
-        validateInput: (value) => (value.trim() ? undefined : 'Tag name is required')
-      });
-      if (!name) {
-        return;
-      }
-
-      await this.git.createTag(name.trim(), sha);
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
-    });
+    register(GitCommand.TagCreateCurrent, this.handleTagCreateCurrent.bind(this));
 
     register(GitCommand.RemoteSetUrl, this.handleSetRemoteUrl.bind(this));
     register(GitCommand.RemoteChangeUrl, this.handleSetRemoteUrl.bind(this));
     register(GitCommand.RemoteSetUrlMissing, this.handleSetRemoteUrl.bind(this));
 
-    register(GitCommand.RemoteAdd, async () => {
-      const remoteUrl = await vscode.window.showInputBox({
-        title: 'Add Git remote',
-        placeHolder: 'https://github.com/org/repo.git',
-        validateInput: (value) => (value.trim() ? undefined : 'Remote URL is required')
-      });
-      if (!remoteUrl) {
-        return;
-      }
+    register(GitCommand.RemoteAdd, this.handleRemoteAdd.bind(this));
 
-      const remoteName = await vscode.window.showInputBox({
-        title: 'Remote name',
-        placeHolder: 'origin',
-        validateInput: (value) => (value.trim() ? undefined : 'Remote name is required')
-      });
-      if (!remoteName) {
-        return;
-      }
+    register(GitCommand.RemoteDelete, this.handleRemoteDelete.bind(this));
 
-      await this.git.addRemote(remoteName.trim(), remoteUrl.trim());
-      await this.state.refreshBranches();
-      void vscode.window.showInformationMessage(`Added remote ${remoteName.trim()}.`);
-    });
+    register(GitCommand.BranchRename, this.handleBranchRename.bind(this));
 
-    register(GitCommand.RemoteDelete, async (arg?: unknown) => {
-      const remoteName = this.asBranchRemoteItem(arg)?.remoteName;
-      if (!remoteName) {
-        return;
-      }
+    register(GitCommand.BranchDelete, this.handleBranchDelete.bind(this));
 
-      const confirmed = await confirmDangerousAction({
-        title: 'Delete remote',
-        detail: `Remote: ${remoteName}`,
-        acceptLabel: 'Delete'
-      });
-      if (!confirmed) {
-        return;
-      }
+    register(GitCommand.BranchTrack, this.handleBranchTrack.bind(this));
 
-      await this.git.deleteRemote(remoteName);
-      await this.state.refreshBranches();
-      void vscode.window.showInformationMessage(`Deleted remote ${remoteName}.`);
-    });
+    register(GitCommand.BranchUntrack, this.handleBranchUntrack.bind(this));
 
-    register(GitCommand.BranchRename, async (arg?: unknown) => {
-      const from = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
-      if (!from) {
-        return;
-      }
+    register(GitCommand.BranchMergeIntoCurrent, this.handleBranchMergeIntoCurrent.bind(this));
 
-      const to = await vscode.window.showInputBox({
-        title: `Rename branch ${from}`,
-        value: from,
-        validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
-      });
-
-      if (!to || to.trim() === from) {
-        return;
-      }
-
-      await this.git.renameBranch(from, to.trim());
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.BranchDelete, async (arg?: unknown) => {
-      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
-      if (!branch) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Delete branch',
-        detail: `Branch: ${branch}`,
-        acceptLabel: 'Delete'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.deleteBranch(branch);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.BranchTrack, async (arg?: unknown) => {
-      const local = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
-      if (!local) {
-        return;
-      }
-
-      const remote = await this.pickBranchName('Pick remote upstream branch', true);
-      if (!remote) {
-        return;
-      }
-
-      await this.git.trackBranch(local, remote);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.BranchUntrack, async (arg?: unknown) => {
-      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
-      if (!branch) {
-        return;
-      }
-
-      await this.git.untrackBranch(branch);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.BranchMergeIntoCurrent, async (arg?: unknown) => {
-      const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
-      if (!branch) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Merge into current branch',
-        detail: `Source branch: ${branch}`,
-        acceptLabel: 'Merge'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.startMergeOperation(() => this.git.mergeIntoCurrent(branch));
-    });
-
-    register(GitCommand.BranchRebaseOnto, async (arg?: unknown) => {
-      const onto = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
-      if (!onto) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Rebase current branch',
-        detail: `Rebase onto: ${onto}`,
-        acceptLabel: 'Rebase'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(onto));
-    });
+    register(GitCommand.BranchRebaseOnto, this.handleBranchRebaseOnto.bind(this));
 
     register(GitCommand.BranchResetCurrentToCommit, this.handleResetCurrentToCommit.bind(this));
 
-    register(GitCommand.BranchCompareWithCurrent, async (arg?: unknown) => {
-      const current = await this.git.getCurrentBranch();
-      const target = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
-      if (!target) {
-        return;
-      }
-
-      await this.editor.openBranchCompare(current, target);
-    });
+    register(GitCommand.BranchCompareWithCurrent, this.handleBranchCompareWithCurrent.bind(this));
 
     register(GitCommand.StashCreate, this.handleStashCreate.bind(this));
 
-    register(GitCommand.StashUnshelve, async (arg?: unknown) => {
-      const item = this.asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to unshelve'));
-      if (!ref) {
-        return;
-      }
+    register(GitCommand.StashUnshelve, this.handleStashUnshelve.bind(this));
 
-      await this.git.unstashToWorkingTree(ref);
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Unshelved ${ref}.`);
-    });
+    register(GitCommand.StashApply, this.handleStashApply.bind(this));
+    register(GitCommand.StashPop, this.handleStashPop.bind(this));
 
-    register(GitCommand.StashApply, async (arg?: unknown) => this.handleStashApplyPop(arg, false));
-    register(GitCommand.StashPop, async (arg?: unknown) => this.handleStashApplyPop(arg, true));
+    register(GitCommand.StashDrop, this.handleStashDrop.bind(this));
 
-    register(GitCommand.StashDrop, async (arg?: unknown) => {
-      const item = this.asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to drop'));
-      if (!ref) {
-        return;
-      }
+    register(GitCommand.StashRename, this.handleStashRename.bind(this));
 
-      const confirmed = await confirmDangerousAction({
-        title: 'Drop stash',
-        detail: `Target: ${ref}`,
-        acceptLabel: 'Drop'
-      });
-      if (!confirmed) {
-        return;
-      }
+    register(GitCommand.StashPreviewPatch, this.handleStashPreviewPatch.bind(this));
 
-      await this.git.dropStash(ref);
-      await this.state.refreshAll();
-    });
+    register(GitCommand.GraphOpenDetails, this.handleGraphOpenDetails.bind(this));
 
-    register(GitCommand.StashRename, async (arg?: unknown) => {
-      const item = this.asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to rename'));
-      if (!ref) {
-        return;
-      }
+    register(GitCommand.GraphOpenCommitRangeDetails, this.handleGraphOpenCommitRangeDetails.bind(this));
 
-      const message = await vscode.window.showInputBox({
-        title: `Rename ${ref}`,
-        placeHolder: 'Updated stash message'
-      });
-      if (!message) {
-        return;
-      }
+    register(GitCommand.GraphCopyCommitId, this.handleGraphCopyCommitId.bind(this));
 
-      await this.git.renameStash(ref, message.trim());
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.StashPreviewPatch, async (arg?: unknown) => {
-      const item = this.asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to preview patch'));
-      if (!ref) {
-        return;
-      }
-
-      const patch = await this.git.getStashPatch(ref);
-      const doc = await vscode.workspace.openTextDocument({
-        language: 'diff',
-        content: patch
-      });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    });
-
-    register(GitCommand.GraphOpenDetails, async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = this.toGraphCommitShas(arg, selected);
-      const shouldOpenFirstDiff =
-        this.asGraphItem(arg) !== undefined ||
-        (Array.isArray(selected) && selected.some((item) => this.asGraphItem(item) !== undefined));
-      if (selectedShas.length === 0) {
-        const picked = await this.pickCommitSha('Pick commit for details');
-        if (!picked) {
-          return;
-        }
-        selectedShas.push(picked);
-      }
-      const sha = selectedShas[0];
-      if (!sha) {
-        return;
-      }
-      const subject = this.resolveCommitSubject(sha, arg, selected);
-      await this.openCommitDetails(sha, subject, { openFirstDiff: shouldOpenFirstDiff, allowToggle: true });
-    });
-
-    register(GitCommand.GraphOpenCommitRangeDetails, async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = this.toGraphCommitShas(arg, selected);
-      if (selectedShas.length < 2) {
-        return;
-      }
-      await this.editor.openCommitRangeDetails(selectedShas);
-    });
-
-    register(GitCommand.GraphCopyCommitId, async (arg?: unknown, selected?: unknown) => {
-      const shas = this.toGraphCommitShas(arg, selected);
-      if (shas.length === 0) {
-        return;
-      }
-      await vscode.env.clipboard.writeText(shas.join('\n'));
-      void vscode.window.setStatusBarMessage(
-        shas.length > 1 ? `Copied ${shas.length} commit IDs` : `Copied commit ID ${shas[0]}`,
-        1500
-      );
-    });
-
-    register(GitCommand.GraphCopyCommitMessage, async (arg?: unknown, selected?: unknown) => {
-      const shas = this.toGraphCommitShas(arg, selected);
-      if (shas.length === 0) {
-        return;
-      }
-      const messages = shas
-        .map((sha) => this.state.graph.find((commit) => commit.sha === sha)?.subject?.trim() ?? '')
-        .filter((value): value is string => Boolean(value));
-      if (messages.length === 0) {
-        return;
-      }
-      await vscode.env.clipboard.writeText(messages.join('\n'));
-      void vscode.window.setStatusBarMessage(
-        messages.length > 1 ? `Copied ${messages.length} commit messages` : 'Copied commit message',
-        1500
-      );
-    });
+    register(GitCommand.GraphCopyCommitMessage, this.handleGraphCopyCommitMessage.bind(this));
 
     register(GitCommand.GraphOpenFileDiff, this.handleOpenFileDiff.bind(this));
 
-    register(GitCommand.WorkingTreeCompareOpenFileDiff, async (arg?: unknown) => {
-      const item = this.asWorkingTreeCompareFileItem(arg);
-      if (!item) {
-        return;
-      }
+    register(GitCommand.WorkingTreeCompareOpenFileDiff, this.handleWorkingTreeCompareOpenFileDiff.bind(this));
 
-      await this.editor.openWorkingTreeFileDiff(item.filePath, item.ref, item.refLabel, {
-        preview: true,
-        status: item.status
-      });
-    });
+    register(GitCommand.CompareWithRevisionSwapDirection, this.handleCompareWithRevisionSwapDirection.bind(this));
 
-    register(GitCommand.CompareWithRevisionSwapDirection, async () => {
-      await this.editor.swapActiveCompareDirection();
-    });
+    register(GitCommand.GraphOpenRepositoryFileAtRevision, this.handleGraphOpenRepositoryFileAtRevision.bind(this));
 
-    register(GitCommand.GraphOpenRepositoryFileAtRevision, async (arg?: unknown) => {
-      const item = this.asRevisionViewFileItem(arg);
-      if (!item) {
-        return;
-      }
+    register(GitCommand.GraphCheckoutCommit, this.handleGraphCheckoutCommit.bind(this));
 
-      await this.editor.openFileAtRevision(item.sha, item.filePath);
-    });
+    register(GitCommand.GraphCreateBranchHere, this.handleGraphCreateBranchHere.bind(this));
 
-    register(GitCommand.GraphCheckoutCommit, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to checkout'));
-      if (!sha) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Checkout detached HEAD',
-        detail: `Commit: ${sha}`,
-        acceptLabel: 'Checkout'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.checkoutCommit(sha);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.GraphCreateBranchHere, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new branch'));
-      if (!sha) {
-        return;
-      }
-
-      const name = await vscode.window.showInputBox({
-        title: `Create branch at ${sha.slice(0, 8)}`,
-        placeHolder: 'feature/new-branch',
-        validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
-      });
-
-      if (!name) {
-        return;
-      }
-
-      await this.git.createBranch(name.trim(), sha);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.GraphCreateTagHere, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new tag'));
-      if (!sha) {
-        return;
-      }
-
-      const name = await vscode.window.showInputBox({
-        title: `Create tag at ${sha.slice(0, 8)}`,
-        placeHolder: 'v1.2.3',
-        validateInput: (value) => (value.trim() ? undefined : 'Tag name is required')
-      });
-
-      if (!name) {
-        return;
-      }
-
-      await this.git.createTag(name.trim(), sha);
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
-    });
+    register(GitCommand.GraphCreateTagHere, this.handleGraphCreateTagHere.bind(this));
 
     register(GitCommand.GraphCherryPick, this.handleCherryPick.bind(this));
 
-    register(GitCommand.GraphCherryPickRange, async () => {
-      const fromExclusive = await this.pickCommitSha('Pick starting point (exclusive)');
-      if (!fromExclusive) {
-        return;
-      }
-      const toInclusive = await this.pickCommitSha('Pick end point (inclusive)');
-      if (!toInclusive) {
-        return;
-      }
+    register(GitCommand.GraphCherryPickRange, this.handleGraphCherryPickRange.bind(this));
 
-      const confirmed = await confirmDangerousAction({
-        title: 'Cherry-pick range',
-        detail: `${fromExclusive}..${toInclusive}`,
-        acceptLabel: 'Cherry-pick'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.git.cherryPickRange(fromExclusive, toInclusive);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.GraphRevert, async (arg?: unknown, selected?: unknown) => {
-      const selectedShas = this.toGraphCommitShas(arg, selected);
-      if (selectedShas.length === 0) {
-        const picked = await this.pickCommitSha('Pick commit to revert');
-        if (!picked) {
-          return;
-        }
-        selectedShas.push(picked);
-      }
-
-      for (const sha of selectedShas) {
-        await this.git.revertCommit(sha);
-      }
-      await this.state.refreshAll();
-    });
+    register(GitCommand.GraphRevert, this.handleGraphRevert.bind(this));
 
     register(GitCommand.CommitRevertSelectedChanges, this.handleRevertSelectedChanges.bind(this));
 
@@ -783,346 +302,75 @@ export class CommandController {
 
     register(GitCommand.CommitApplyPatch, this.handleApplyPatch.bind(this));
 
-    register(GitCommand.GraphCompareWithCurrent, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
-      if (!sha) {
-        return;
-      }
+    register(GitCommand.GraphCompareWithCurrent, this.handleGraphCompareWithCurrent.bind(this));
 
-      await this.editor.openCompareFromCommit(sha);
-    });
-
-    register(GitCommand.GraphRebaseInteractiveFromHere, async (arg?: unknown) => {
-      const base = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick base commit for interactive rebase'));
-      if (!base) {
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Interactive rebase',
-        detail: `Base commit: ${base}`,
-        acceptLabel: 'Start rebase'
-      });
-      if (!confirmed) {
-        return;
-      }
-
-      await this.startRebaseOperation(() => this.git.rebaseInteractive(base));
-    });
+    register(GitCommand.GraphRebaseInteractiveFromHere, this.handleGraphRebaseInteractiveFromHere.bind(this));
 
     register(GitCommand.GraphEditCommitMessage, this.handleEditCommitMessage.bind(this));
 
-    register(GitCommand.GraphGoToParentCommit, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
-      if (!sha) {
-        return;
-      }
+    register(GitCommand.GraphGoToParentCommit, this.handleGraphGoToParentCommit.bind(this));
 
-      const parent = await this.git.getParentCommit(sha);
-      if (!parent) {
-        void vscode.window.showInformationMessage('This commit has no parent commit.');
-        return;
-      }
-
-      const graphCommit = this.state.graph.find((commit) => commit.sha === parent);
-      if (graphCommit) {
-        await vscode.commands.executeCommand(GitCommand.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
-      } else {
-        const subject = (await this.git.getCommitDetails(parent)).commit.subject;
-        await this.openCommitDetails(parent, subject, { openFirstDiff: true });
-      }
-    });
-
-    register(GitCommand.GraphGoToChildCommit, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
-      if (!sha) {
-        return;
-      }
-
-      const result = await this.git.runGit(['rev-list', '--children', '-n', '1', sha]);
-      const parts = result.stdout.trim().split(/\s+/).filter(Boolean);
-      const children = parts.slice(1);
-      if (children.length === 0) {
-        void vscode.window.showInformationMessage('This commit has no child commit.');
-        return;
-      }
-
-      let child = children[0];
-      if (children.length > 1) {
-        const picked = await vscode.window.showQuickPick(
-          children.map((candidate) => ({ label: candidate })),
-          { title: `Pick child commit of ${sha.slice(0, 8)}` }
-        );
-        if (!picked) {
-          return;
-        }
-        child = picked.label;
-      }
-
-      const graphCommit = this.state.graph.find((commit) => commit.sha === child);
-      if (graphCommit) {
-        await vscode.commands.executeCommand(GitCommand.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
-      } else {
-        const subject = (await this.git.getCommitDetails(child)).commit.subject;
-        await this.openCommitDetails(child, subject, { openFirstDiff: true });
-      }
-    });
+    register(GitCommand.GraphGoToChildCommit, this.handleGraphGoToChildCommit.bind(this));
 
     register(GitCommand.GraphPushAllUpToHere, this.handlePushAllUpToHere.bind(this));
 
-    register(GitCommand.GraphCreatePatch, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to export patch'));
-      if (!sha) {
-        return;
-      }
+    register(GitCommand.GraphCreatePatch, this.handleGraphCreatePatch.bind(this));
 
-      const patch = await this.git.getPatchForCommit(sha);
-      const doc = await vscode.workspace.openTextDocument({
-        language: 'diff',
-        content: patch
-      });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    });
+    register(GitCommand.GraphCreatePatchForRange, this.handleGraphCreatePatchForRange.bind(this));
 
-    register(GitCommand.GraphCreatePatchForRange, async (arg?: unknown, selected?: unknown) => {
-      const shas = this.toGraphCommitShas(arg, selected);
-      if (shas.length < 2) {
-        return;
-      }
-
-      const patch = await this.git.getPatchForCommitRange(shas);
-      const doc = await vscode.workspace.openTextDocument({
-        language: 'diff',
-        content: patch
-      });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    });
-
-    register(GitCommand.GraphShowRepositoryAtRevision, async (arg?: unknown) => {
-      const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));
-      if (!sha) {
-        return;
-      }
-
-      await this.editor.showRepositoryAtRevision(sha);
-    });
+    register(GitCommand.GraphShowRepositoryAtRevision, this.handleGraphShowRepositoryAtRevision.bind(this));
 
     register(GitCommand.GraphFilter, this.handleGraphFilter.bind(this));
 
-    register(GitCommand.GraphClearFilter, async () => {
-      await GraphFilterView.clearCurrentFilters();
-      await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
-    });
+    register(GitCommand.GraphClearFilter, this.handleGraphClearFilter.bind(this));
 
-    register(GitCommand.GraphLoadMore, async () => {
-      await this.state.loadMoreGraph();
-    });
+    register(GitCommand.GraphLoadMore, this.handleGraphLoadMore.bind(this));
 
-    register(GitCommand.DiffOpen, async () => {
-      await this.openDiffWorkflow();
-    });
+    register(GitCommand.DiffOpen, this.handleDiffOpen.bind(this));
 
-    register(GitCommand.CompareOpen, async () => {
-      await this.openCompareWorkflow();
-    });
+    register(GitCommand.CompareOpen, this.handleCompareOpen.bind(this));
 
-    register(GitCommand.MergeOpenConflict, async () => {
-      const conflicts = await this.git.getMergeConflicts();
-      if (conflicts.length === 0) {
-        void vscode.window.showInformationMessage('No conflicted files found.');
-        return;
-      }
+    register(GitCommand.MergeOpenConflict, this.handleMergeOpenConflict.bind(this));
 
-      const picked = await vscode.window.showQuickPick(
-        conflicts.map((item) => ({ label: item.path, description: item.status })),
-        { title: 'Open conflict in merge editor' }
-      );
+    register(GitCommand.MergeNext, this.handleMergeNext.bind(this));
 
-      if (!picked) {
-        return;
-      }
+    register(GitCommand.MergePrevious, this.handleMergePrevious.bind(this));
 
-      await this.editor.openMergeConflict(picked.label);
-    });
+    register(GitCommand.MergeFinalize, this.handleMergeFinalize.bind(this));
 
-    register(GitCommand.MergeNext, async () => {
-      await vscode.commands.executeCommand('merge-conflict.next');
-    });
-
-    register(GitCommand.MergePrevious, async () => {
-      await vscode.commands.executeCommand('merge-conflict.previous');
-    });
-
-    register(GitCommand.MergeFinalize, async () => {
-      const conflicts = await this.git.getMergeConflicts();
-      if (conflicts.length > 0) {
-        void vscode.window.showWarningMessage(`Resolve all conflicts before finalizing (${conflicts.length} remaining).`);
-        return;
-      }
-
-      const changed = await this.git.getChangedFiles();
-      if (changed.length > 0) {
-        await this.git.addAll();
-      }
-
-      void vscode.window.showInformationMessage('All conflicts resolved. Ready to commit merge.');
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.ConflictAcceptOurs, async (arg?: unknown) => this.handleConflictResolve(arg, 'ours'));
-    register(GitCommand.ConflictAcceptTheirs, async (arg?: unknown) => this.handleConflictResolve(arg, 'theirs'));
-    register(GitCommand.ConflictAcceptBoth, async (arg?: unknown) => this.handleConflictResolve(arg, 'both'));
+    register(GitCommand.ConflictAcceptOurs, this.handleConflictAcceptOurs.bind(this));
+    register(GitCommand.ConflictAcceptTheirs, this.handleConflictAcceptTheirs.bind(this));
+    register(GitCommand.ConflictAcceptBoth, this.handleConflictAcceptBoth.bind(this));
 
     register(GitCommand.OperationAbort, this.handleOperationAbort.bind(this));
 
     register(GitCommand.OperationContinue, this.handleOperationContinue.bind(this));
 
-    register(GitCommand.OperationSkip, async () => {
-      const state = await this.git.getOperationState();
-      if (state.kind === 'rebase') {
-        await this.git.rebaseSkip();
-      } else if (state.kind === 'cherry-pick') {
-        await this.git.cherryPickSkip();
-      } else {
-        void vscode.window.showInformationMessage('Skip is only available during rebase or cherry-pick.');
-        return;
-      }
-      await this.state.refreshAll();
-    });
+    register(GitCommand.OperationSkip, this.handleOperationSkip.bind(this));
 
-    register(GitCommand.GitPushWithPreview, async () => {
-      const preview = await this.git.getOutgoingIncomingPreview();
-      const confirmed = await confirmDangerousAction({
-        title: 'Push current branch',
-        detail: `Outgoing commits:\n${preview.outgoing.slice(0, 10).join('\n') || 'none'}`,
-        acceptLabel: 'Push'
-      });
-      if (!confirmed) {
-        return;
-      }
+    register(GitCommand.GitPushWithPreview, this.handleGitPushWithPreview.bind(this));
 
-      await this.git.push();
-      await this.state.refreshAll();
-    });
+    register(GitCommand.GitPullWithPreview, this.handleGitPullWithPreview.bind(this));
 
-    register(GitCommand.GitPullWithPreview, async () => {
-      const preview = await this.git.getOutgoingIncomingPreview();
-      const confirmed = await confirmDangerousAction({
-        title: 'Pull current branch',
-        detail: `Incoming commits:\n${preview.incoming.slice(0, 10).join('\n') || 'none'}`,
-        acceptLabel: 'Pull'
-      });
-      if (!confirmed) {
-        return;
-      }
+    register(GitCommand.GitFetchPrune, this.handleGitFetchPrune.bind(this));
 
-      await this.git.pull();
-      await this.state.refreshAll();
-    });
+    register(GitCommand.GitSshPullGithub, this.handleGitSshPullGithub.bind(this));
 
-    register(GitCommand.GitFetchPrune, async () => {
-      await this.git.fetchPrune();
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage('Fetch --prune completed.');
-    });
+    register(GitCommand.GitSshPullGitlab, this.handleGitSshPullGitlab.bind(this));
 
-    register(GitCommand.GitSshPullGithub, async () => {
-      await this.sshPull('github.com');
-    });
+    register(GitCommand.GitSshPullBitbucket, this.handleGitSshPullBitbucket.bind(this));
 
-    register(GitCommand.GitSshPullGitlab, async () => {
-      await this.sshPull('gitlab.com');
-    });
+    register(GitCommand.GitSshPullCustom, this.handleGitSshPullCustom.bind(this));
 
-    register(GitCommand.GitSshPullBitbucket, async () => {
-      await this.sshPull('bitbucket.org');
-    });
+    register(GitCommand.StagePatch, this.handleStagePatch.bind(this));
 
-    register(GitCommand.GitSshPullCustom, async () => {
-      await this.sshPull('prompt');
-    });
-
-    register(GitCommand.StagePatch, async () => {
-      const changed = await this.git.getChangedFiles();
-      if (changed.length === 0) {
-        void vscode.window.showInformationMessage('No local changes found.');
-        return;
-      }
-
-      const file = await vscode.window.showQuickPick(
-        changed.map((item) => ({ label: item.path, description: item.status })),
-        { title: 'Select file for interactive hunk staging' }
-      );
-
-      if (!file) {
-        return;
-      }
-
-      await this.git.stagePatch(file.label);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.StageFile, async () => {
-      const changed = await this.git.getChangedFiles();
-      const candidates = changed.filter((entry) => entry.status.length > 0 && entry.status[1] !== ' ');
-      if (candidates.length === 0) {
-        void vscode.window.showInformationMessage('No unstaged files found.');
-        return;
-      }
-
-      const file = await vscode.window.showQuickPick(
-        candidates.map((item) => ({ label: item.path, description: item.status })),
-        { title: 'Stage file' }
-      );
-      if (!file) {
-        return;
-      }
-
-      await this.git.stageFile(file.label);
-      await this.state.refreshAll();
-    });
+    register(GitCommand.StageFile, this.handleStageFile.bind(this));
 
     register(GitCommand.ScmShelveResource, this.handleShelveResource.bind(this));
 
-    register(GitCommand.UnstageFile, async () => {
-      const changed = await this.git.getChangedFiles();
-      const candidates = changed.filter((entry) => entry.status.length > 1 && entry.status[0] !== ' ' && entry.status[0] !== '?');
-      if (candidates.length === 0) {
-        void vscode.window.showInformationMessage('No staged files found.');
-        return;
-      }
+    register(GitCommand.UnstageFile, this.handleUnstageFile.bind(this));
 
-      const file = await vscode.window.showQuickPick(
-        candidates.map((item) => ({ label: item.path, description: item.status })),
-        { title: 'Unstage file' }
-      );
-      if (!file) {
-        return;
-      }
-
-      await this.git.unstageFile(file.label);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.CommitAmend, async () => {
-      const defaultMessage = await this.git.getHeadCommitMessage();
-      const message = await vscode.window.showInputBox({
-        title: 'Amend last commit message',
-        value: defaultMessage,
-        prompt: 'Leave unchanged to amend content only'
-      });
-
-      if (message === undefined) {
-        return;
-      }
-
-      if (message.trim() && message.trim() !== defaultMessage.trim()) {
-        await this.git.amendCommit(message.trim());
-      } else {
-        await this.git.amendCommit();
-      }
-      await this.state.refreshAll();
-    });
+    register(GitCommand.CommitAmend, this.handleCommitAmend.bind(this));
 
     register(GitCommand.ScmCommitTemplate, this.handleCommitTemplate.bind(this));
 
@@ -1134,474 +382,71 @@ export class CommandController {
 
     register(GitCommand.DirectoryTimelineOpen, this.handleDirectoryTimelineOpen.bind(this));
 
-    register(GitCommand.FileBlameOpen, async () => {
-      const file = this.getActiveFilePath();
-      if (!file) {
-        void vscode.window.showWarningMessage('Open a file to view blame.');
-        return;
-      }
-
-      const blame = await this.git.fileBlame(file);
-      const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: blame });
-      await vscode.window.showTextDocument(doc, { preview: false });
-    });
+    register(GitCommand.FileBlameOpen, this.handleFileBlameOpen.bind(this));
 
     // ── Worktree commands ──────────────────────────────────────────────────
 
-    register(GitCommand.WorktreeRefresh, async () => {
-      await this.state.refreshWorktrees();
-    });
+    register(GitCommand.WorktreeRefresh, this.handleWorktreeRefresh.bind(this));
 
-    register(GitCommand.WorktreeOpen, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      const worktreePath = item?.worktree.worktreePath;
-      if (!worktreePath) { return; }
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceReuseWindow: true });
-    });
+    register(GitCommand.WorktreeOpen, this.handleWorktreeOpen.bind(this));
 
-    register(GitCommand.WorktreeOpenInNewWindow, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      const worktreePath = item?.worktree.worktreePath;
-      if (!worktreePath) { return; }
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceNewWindow: true });
-    });
+    register(GitCommand.WorktreeOpenInNewWindow, this.handleWorktreeOpenInNewWindow.bind(this));
 
-    register(GitCommand.WorktreeAddFromBranch, async () => {
-      const selection = await this.pickWorktreeRevision('Add worktree from branch, tag, or revision');
-      if (!selection) { return; }
+    register(GitCommand.WorktreeAddFromBranch, this.handleWorktreeAddFromBranch.bind(this));
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
-      if (!targetPath) { return; }
+    register(GitCommand.WorktreeAddNewBranch, this.handleWorktreeAddNewBranch.bind(this));
 
-      await this.git.addWorktree(targetPath, selection.ref);
-      await this.state.refreshWorktrees();
-    });
+    register(GitCommand.WorktreeAddDetached, this.handleWorktreeAddDetached.bind(this));
 
-    register(GitCommand.WorktreeAddNewBranch, async () => {
-      const branchName = await vscode.window.showInputBox({
-        title: 'New branch name',
-        placeHolder: 'feature/my-branch',
-        validateInput: (v) => v.trim() ? undefined : 'Branch name is required'
-      });
-      if (!branchName) { return; }
+    register(GitCommand.WorktreeRemove, this.handleWorktreeRemove.bind(this));
 
-      const base = await this.pickWorktreeRevision('Select base branch, tag, or revision');
+    register(GitCommand.WorktreeRemoveForce, this.handleWorktreeRemoveForce.bind(this));
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', branchName.trim());
-      if (!targetPath) { return; }
+    register(GitCommand.WorktreeLock, this.handleWorktreeLock.bind(this));
 
-      await this.git.addWorktreeBranch(targetPath, branchName.trim(), base?.ref);
-      await this.state.refreshWorktrees();
-    });
+    register(GitCommand.WorktreeUnlock, this.handleWorktreeUnlock.bind(this));
 
-    register(GitCommand.WorktreeAddDetached, async () => {
-      const selection = await this.pickWorktreeRevision('Detached worktree at branch, tag, or revision');
-      if (!selection) { return; }
+    register(GitCommand.WorktreePrunePreview, this.handleWorktreePrunePreview.bind(this));
 
-      const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
-      if (!targetPath) { return; }
+    register(GitCommand.WorktreePrune, this.handleWorktreePrune.bind(this));
 
-      const confirmed = await confirmDangerousAction({
-        title: 'Add detached worktree',
-        detail: `This creates a worktree in detached HEAD state at ${selection.ref}`,
-        acceptLabel: 'Create Detached'
-      });
-      if (!confirmed) { return; }
+    register(GitCommand.WorktreeRevealInFinder, this.handleWorktreeRevealInFinder.bind(this));
 
-      await this.git.addDetachedWorktree(targetPath, selection.ref);
-      await this.state.refreshWorktrees();
-    });
-
-    register(GitCommand.WorktreeRemove, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const { worktree } = item;
-
-      if (worktree.isCurrent) {
-        void vscode.window.showWarningMessage('Cannot remove the current worktree.');
-        return;
-      }
-
-      if (worktree.isLocked) {
-        void vscode.window.showWarningMessage('Unlock the worktree before removing it.');
-        return;
-      }
-
-      if (worktree.isDirty) {
-        void vscode.window.showWarningMessage(
-          `${worktree.worktreePath} has uncommitted changes. Use Force Remove if you want to discard them.`
-        );
-        return;
-      } else {
-        const confirmed = await confirmDangerousAction({
-          title: 'Remove worktree',
-          detail: worktree.worktreePath,
-          acceptLabel: 'Remove'
-        });
-        if (!confirmed) { return; }
-      }
-
-      await this.git.removeWorktree(worktree.worktreePath);
-      await this.state.refreshWorktrees();
-    });
-
-    register(GitCommand.WorktreeRemoveForce, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const { worktree } = item;
-
-      if (worktree.isCurrent) {
-        void vscode.window.showWarningMessage('Cannot remove the current worktree.');
-        return;
-      }
-
-      const confirmed = await confirmDangerousAction({
-        title: 'Force remove worktree',
-        detail: `${worktree.worktreePath} — all local changes will be lost. This cannot be undone.`,
-        acceptLabel: 'Force Remove'
-      });
-      if (!confirmed) { return; }
-
-      await this.git.removeWorktree(worktree.worktreePath, true);
-      await this.state.refreshWorktrees();
-    });
-
-    register(GitCommand.WorktreeLock, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-
-      const reason = await vscode.window.showInputBox({
-        title: 'Lock reason (optional)',
-        placeHolder: 'e.g. long-running experiment'
-      });
-
-      await this.git.lockWorktree(item.worktree.worktreePath, reason?.trim() || undefined);
-      await this.state.refreshWorktrees();
-    });
-
-    register(GitCommand.WorktreeUnlock, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-
-      await this.git.unlockWorktree(item.worktree.worktreePath);
-      await this.state.refreshWorktrees();
-    });
-
-    register(GitCommand.WorktreePrunePreview, async () => {
-      const prunable = await this.git.getPrunableWorktrees();
-      if (prunable.length === 0) {
-        void vscode.window.showInformationMessage('No prunable worktrees found.');
-        return;
-      }
-
-      const items = prunable.map((p) => ({ label: p.worktreePath, description: p.reason }));
-      await vscode.window.showQuickPick(items, {
-        title: 'Prunable worktrees (dry run)',
-        placeHolder: 'These worktrees would be pruned',
-        canPickMany: false
-      });
-    });
-
-    register(GitCommand.WorktreePrune, async () => {
-      const prunable = await this.git.getPrunableWorktrees();
-      if (prunable.length === 0) {
-        void vscode.window.showInformationMessage('No prunable worktrees found.');
-        return;
-      }
-
-      const items = prunable.map((p) => ({ label: p.worktreePath, description: p.reason }));
-      const confirmed = await vscode.window.showQuickPick(items, {
-        title: `Prune ${prunable.length} stale worktree(s)?`,
-        placeHolder: 'Review — confirm by pressing Enter',
-        canPickMany: false
-      });
-      if (!confirmed) { return; }
-
-      await this.git.pruneWorktrees();
-      await this.state.refreshWorktrees();
-      void vscode.window.showInformationMessage('Stale worktrees pruned.');
-    });
-
-    register(GitCommand.WorktreeRevealInFinder, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-      await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(item.worktree.worktreePath));
-    });
-
-    register(GitCommand.WorktreeOpenTerminal, async (arg?: unknown) => {
-      const item = arg instanceof WorktreeTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const terminal = vscode.window.createTerminal({ cwd: item.worktree.worktreePath, name: `Worktree: ${item.label}` });
-      terminal.show();
-    });
+    register(GitCommand.WorktreeOpenTerminal, this.handleWorktreeOpenTerminal.bind(this));
 
     // ── Submodule commands ─────────────────────────────────────────────────
 
-    register(GitCommand.SubmoduleRefresh, async () => {
-      await this.state.refreshSubmodules();
-    });
+    register(GitCommand.SubmoduleRefresh, this.handleSubmoduleRefresh.bind(this));
 
-    register(GitCommand.SubmoduleInit, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Initializing submodule ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule init'
-          },
-          ({ sink, signal }) => this.git.initSubmodule(item.submodule.path, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleInit, this.handleSubmoduleInit.bind(this));
 
-    register(GitCommand.SubmoduleInitAll, async () => {
-      const count = this.state.submodules.length;
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Initializing ${count} submodule(s)…`,
-            autoShow: true,
-            command: 'Submodule init (all)'
-          },
-          ({ sink, signal }) => this.git.initAllSubmodules({ sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleInitAll, this.handleSubmoduleInitAll.bind(this));
 
-    register(GitCommand.SubmoduleUpdate, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
+    register(GitCommand.SubmoduleUpdate, this.handleSubmoduleUpdate.bind(this));
 
-      if (item.submodule.isDirty) {
-        const confirmed = await confirmDangerousAction({
-          title: 'Update dirty submodule',
-          detail: `${item.submodule.path} has uncommitted changes.`,
-          acceptLabel: 'Update anyway'
-        });
-        if (!confirmed) { return; }
-      }
+    register(GitCommand.SubmoduleUpdateAll, this.handleSubmoduleUpdateAll.bind(this));
 
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Updating submodule ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule update'
-          },
-          ({ sink, signal }) => this.git.updateSubmodule(item.submodule.path, false, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleUpdateRecursive, this.handleSubmoduleUpdateRecursive.bind(this));
 
-    register(GitCommand.SubmoduleUpdateAll, async () => {
-      const submodules = this.state.submodules;
-      const dirtyCount = submodules.filter((s) => s.isDirty).length;
-      if (dirtyCount > 0) {
-        const confirmed = await confirmDangerousAction({
-          title: 'Update all submodules',
-          detail: `${dirtyCount} submodule(s) have uncommitted changes.`,
-          acceptLabel: 'Update all'
-        });
-        if (!confirmed) { return; }
-      }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Updating ${submodules.length} submodule(s)…`,
-            autoShow: true,
-            command: 'Submodule update (all)'
-          },
-          ({ sink, signal }) => this.git.updateAllSubmodules(false, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleSync, this.handleSubmoduleSync.bind(this));
 
-    register(GitCommand.SubmoduleUpdateRecursive, async () => {
-      const submodules = this.state.submodules;
-      const dirtyCount = submodules.filter((s) => s.isDirty).length;
-      const confirmed = await confirmDangerousAction({
-        title: 'Update all submodules recursively',
-        detail: dirtyCount > 0
-          ? `${submodules.length} submodule(s) will be updated recursively. ${dirtyCount} have uncommitted changes.`
-          : `${submodules.length} submodule(s) will be updated recursively.`,
-        acceptLabel: 'Update Recursive'
-      });
-      if (!confirmed) { return; }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Recursively updating ${submodules.length} submodule(s)…`,
-            autoShow: true,
-            command: 'Submodule update (recursive)'
-          },
-          ({ sink, signal }) => this.git.updateAllSubmodules(true, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleSyncAll, this.handleSubmoduleSyncAll.bind(this));
 
-    register(GitCommand.SubmoduleSync, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Syncing submodule ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule sync'
-          },
-          ({ sink, signal }) => this.git.syncSubmodule(item.submodule.path, false, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleOpen, this.handleSubmoduleOpen.bind(this));
 
-    register(GitCommand.SubmoduleSyncAll, async () => {
-      const count = this.state.submodules.length;
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Syncing ${count} submodule(s)…`,
-            autoShow: true,
-            command: 'Submodule sync (all)'
-          },
-          ({ sink, signal }) => this.git.syncSubmodule(undefined, true, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleOpenInNewWindow, this.handleSubmoduleOpenInNewWindow.bind(this));
 
-    register(GitCommand.SubmoduleOpen, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceReuseWindow: true });
-    });
+    register(GitCommand.SubmoduleOpenTerminal, this.handleSubmoduleOpenTerminal.bind(this));
 
-    register(GitCommand.SubmoduleOpenInNewWindow, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
-      await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceNewWindow: true });
-    });
+    register(GitCommand.SubmoduleCheckoutRecorded, this.handleSubmoduleCheckoutRecorded.bind(this));
 
-    register(GitCommand.SubmoduleOpenTerminal, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
-      const terminal = vscode.window.createTerminal({ cwd: fullPath, name: `Submodule: ${item.submodule.name}` });
-      terminal.show();
-    });
+    register(GitCommand.SubmodulePullTrackedBranch, this.handleSubmodulePullTrackedBranch.bind(this));
 
-    register(GitCommand.SubmoduleCheckoutRecorded, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Checking out recorded commit for ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule checkout recorded'
-          },
-          ({ sink, signal }) => this.git.checkoutRecordedSubmoduleCommit(item.submodule.path, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleDiffPointer, this.handleSubmoduleDiffPointer.bind(this));
 
-    register(GitCommand.SubmodulePullTrackedBranch, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Pulling tracked branch in ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule pull'
-          },
-          ({ sink, signal }) => this.git.pullSubmoduleTrackedBranch(item.submodule.path, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleStagePointerChange, this.handleSubmoduleStagePointerChange.bind(this));
 
-    register(GitCommand.SubmoduleDiffPointer, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      const diff = await this.git.getSubmodulePointerDiff(item.submodule.path);
-      if (!diff.trim()) {
-        void vscode.window.showInformationMessage('No pointer diff for this submodule.');
-        return;
-      }
-      const doc = await vscode.workspace.openTextDocument({ content: diff, language: 'diff' });
-      await vscode.window.showTextDocument(doc);
-    });
-
-    register(GitCommand.SubmoduleStagePointerChange, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-      await this.git.stageSubmodulePointer(item.submodule.path);
-      await this.state.refreshAll();
-    });
-
-    register(GitCommand.SubmoduleDeinit, async (arg?: unknown) => {
-      const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
-      if (!item) { return; }
-
-      if (item.submodule.isDirty) {
-        const confirmed = await confirmDangerousAction({
-          title: 'Deinit dirty submodule',
-          detail: `${item.submodule.path} has uncommitted changes that will be lost.`,
-          acceptLabel: 'Deinit'
-        });
-        if (!confirmed) { return; }
-      } else {
-        const confirmed = await confirmDangerousAction({
-          title: 'Deinit submodule',
-          detail: `This will remove ${item.submodule.path} from the working tree.`,
-          acceptLabel: 'Deinit'
-        });
-        if (!confirmed) { return; }
-      }
-
-      try {
-        await withSubmoduleProgress(
-          this.logger,
-          {
-            title: `Deiniting submodule ${item.submodule.path}…`,
-            autoShow: false,
-            command: 'Submodule deinit'
-          },
-          ({ sink, signal }) => this.git.deinitSubmodule(item.submodule.path, item.submodule.isDirty, { sink, signal })
-        );
-      } finally {
-        await this.state.refreshSubmodules();
-      }
-    });
+    register(GitCommand.SubmoduleDeinit, this.handleSubmoduleDeinit.bind(this));
 
   }
 
@@ -3305,8 +2150,6 @@ export class CommandController {
     });
   }
 
-  // ── Extracted command handlers (Phase 2 continued) ────────────────────
-
   private async handleEditCommitMessage(arg?: unknown): Promise<void> {
     const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to edit message'));
     if (!sha) {
@@ -3857,4 +2700,1473 @@ export class CommandController {
     await this.state.refreshAll();
   }
 
+  // ── Extracted command handler methods (Phase 3) ────────────────
+
+  private async handleSubmoduleDeinit(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+
+    if (item.submodule.isDirty) {
+      const confirmed = await confirmDangerousAction({
+        title: 'Deinit dirty submodule',
+        detail: `${item.submodule.path} has uncommitted changes that will be lost.`,
+        acceptLabel: 'Deinit'
+      });
+      if (!confirmed) { return; }
+    } else {
+      const confirmed = await confirmDangerousAction({
+        title: 'Deinit submodule',
+        detail: `This will remove ${item.submodule.path} from the working tree.`,
+        acceptLabel: 'Deinit'
+      });
+      if (!confirmed) { return; }
+    }
+
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Deiniting submodule ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule deinit'
+        },
+        ({ sink, signal }) => this.git.deinitSubmodule(item.submodule.path, item.submodule.isDirty, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleStagePointerChange(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    await this.git.stageSubmodulePointer(item.submodule.path);
+    await this.state.refreshAll();
+
+  }
+  private async handleSubmoduleDiffPointer(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const diff = await this.git.getSubmodulePointerDiff(item.submodule.path);
+    if (!diff.trim()) {
+      void vscode.window.showInformationMessage('No pointer diff for this submodule.');
+      return;
+    }
+    const doc = await vscode.workspace.openTextDocument({ content: diff, language: 'diff' });
+    await vscode.window.showTextDocument(doc);
+
+  }
+  private async handleSubmodulePullTrackedBranch(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Pulling tracked branch in ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule pull'
+        },
+        ({ sink, signal }) => this.git.pullSubmoduleTrackedBranch(item.submodule.path, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleCheckoutRecorded(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Checking out recorded commit for ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule checkout recorded'
+        },
+        ({ sink, signal }) => this.git.checkoutRecordedSubmoduleCommit(item.submodule.path, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleOpenTerminal(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
+    const terminal = vscode.window.createTerminal({ cwd: fullPath, name: `Submodule: ${item.submodule.name}` });
+    terminal.show();
+
+  }
+  private async handleSubmoduleOpenInNewWindow(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceNewWindow: true });
+
+  }
+  private async handleSubmoduleOpen(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const fullPath = `${this.git.gitRoot}/${item.submodule.path}`;
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(fullPath), { forceReuseWindow: true });
+
+  }
+  private async handleSubmoduleSyncAll(): Promise<void> {
+
+    const count = this.state.submodules.length;
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Syncing ${count} submodule(s)…`,
+          autoShow: true,
+          command: 'Submodule sync (all)'
+        },
+        ({ sink, signal }) => this.git.syncSubmodule(undefined, true, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleSync(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Syncing submodule ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule sync'
+        },
+        ({ sink, signal }) => this.git.syncSubmodule(item.submodule.path, false, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleUpdateRecursive(): Promise<void> {
+
+    const submodules = this.state.submodules;
+    const dirtyCount = submodules.filter((s) => s.isDirty).length;
+    const confirmed = await confirmDangerousAction({
+      title: 'Update all submodules recursively',
+      detail: dirtyCount > 0
+        ? `${submodules.length} submodule(s) will be updated recursively. ${dirtyCount} have uncommitted changes.`
+        : `${submodules.length} submodule(s) will be updated recursively.`,
+      acceptLabel: 'Update Recursive'
+    });
+    if (!confirmed) { return; }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Recursively updating ${submodules.length} submodule(s)…`,
+          autoShow: true,
+          command: 'Submodule update (recursive)'
+        },
+        ({ sink, signal }) => this.git.updateAllSubmodules(true, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleUpdateAll(): Promise<void> {
+
+    const submodules = this.state.submodules;
+    const dirtyCount = submodules.filter((s) => s.isDirty).length;
+    if (dirtyCount > 0) {
+      const confirmed = await confirmDangerousAction({
+        title: 'Update all submodules',
+        detail: `${dirtyCount} submodule(s) have uncommitted changes.`,
+        acceptLabel: 'Update all'
+      });
+      if (!confirmed) { return; }
+    }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Updating ${submodules.length} submodule(s)…`,
+          autoShow: true,
+          command: 'Submodule update (all)'
+        },
+        ({ sink, signal }) => this.git.updateAllSubmodules(false, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleUpdate(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+
+    if (item.submodule.isDirty) {
+      const confirmed = await confirmDangerousAction({
+        title: 'Update dirty submodule',
+        detail: `${item.submodule.path} has uncommitted changes.`,
+        acceptLabel: 'Update anyway'
+      });
+      if (!confirmed) { return; }
+    }
+
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Updating submodule ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule update'
+        },
+        ({ sink, signal }) => this.git.updateSubmodule(item.submodule.path, false, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleInitAll(): Promise<void> {
+
+    const count = this.state.submodules.length;
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Initializing ${count} submodule(s)…`,
+          autoShow: true,
+          command: 'Submodule init (all)'
+        },
+        ({ sink, signal }) => this.git.initAllSubmodules({ sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleInit(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof SubmoduleTreeItem ? arg : undefined;
+    if (!item) { return; }
+    try {
+      await withSubmoduleProgress(
+        this.logger,
+        {
+          title: `Initializing submodule ${item.submodule.path}…`,
+          autoShow: false,
+          command: 'Submodule init'
+        },
+        ({ sink, signal }) => this.git.initSubmodule(item.submodule.path, { sink, signal })
+      );
+    } finally {
+      await this.state.refreshSubmodules();
+    }
+
+  }
+  private async handleSubmoduleRefresh(): Promise<void> {
+
+    await this.state.refreshSubmodules();
+
+  }
+  private async handleWorktreeOpenTerminal(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const terminal = vscode.window.createTerminal({ cwd: item.worktree.worktreePath, name: `Worktree: ${item.label}` });
+    terminal.show();
+
+  }
+  private async handleWorktreeRevealInFinder(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+    await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(item.worktree.worktreePath));
+
+  }
+  private async handleWorktreePrune(): Promise<void> {
+
+    const prunable = await this.git.getPrunableWorktrees();
+    if (prunable.length === 0) {
+      void vscode.window.showInformationMessage('No prunable worktrees found.');
+      return;
+    }
+
+    const items = prunable.map((p) => ({ label: p.worktreePath, description: p.reason }));
+    const confirmed = await vscode.window.showQuickPick(items, {
+      title: `Prune ${prunable.length} stale worktree(s)?`,
+      placeHolder: 'Review — confirm by pressing Enter',
+      canPickMany: false
+    });
+    if (!confirmed) { return; }
+
+    await this.git.pruneWorktrees();
+    await this.state.refreshWorktrees();
+    void vscode.window.showInformationMessage('Stale worktrees pruned.');
+
+  }
+  private async handleWorktreePrunePreview(): Promise<void> {
+
+    const prunable = await this.git.getPrunableWorktrees();
+    if (prunable.length === 0) {
+      void vscode.window.showInformationMessage('No prunable worktrees found.');
+      return;
+    }
+
+    const items = prunable.map((p) => ({ label: p.worktreePath, description: p.reason }));
+    await vscode.window.showQuickPick(items, {
+      title: 'Prunable worktrees (dry run)',
+      placeHolder: 'These worktrees would be pruned',
+      canPickMany: false
+    });
+
+  }
+  private async handleWorktreeUnlock(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+
+    await this.git.unlockWorktree(item.worktree.worktreePath);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeLock(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+
+    const reason = await vscode.window.showInputBox({
+      title: 'Lock reason (optional)',
+      placeHolder: 'e.g. long-running experiment'
+    });
+
+    await this.git.lockWorktree(item.worktree.worktreePath, reason?.trim() || undefined);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeRemoveForce(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const { worktree } = item;
+
+    if (worktree.isCurrent) {
+      void vscode.window.showWarningMessage('Cannot remove the current worktree.');
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Force remove worktree',
+      detail: `${worktree.worktreePath} — all local changes will be lost. This cannot be undone.`,
+      acceptLabel: 'Force Remove'
+    });
+    if (!confirmed) { return; }
+
+    await this.git.removeWorktree(worktree.worktreePath, true);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeRemove(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    if (!item) { return; }
+    const { worktree } = item;
+
+    if (worktree.isCurrent) {
+      void vscode.window.showWarningMessage('Cannot remove the current worktree.');
+      return;
+    }
+
+    if (worktree.isLocked) {
+      void vscode.window.showWarningMessage('Unlock the worktree before removing it.');
+      return;
+    }
+
+    if (worktree.isDirty) {
+      void vscode.window.showWarningMessage(
+        `${worktree.worktreePath} has uncommitted changes. Use Force Remove if you want to discard them.`
+      );
+      return;
+    } else {
+      const confirmed = await confirmDangerousAction({
+        title: 'Remove worktree',
+        detail: worktree.worktreePath,
+        acceptLabel: 'Remove'
+      });
+      if (!confirmed) { return; }
+    }
+
+    await this.git.removeWorktree(worktree.worktreePath);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeAddDetached(): Promise<void> {
+
+    const selection = await this.pickWorktreeRevision('Detached worktree at branch, tag, or revision');
+    if (!selection) { return; }
+
+    const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
+    if (!targetPath) { return; }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Add detached worktree',
+      detail: `This creates a worktree in detached HEAD state at ${selection.ref}`,
+      acceptLabel: 'Create Detached'
+    });
+    if (!confirmed) { return; }
+
+    await this.git.addDetachedWorktree(targetPath, selection.ref);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeAddNewBranch(): Promise<void> {
+
+    const branchName = await vscode.window.showInputBox({
+      title: 'New branch name',
+      placeHolder: 'feature/my-branch',
+      validateInput: (v) => v.trim() ? undefined : 'Branch name is required'
+    });
+    if (!branchName) { return; }
+
+    const base = await this.pickWorktreeRevision('Select base branch, tag, or revision');
+
+    const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', branchName.trim());
+    if (!targetPath) { return; }
+
+    await this.git.addWorktreeBranch(targetPath, branchName.trim(), base?.ref);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeAddFromBranch(): Promise<void> {
+
+    const selection = await this.pickWorktreeRevision('Add worktree from branch, tag, or revision');
+    if (!selection) { return; }
+
+    const targetPath = await this.pickWorktreeTargetPath('Select Worktree Folder', selection.ref);
+    if (!targetPath) { return; }
+
+    await this.git.addWorktree(targetPath, selection.ref);
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleWorktreeOpenInNewWindow(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    const worktreePath = item?.worktree.worktreePath;
+    if (!worktreePath) { return; }
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceNewWindow: true });
+
+  }
+  private async handleWorktreeOpen(arg?: unknown): Promise<void> {
+
+    const item = arg instanceof WorktreeTreeItem ? arg : undefined;
+    const worktreePath = item?.worktree.worktreePath;
+    if (!worktreePath) { return; }
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(worktreePath), { forceReuseWindow: true });
+
+  }
+  private async handleWorktreeRefresh(): Promise<void> {
+
+    await this.state.refreshWorktrees();
+
+  }
+  private async handleFileBlameOpen(): Promise<void> {
+
+    const file = this.getActiveFilePath();
+    if (!file) {
+      void vscode.window.showWarningMessage('Open a file to view blame.');
+      return;
+    }
+
+    const blame = await this.git.fileBlame(file);
+    const doc = await vscode.workspace.openTextDocument({ language: 'plaintext', content: blame });
+    await vscode.window.showTextDocument(doc, { preview: false });
+
+  }
+  private async handleCommitAmend(): Promise<void> {
+
+    const defaultMessage = await this.git.getHeadCommitMessage();
+    const message = await vscode.window.showInputBox({
+      title: 'Amend last commit message',
+      value: defaultMessage,
+      prompt: 'Leave unchanged to amend content only'
+    });
+
+    if (message === undefined) {
+      return;
+    }
+
+    if (message.trim() && message.trim() !== defaultMessage.trim()) {
+      await this.git.amendCommit(message.trim());
+    } else {
+      await this.git.amendCommit();
+    }
+    await this.state.refreshAll();
+
+  }
+  private async handleUnstageFile(): Promise<void> {
+
+    const changed = await this.git.getChangedFiles();
+    const candidates = changed.filter((entry) => entry.status.length > 1 && entry.status[0] !== ' ' && entry.status[0] !== '?');
+    if (candidates.length === 0) {
+      void vscode.window.showInformationMessage('No staged files found.');
+      return;
+    }
+
+    const file = await vscode.window.showQuickPick(
+      candidates.map((item) => ({ label: item.path, description: item.status })),
+      { title: 'Unstage file' }
+    );
+    if (!file) {
+      return;
+    }
+
+    await this.git.unstageFile(file.label);
+    await this.state.refreshAll();
+
+  }
+  private async handleStageFile(): Promise<void> {
+
+    const changed = await this.git.getChangedFiles();
+    const candidates = changed.filter((entry) => entry.status.length > 0 && entry.status[1] !== ' ');
+    if (candidates.length === 0) {
+      void vscode.window.showInformationMessage('No unstaged files found.');
+      return;
+    }
+
+    const file = await vscode.window.showQuickPick(
+      candidates.map((item) => ({ label: item.path, description: item.status })),
+      { title: 'Stage file' }
+    );
+    if (!file) {
+      return;
+    }
+
+    await this.git.stageFile(file.label);
+    await this.state.refreshAll();
+
+  }
+  private async handleStagePatch(): Promise<void> {
+
+    const changed = await this.git.getChangedFiles();
+    if (changed.length === 0) {
+      void vscode.window.showInformationMessage('No local changes found.');
+      return;
+    }
+
+    const file = await vscode.window.showQuickPick(
+      changed.map((item) => ({ label: item.path, description: item.status })),
+      { title: 'Select file for interactive hunk staging' }
+    );
+
+    if (!file) {
+      return;
+    }
+
+    await this.git.stagePatch(file.label);
+    await this.state.refreshAll();
+
+  }
+  private async handleGitSshPullCustom(): Promise<void> {
+
+    await this.sshPull('prompt');
+
+  }
+  private async handleGitSshPullBitbucket(): Promise<void> {
+
+    await this.sshPull('bitbucket.org');
+
+  }
+  private async handleGitSshPullGitlab(): Promise<void> {
+
+    await this.sshPull('gitlab.com');
+
+  }
+  private async handleGitSshPullGithub(): Promise<void> {
+
+    await this.sshPull('github.com');
+
+  }
+  private async handleGitFetchPrune(): Promise<void> {
+
+    await this.git.fetchPrune();
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage('Fetch --prune completed.');
+
+  }
+  private async handleGitPullWithPreview(): Promise<void> {
+
+    const preview = await this.git.getOutgoingIncomingPreview();
+    const confirmed = await confirmDangerousAction({
+      title: 'Pull current branch',
+      detail: `Incoming commits:\n${preview.incoming.slice(0, 10).join('\n') || 'none'}`,
+      acceptLabel: 'Pull'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.pull();
+    await this.state.refreshAll();
+
+  }
+  private async handleGitPushWithPreview(): Promise<void> {
+
+    const preview = await this.git.getOutgoingIncomingPreview();
+    const confirmed = await confirmDangerousAction({
+      title: 'Push current branch',
+      detail: `Outgoing commits:\n${preview.outgoing.slice(0, 10).join('\n') || 'none'}`,
+      acceptLabel: 'Push'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.push();
+    await this.state.refreshAll();
+
+  }
+  private async handleOperationSkip(): Promise<void> {
+
+    const state = await this.git.getOperationState();
+    if (state.kind === 'rebase') {
+      await this.git.rebaseSkip();
+    } else if (state.kind === 'cherry-pick') {
+      await this.git.cherryPickSkip();
+    } else {
+      void vscode.window.showInformationMessage('Skip is only available during rebase or cherry-pick.');
+      return;
+    }
+    await this.state.refreshAll();
+
+  }
+  private async handleConflictAcceptBoth(arg?: unknown): Promise<void> {
+    await this.handleConflictResolve(arg, 'both');
+  }
+  private async handleConflictAcceptTheirs(arg?: unknown): Promise<void> {
+    await this.handleConflictResolve(arg, 'theirs');
+  }
+  private async handleConflictAcceptOurs(arg?: unknown): Promise<void> {
+    await this.handleConflictResolve(arg, 'ours');
+  }
+  private async handleMergeFinalize(): Promise<void> {
+
+    const conflicts = await this.git.getMergeConflicts();
+    if (conflicts.length > 0) {
+      void vscode.window.showWarningMessage(`Resolve all conflicts before finalizing (${conflicts.length} remaining).`);
+      return;
+    }
+
+    const changed = await this.git.getChangedFiles();
+    if (changed.length > 0) {
+      await this.git.addAll();
+    }
+
+    void vscode.window.showInformationMessage('All conflicts resolved. Ready to commit merge.');
+    await this.state.refreshAll();
+
+  }
+  private async handleMergePrevious(): Promise<void> {
+
+    await vscode.commands.executeCommand('merge-conflict.previous');
+
+  }
+  private async handleMergeNext(): Promise<void> {
+
+    await vscode.commands.executeCommand('merge-conflict.next');
+
+  }
+  private async handleMergeOpenConflict(): Promise<void> {
+
+    const conflicts = await this.git.getMergeConflicts();
+    if (conflicts.length === 0) {
+      void vscode.window.showInformationMessage('No conflicted files found.');
+      return;
+    }
+
+    const picked = await vscode.window.showQuickPick(
+      conflicts.map((item) => ({ label: item.path, description: item.status })),
+      { title: 'Open conflict in merge editor' }
+    );
+
+    if (!picked) {
+      return;
+    }
+
+    await this.editor.openMergeConflict(picked.label);
+
+  }
+  private async handleCompareOpen(): Promise<void> {
+
+    await this.openCompareWorkflow();
+
+  }
+  private async handleDiffOpen(): Promise<void> {
+
+    await this.openDiffWorkflow();
+
+  }
+  private async handleGraphLoadMore(): Promise<void> {
+
+    await this.state.loadMoreGraph();
+
+  }
+  private async handleGraphClearFilter(): Promise<void> {
+
+    await GraphFilterView.clearCurrentFilters();
+    await vscode.commands.executeCommand('setContext', 'vscodeGitClient.graphFilterActive', false);
+
+  }
+  private async handleGraphShowRepositoryAtRevision(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick revision'));
+    if (!sha) {
+      return;
+    }
+
+    await this.editor.showRepositoryAtRevision(sha);
+
+  }
+  private async handleGraphCreatePatchForRange(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const shas = this.toGraphCommitShas(arg, selected);
+    if (shas.length < 2) {
+      return;
+    }
+
+    const patch = await this.git.getPatchForCommitRange(shas);
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'diff',
+      content: patch
+    });
+    await vscode.window.showTextDocument(doc, { preview: false });
+
+  }
+  private async handleGraphCreatePatch(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to export patch'));
+    if (!sha) {
+      return;
+    }
+
+    const patch = await this.git.getPatchForCommit(sha);
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'diff',
+      content: patch
+    });
+    await vscode.window.showTextDocument(doc, { preview: false });
+
+  }
+  private async handleGraphGoToChildCommit(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
+    if (!sha) {
+      return;
+    }
+
+    const result = await this.git.runGit(['rev-list', '--children', '-n', '1', sha]);
+    const parts = result.stdout.trim().split(/\s+/).filter(Boolean);
+    const children = parts.slice(1);
+    if (children.length === 0) {
+      void vscode.window.showInformationMessage('This commit has no child commit.');
+      return;
+    }
+
+    let child = children[0];
+    if (children.length > 1) {
+      const picked = await vscode.window.showQuickPick(
+        children.map((candidate) => ({ label: candidate })),
+        { title: `Pick child commit of ${sha.slice(0, 8)}` }
+      );
+      if (!picked) {
+        return;
+      }
+      child = picked.label;
+    }
+
+    const graphCommit = this.state.graph.find((commit) => commit.sha === child);
+    if (graphCommit) {
+      await vscode.commands.executeCommand(GitCommand.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
+    } else {
+      const subject = (await this.git.getCommitDetails(child)).commit.subject;
+      await this.openCommitDetails(child, subject, { openFirstDiff: true });
+    }
+
+  }
+  private async handleGraphGoToParentCommit(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit'));
+    if (!sha) {
+      return;
+    }
+
+    const parent = await this.git.getParentCommit(sha);
+    if (!parent) {
+      void vscode.window.showInformationMessage('This commit has no parent commit.');
+      return;
+    }
+
+    const graphCommit = this.state.graph.find((commit) => commit.sha === parent);
+    if (graphCommit) {
+      await vscode.commands.executeCommand(GitCommand.GraphOpenDetails, new GraphCommitTreeItem(graphCommit));
+    } else {
+      const subject = (await this.git.getCommitDetails(parent)).commit.subject;
+      await this.openCommitDetails(parent, subject, { openFirstDiff: true });
+    }
+
+  }
+  private async handleGraphRebaseInteractiveFromHere(arg?: unknown): Promise<void> {
+
+    const base = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick base commit for interactive rebase'));
+    if (!base) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Interactive rebase',
+      detail: `Base commit: ${base}`,
+      acceptLabel: 'Start rebase'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.startRebaseOperation(() => this.git.rebaseInteractive(base));
+
+  }
+  private async handleGraphCompareWithCurrent(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to compare with current'));
+    if (!sha) {
+      return;
+    }
+
+    await this.editor.openCompareFromCommit(sha);
+
+  }
+  private async handleGraphRevert(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const selectedShas = this.toGraphCommitShas(arg, selected);
+    if (selectedShas.length === 0) {
+      const picked = await this.pickCommitSha('Pick commit to revert');
+      if (!picked) {
+        return;
+      }
+      selectedShas.push(picked);
+    }
+
+    for (const sha of selectedShas) {
+      await this.git.revertCommit(sha);
+    }
+    await this.state.refreshAll();
+
+  }
+  private async handleGraphCherryPickRange(): Promise<void> {
+
+    const fromExclusive = await this.pickCommitSha('Pick starting point (exclusive)');
+    if (!fromExclusive) {
+      return;
+    }
+    const toInclusive = await this.pickCommitSha('Pick end point (inclusive)');
+    if (!toInclusive) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Cherry-pick range',
+      detail: `${fromExclusive}..${toInclusive}`,
+      acceptLabel: 'Cherry-pick'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.cherryPickRange(fromExclusive, toInclusive);
+    await this.state.refreshAll();
+
+  }
+  private async handleGraphCreateTagHere(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new tag'));
+    if (!sha) {
+      return;
+    }
+
+    const name = await vscode.window.showInputBox({
+      title: `Create tag at ${sha.slice(0, 8)}`,
+      placeHolder: 'v1.2.3',
+      validateInput: (value) => (value.trim() ? undefined : 'Tag name is required')
+    });
+
+    if (!name) {
+      return;
+    }
+
+    await this.git.createTag(name.trim(), sha);
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
+
+  }
+  private async handleGraphCreateBranchHere(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit for new branch'));
+    if (!sha) {
+      return;
+    }
+
+    const name = await vscode.window.showInputBox({
+      title: `Create branch at ${sha.slice(0, 8)}`,
+      placeHolder: 'feature/new-branch',
+      validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
+    });
+
+    if (!name) {
+      return;
+    }
+
+    await this.git.createBranch(name.trim(), sha);
+    await this.state.refreshAll();
+
+  }
+  private async handleGraphCheckoutCommit(arg?: unknown): Promise<void> {
+
+    const sha = this.toCommitSha(arg) ?? (await this.pickCommitSha('Pick commit to checkout'));
+    if (!sha) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Checkout detached HEAD',
+      detail: `Commit: ${sha}`,
+      acceptLabel: 'Checkout'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.checkoutCommit(sha);
+    await this.state.refreshAll();
+
+  }
+  private async handleGraphOpenRepositoryFileAtRevision(arg?: unknown): Promise<void> {
+
+    const item = this.asRevisionViewFileItem(arg);
+    if (!item) {
+      return;
+    }
+
+    await this.editor.openFileAtRevision(item.sha, item.filePath);
+
+  }
+  private async handleCompareWithRevisionSwapDirection(): Promise<void> {
+
+    await this.editor.swapActiveCompareDirection();
+
+  }
+  private async handleWorkingTreeCompareOpenFileDiff(arg?: unknown): Promise<void> {
+
+    const item = this.asWorkingTreeCompareFileItem(arg);
+    if (!item) {
+      return;
+    }
+
+    await this.editor.openWorkingTreeFileDiff(item.filePath, item.ref, item.refLabel, {
+      preview: true,
+      status: item.status
+    });
+
+  }
+  private async handleGraphCopyCommitMessage(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const shas = this.toGraphCommitShas(arg, selected);
+    if (shas.length === 0) {
+      return;
+    }
+    const messages = shas
+      .map((sha) => this.state.graph.find((commit) => commit.sha === sha)?.subject?.trim() ?? '')
+      .filter((value): value is string => Boolean(value));
+    if (messages.length === 0) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(messages.join('\n'));
+    void vscode.window.setStatusBarMessage(
+      messages.length > 1 ? `Copied ${messages.length} commit messages` : 'Copied commit message',
+      1500
+    );
+
+  }
+  private async handleGraphCopyCommitId(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const shas = this.toGraphCommitShas(arg, selected);
+    if (shas.length === 0) {
+      return;
+    }
+    await vscode.env.clipboard.writeText(shas.join('\n'));
+    void vscode.window.setStatusBarMessage(
+      shas.length > 1 ? `Copied ${shas.length} commit IDs` : `Copied commit ID ${shas[0]}`,
+      1500
+    );
+
+  }
+  private async handleGraphOpenCommitRangeDetails(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const selectedShas = this.toGraphCommitShas(arg, selected);
+    if (selectedShas.length < 2) {
+      return;
+    }
+    await this.editor.openCommitRangeDetails(selectedShas);
+
+  }
+  private async handleGraphOpenDetails(arg?: unknown, selected?: unknown): Promise<void> {
+
+    const selectedShas = this.toGraphCommitShas(arg, selected);
+    const shouldOpenFirstDiff =
+      this.asGraphItem(arg) !== undefined ||
+      (Array.isArray(selected) && selected.some((item) => this.asGraphItem(item) !== undefined));
+    if (selectedShas.length === 0) {
+      const picked = await this.pickCommitSha('Pick commit for details');
+      if (!picked) {
+        return;
+      }
+      selectedShas.push(picked);
+    }
+    const sha = selectedShas[0];
+    if (!sha) {
+      return;
+    }
+    const subject = this.resolveCommitSubject(sha, arg, selected);
+    await this.openCommitDetails(sha, subject, { openFirstDiff: shouldOpenFirstDiff, allowToggle: true });
+
+  }
+  private async handleStashPreviewPatch(arg?: unknown): Promise<void> {
+
+    const item = this.asStashItem(arg);
+    const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to preview patch'));
+    if (!ref) {
+      return;
+    }
+
+    const patch = await this.git.getStashPatch(ref);
+    const doc = await vscode.workspace.openTextDocument({
+      language: 'diff',
+      content: patch
+    });
+    await vscode.window.showTextDocument(doc, { preview: false });
+
+  }
+  private async handleStashRename(arg?: unknown): Promise<void> {
+
+    const item = this.asStashItem(arg);
+    const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to rename'));
+    if (!ref) {
+      return;
+    }
+
+    const message = await vscode.window.showInputBox({
+      title: `Rename ${ref}`,
+      placeHolder: 'Updated stash message'
+    });
+    if (!message) {
+      return;
+    }
+
+    await this.git.renameStash(ref, message.trim());
+    await this.state.refreshAll();
+
+  }
+  private async handleStashDrop(arg?: unknown): Promise<void> {
+
+    const item = this.asStashItem(arg);
+    const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to drop'));
+    if (!ref) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Drop stash',
+      detail: `Target: ${ref}`,
+      acceptLabel: 'Drop'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.dropStash(ref);
+    await this.state.refreshAll();
+
+  }
+  private async handleStashPop(arg?: unknown): Promise<void> {
+    await this.handleStashApplyPop(arg, true);
+  }
+  private async handleStashApply(arg?: unknown): Promise<void> {
+    await this.handleStashApplyPop(arg, false);
+  }
+  private async handleStashUnshelve(arg?: unknown): Promise<void> {
+
+    const item = this.asStashItem(arg);
+    const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to unshelve'));
+    if (!ref) {
+      return;
+    }
+
+    await this.git.unstashToWorkingTree(ref);
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage(`Unshelved ${ref}.`);
+
+  }
+  private async handleBranchCompareWithCurrent(arg?: unknown): Promise<void> {
+
+    const current = await this.git.getCurrentBranch();
+    const target = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to compare with current'));
+    if (!target) {
+      return;
+    }
+
+    await this.editor.openBranchCompare(current, target);
+
+  }
+  private async handleBranchRebaseOnto(arg?: unknown): Promise<void> {
+
+    const onto = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rebase onto'));
+    if (!onto) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Rebase current branch',
+      detail: `Rebase onto: ${onto}`,
+      acceptLabel: 'Rebase'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.startRebaseOperation(() => this.git.rebaseCurrentOnto(onto));
+
+  }
+  private async handleBranchMergeIntoCurrent(arg?: unknown): Promise<void> {
+
+    const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to merge into current branch'));
+    if (!branch) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Merge into current branch',
+      detail: `Source branch: ${branch}`,
+      acceptLabel: 'Merge'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.startMergeOperation(() => this.git.mergeIntoCurrent(branch));
+
+  }
+  private async handleBranchUntrack(arg?: unknown): Promise<void> {
+
+    const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to untrack'));
+    if (!branch) {
+      return;
+    }
+
+    await this.git.untrackBranch(branch);
+    await this.state.refreshAll();
+
+  }
+  private async handleBranchTrack(arg?: unknown): Promise<void> {
+
+    const local = this.toBranchName(arg) ?? (await this.pickBranchName('Pick local branch to track'));
+    if (!local) {
+      return;
+    }
+
+    const remote = await this.pickBranchName('Pick remote upstream branch', true);
+    if (!remote) {
+      return;
+    }
+
+    await this.git.trackBranch(local, remote);
+    await this.state.refreshAll();
+
+  }
+  private async handleBranchDelete(arg?: unknown): Promise<void> {
+
+    const branch = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to delete'));
+    if (!branch) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Delete branch',
+      detail: `Branch: ${branch}`,
+      acceptLabel: 'Delete'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.deleteBranch(branch);
+    await this.state.refreshAll();
+
+  }
+  private async handleBranchRename(arg?: unknown): Promise<void> {
+
+    const from = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to rename'));
+    if (!from) {
+      return;
+    }
+
+    const to = await vscode.window.showInputBox({
+      title: `Rename branch ${from}`,
+      value: from,
+      validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
+    });
+
+    if (!to || to.trim() === from) {
+      return;
+    }
+
+    await this.git.renameBranch(from, to.trim());
+    await this.state.refreshAll();
+
+  }
+  private async handleRemoteDelete(arg?: unknown): Promise<void> {
+
+    const remoteName = this.asBranchRemoteItem(arg)?.remoteName;
+    if (!remoteName) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Delete remote',
+      detail: `Remote: ${remoteName}`,
+      acceptLabel: 'Delete'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.deleteRemote(remoteName);
+    await this.state.refreshBranches();
+    void vscode.window.showInformationMessage(`Deleted remote ${remoteName}.`);
+
+  }
+  private async handleRemoteAdd(): Promise<void> {
+
+    const remoteUrl = await vscode.window.showInputBox({
+      title: 'Add Git remote',
+      placeHolder: 'https://github.com/org/repo.git',
+      validateInput: (value) => (value.trim() ? undefined : 'Remote URL is required')
+    });
+    if (!remoteUrl) {
+      return;
+    }
+
+    const remoteName = await vscode.window.showInputBox({
+      title: 'Remote name',
+      placeHolder: 'origin',
+      validateInput: (value) => (value.trim() ? undefined : 'Remote name is required')
+    });
+    if (!remoteName) {
+      return;
+    }
+
+    await this.git.addRemote(remoteName.trim(), remoteUrl.trim());
+    await this.state.refreshBranches();
+    void vscode.window.showInformationMessage(`Added remote ${remoteName.trim()}.`);
+
+  }
+  private async handleTagCreateCurrent(): Promise<void> {
+
+    const sha = await this.git.getCurrentHeadSha();
+    if (!sha) {
+      return;
+    }
+
+    const name = await vscode.window.showInputBox({
+      title: `Create tag at ${sha.slice(0, 8)}`,
+      placeHolder: 'v1.2.3',
+      validateInput: (value) => (value.trim() ? undefined : 'Tag name is required')
+    });
+    if (!name) {
+      return;
+    }
+
+    await this.git.createTag(name.trim(), sha);
+    await this.state.refreshAll();
+    void vscode.window.showInformationMessage(`Created tag ${name.trim()} at ${sha.slice(0, 8)}.`);
+
+  }
+  private async handleTagCreatePatch(arg?: unknown): Promise<void> {
+
+    const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to export patch'));
+    if (!revision) { return; }
+    const patch = await this.git.getPatchForCommit(revision);
+    const doc = await vscode.workspace.openTextDocument({ language: 'diff', content: patch });
+    await vscode.window.showTextDocument(doc, { preview: false });
+
+  }
+  private async handleTagCompareWithCurrent(arg?: unknown): Promise<void> {
+
+    const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to compare with current'));
+    if (!revision) { return; }
+    await this.editor.openCompareFromCommit(revision);
+
+  }
+  private async handleTagShowRepositoryAtRevision(arg?: unknown): Promise<void> {
+
+    const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision'));
+    if (!revision) { return; }
+    await this.editor.showRepositoryAtRevision(revision);
+
+  }
+  private async handleTagCopyRevisionNumber(arg?: unknown): Promise<void> {
+
+    const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick revision to copy'));
+    if (!revision) {
+      return;
+    }
+
+    await vscode.env.clipboard.writeText(revision);
+    void vscode.window.setStatusBarMessage(`Copied ${revision}`, 1500);
+
+  }
+  private async handleTagCheckout(arg?: unknown): Promise<void> {
+
+    const tagRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision to checkout'));
+    if (!tagRef) {
+      return;
+    }
+
+    const confirmed = await confirmDangerousAction({
+      title: 'Checkout revision',
+      detail: `Revision: ${tagRef}`,
+      acceptLabel: 'Checkout'
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    await this.git.checkoutCommit(tagRef);
+    await this.state.refreshAll();
+
+  }
+  private async handleTagCheckoutNewBranch(arg?: unknown): Promise<void> {
+
+    const baseRef = this.toTagRef(arg) ?? (await this.pickCommitSha('Pick tag or revision for new branch'));
+    if (!baseRef) {
+      return;
+    }
+
+    const branchName = await vscode.window.showInputBox({
+      title: `Checkout new branch from ${baseRef}`,
+      placeHolder: 'feature/new-branch',
+      validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
+    });
+
+    if (!branchName) {
+      return;
+    }
+
+    await this.git.createBranch(branchName.trim(), baseRef);
+    await this.git.checkoutBranch(branchName.trim());
+    await this.state.refreshAll();
+
+  }
+  private async handleBranchCreate(): Promise<void> {
+
+    const baseBranch = await this.pickBranchName('Pick base branch for new branch');
+    if (!baseBranch) {
+      return;
+    }
+
+    const branchName = await vscode.window.showInputBox({
+      title: 'Create branch',
+      placeHolder: 'feature/my-branch',
+      validateInput: (value) => (value.trim() ? undefined : 'Branch name is required')
+    });
+
+    if (!branchName) {
+      return;
+    }
+
+    await this.git.createBranch(branchName.trim(), baseBranch);
+    await this.git.checkoutBranch(branchName.trim());
+    await this.state.refreshAll();
+
+  }
+  private async handleTagOpenCommits(arg?: unknown): Promise<void> {
+
+    const revision = this.toTagRevision(arg) ?? (await this.pickCommitSha('Pick tag or revision for details'));
+    if (!revision) {
+      return;
+    }
+
+    const tagRef = this.toTagRef(arg) ?? revision;
+    await this.openRefCommits(`tag:${revision}`, `Tag: ${tagRef}`, revision);
+
+  }
+  private async handleBranchCheckout(arg?: unknown): Promise<void> {
+
+    const branchName = this.toBranchName(arg) ?? (await this.pickBranchName());
+    if (!branchName) {
+      return;
+    }
+
+    await this.git.checkoutBranch(branchName);
+    await this.state.refreshAll();
+
+  }
+  private async handleBranchSearchRefresh(): Promise<void> {
+
+    await BranchSearchView.refreshCurrent();
+
+  }
+  private async handleBranchOpenCommits(arg?: unknown): Promise<void> {
+
+    const branchName = this.toBranchName(arg) ?? (await this.pickBranchName('Pick branch to open commits'));
+    if (!branchName) {
+      return;
+    }
+
+    await this.openBranchCommits(branchName);
+
+  }
+  private async handleBranchActionHub(arg?: unknown): Promise<void> {
+
+    await this.openBranchActionHub(arg);
+
+  }
+  private async handleQuickActions(): Promise<void> {
+
+    await this.openQuickActions();
+
+  }
+  private async handleCommitViewClose(): Promise<void> {
+
+    await this.commitFilesView.clear();
+
+  }
+  private async handleRefresh(): Promise<void> {
+
+    await this.state.refreshVisible();
+    void vscode.window.setStatusBarMessage('VS Code Git Client refreshed', 1500);
+
+  }
 }
