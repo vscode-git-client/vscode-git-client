@@ -46,6 +46,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "npm run compile && node --require ./scripts/register-vscode-mock.js --test dist/test/*.test.js",
+    "test:coverage": "npm run compile && mkdir -p coverage && node --require ./scripts/register-vscode-mock.js --experimental-test-coverage --test dist/test/*.test.js 2>&1 | tee coverage/output.txt; node scripts/generate-coverage-html.js",
     "docs:dev": "npm --prefix website run dev",
     "docs:build": "npm --prefix website run build",
     "docs:preview": "npm --prefix website run preview",
