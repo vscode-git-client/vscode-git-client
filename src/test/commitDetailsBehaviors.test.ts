@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { afterEach, describe, it } from 'node:test';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { CommandController } from '../commands/commandController';
 import { GraphCommit } from '../types';
 
@@ -101,7 +102,7 @@ describe('commit details behaviors', () => {
       }
     });
 
-    const openDetails = commands.get('vscodeGitClient.graph.openDetails');
+    const openDetails = commands.get(GitCommand.GraphOpenDetails);
     assert.ok(openDetails, 'expected open details command');
 
     await openDetails(sha);

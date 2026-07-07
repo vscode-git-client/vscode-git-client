@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { afterEach, describe, it } from 'node:test';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { registerTextCompareCommands } from '../commands/textCompareCommands';
 import { TextCompareOrchestrator } from '../editor/textCompareOrchestrator';
 import { Logger } from '../logger';
@@ -60,7 +61,7 @@ describe('registerTextCompareCommands', () => {
 
     registerTextCompareCommands(context, logger, textCompare);
 
-    assert.strictEqual(registered.has('vscodeGitClient.textCompare.open'), true);
+    assert.strictEqual(registered.has(GitCommand.TextCompareOpen), true);
     assert.strictEqual(registered.has('intelliGit.textCompare.open'), true);
     assert.strictEqual(context.subscriptions.length, 2);
   });
@@ -110,7 +111,7 @@ describe('registerTextCompareCommands', () => {
     const seed = vscode.Uri.file('/workspace/a.txt');
     await legacyHandler!(seed);
     assert.deepStrictEqual(executed, [
-      { command: 'vscodeGitClient.textCompare.open', args: [seed] }
+      { command: GitCommand.TextCompareOpen, args: [seed] }
     ]);
   });
 
@@ -163,7 +164,7 @@ describe('registerTextCompareCommands', () => {
 
     registerTextCompareCommands(context, logger, textCompare);
 
-    const handler = registered.get('vscodeGitClient.textCompare.open');
+    const handler = registered.get(GitCommand.TextCompareOpen);
     assert.ok(handler);
     await handler!();
     assert.strictEqual(errors.length, 1);

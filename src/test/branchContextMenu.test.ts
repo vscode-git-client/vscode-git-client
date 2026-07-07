@@ -2,6 +2,7 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 import * as path from 'path';
 import { describe, it } from 'node:test';
+import { GitCommand } from '../config/commands';
 import {
   isBranchContextMenuCommand,
   isTagContextMenuCommand,
@@ -10,10 +11,10 @@ import {
 
 describe('branch/tag search context menus', () => {
   it('keeps branch and tag command allow-lists separate', () => {
-    assert.strictEqual(isBranchContextMenuCommand('vscodeGitClient.branch.checkout'), true);
-    assert.strictEqual(isBranchContextMenuCommand('vscodeGitClient.tag.checkout'), false);
-    assert.strictEqual(isTagContextMenuCommand('vscodeGitClient.tag.checkout'), true);
-    assert.strictEqual(isTagContextMenuCommand('vscodeGitClient.branch.delete'), false);
+    assert.strictEqual(isBranchContextMenuCommand(GitCommand.BranchCheckout), true);
+    assert.strictEqual(isBranchContextMenuCommand(GitCommand.TagCheckout), false);
+    assert.strictEqual(isTagContextMenuCommand(GitCommand.TagCheckout), true);
+    assert.strictEqual(isTagContextMenuCommand(GitCommand.BranchDelete), false);
   });
 
   it('renders separate branch and tag menus', () => {

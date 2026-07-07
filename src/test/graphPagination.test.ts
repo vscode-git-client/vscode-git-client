@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
 import * as vscode from 'vscode';
+import { GitCommand } from '../config/commands';
 import { GraphTreeProvider, LoadMoreTreeItem } from '../providers/graphTreeProvider';
 import { StateStore } from '../state/stateStore';
 import { CommitFilters, GraphCommit } from '../types';
@@ -177,7 +178,7 @@ describe('GraphTreeProvider pagination', () => {
     const last = children[children.length - 1];
     assert.ok(last instanceof LoadMoreTreeItem, 'last item should be LoadMoreTreeItem');
     assert.strictEqual(last.contextValue, 'graphLoadMore');
-    assert.strictEqual(last.command?.command, 'vscodeGitClient.graph.loadMore');
+    assert.strictEqual(last.command?.command, GitCommand.GraphLoadMore);
   });
 
   it('getChildren omits LoadMoreTreeItem when graphHasMore is false', async () => {
