@@ -11,6 +11,7 @@ const conflictMessage = 'There are some conflicts. You have to resolve them firs
 type GitOverrides = Partial<{
   cherryPick(sha: string): Promise<void>;
   deleteRemote(remoteName: string): Promise<void>;
+  getCommitTimestamps(shas: readonly string[]): Promise<Map<string, number>>;
   mergeIntoCurrent(branch: string): Promise<void>;
   rebaseCurrentOnto(branch: string): Promise<void>;
   setRemoteUrl(remoteName: string, remoteUrl: string): Promise<void>;
@@ -64,6 +65,7 @@ function registerController(
         (async (remoteName: string) => {
           events.push(`git:delete-remote:${remoteName}`);
         }),
+      getCommitTimestamps: overrides.getCommitTimestamps ?? (async () => new Map()),
       getMergeConflicts: async () => [{ path: 'src/conflict.ts', status: 'UU' }],
       getOperationState: async () => ({ kind: 'rebase' }),
       mergeIntoCurrent:
@@ -214,6 +216,60 @@ describe('cherry-pick and operation feedback', () => {
       `warning:${conflictMessage}`,
       'refresh:finish',
       'open:src/conflict.ts'
+    ]);
+  });
+
+  it('orders a multi-select cherry-pick oldest-first regardless of selection order', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const newerSha = 'newer1234567';
+    const olderSha = 'older1234567';
+    const commands = registerController(events, refresh, {
+      getCommitTimestamps: async () =>
+        new Map([
+          [newerSha, 200],
+          [olderSha, 100]
+        ])
+    });
+
+    const cherryPick = commands.get(GitCommand.GraphCherryPick);
+    assert.ok(cherryPick, 'expected cherry-pick command to be registered');
+
+    const run = cherryPick(undefined, [newerSha, olderSha]);
+    refresh.resolve();
+    await run;
+
+    assert.deepStrictEqual(events, [
+      `git:cherry-pick:${olderSha}`,
+      `git:cherry-pick:${newerSha}`,
+      'refresh:start',
+      'refresh:finish'
+    ]);
+  });
+
+  it('falls back to selection order when commit timestamps cannot be resolved', async () => {
+    const events: string[] = [];
+    const refresh = deferred();
+    const newerSha = 'newer1234567';
+    const olderSha = 'older1234567';
+    const commands = registerController(events, refresh, {
+      getCommitTimestamps: async () => {
+        throw new Error('git log failed');
+      }
+    });
+
+    const cherryPick = commands.get(GitCommand.GraphCherryPick);
+    assert.ok(cherryPick, 'expected cherry-pick command to be registered');
+
+    const run = cherryPick(undefined, [newerSha, olderSha]);
+    refresh.resolve();
+    await run;
+
+    assert.deepStrictEqual(events, [
+      `git:cherry-pick:${newerSha}`,
+      `git:cherry-pick:${olderSha}`,
+      'refresh:start',
+      'refresh:finish'
     ]);
   });
 

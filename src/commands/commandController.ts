@@ -1967,6 +1967,22 @@ export class CommandController {
 
   // ── Command handler methods (Phase 2) ─────────────────────────────────
 
+  private async orderShasForCherryPick(shas: string[]): Promise<string[]> {
+    if (shas.length <= 1) {
+      return shas;
+    }
+    try {
+      const timestamps = await this.git.getCommitTimestamps(shas);
+      return [...shas].sort((a, b) => (timestamps.get(a) ?? 0) - (timestamps.get(b) ?? 0));
+    } catch (error) {
+      this.logger.error(
+        'Could not determine commit order for cherry-pick; using selection order.',
+        error
+      );
+      return shas;
+    }
+  }
+
   private async handleCherryPick(arg?: unknown, selected?: unknown): Promise<void> {
     const selectedShas = this.toGraphCommitShas(arg, selected);
     if (selectedShas.length === 0) {
@@ -1977,13 +1993,15 @@ export class CommandController {
       selectedShas.push(picked);
     }
 
+    const orderedShas = await this.orderShasForCherryPick(selectedShas);
+
     const pickedShas: string[] = [];
     const emptyShas: string[] = [];
     const failedShas: string[] = [];
     let conflictSha: string | undefined;
     let issueMessage: string | undefined;
 
-    for (const sha of selectedShas) {
+    for (const sha of orderedShas) {
       try {
         await this.git.cherryPick(sha);
         pickedShas.push(sha);

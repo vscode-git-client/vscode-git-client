@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 ### Fixed
+- **Multi-commit cherry-pick ordering** — cherry-picking a multi-commit selection from Filter Graph or Compare Branches previously applied commits in selection order (newest-first, since both views render newest-first), which frequently produced spurious conflicts when a newer commit was applied before the older commit it depended on. Cherry-pick now looks up each selected commit's author date and applies them oldest-first, regardless of the order the view's DOM/selection reports; if the timestamp lookup fails, it falls back to the original selection order.
 - **Git Graph TreeView missing "Reset Current Branch to Commit"** — the native Git Graph TreeView commit context menu was missing `Reset Current Branch To Commit`, present only in the Filter Graph webview's context menu. Both now expose the action consistently.
 - **Text Compare command registration** — `vscodeGitClient.textCompare.open` is now registered before the repository-context check so the Git-agnostic command is available even when no workspace folder is open.
 - **Text Compare premature close** — the session no longer disposes immediately on open when VS Code is still settling tabs between `openTextDocument` and `vscode.diff`. A `sessionSettled` flag defers the standalone-tab balance check until after the diff editor stabilises.

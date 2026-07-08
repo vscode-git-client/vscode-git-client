@@ -854,6 +854,27 @@ export class GitService {
     await this.runGit(['cherry-pick', `${fromExclusive}..${toInclusive}`]);
   }
 
+  async getCommitTimestamps(shas: readonly string[]): Promise<Map<string, number>> {
+    const uniqueShas = Array.from(new Set(shas.filter(Boolean)));
+    if (uniqueShas.length === 0) {
+      return new Map();
+    }
+    const result = await this.runGit([
+      'log',
+      '--no-walk',
+      `--format=%H${FIELD_SEPARATOR}%at`,
+      ...uniqueShas
+    ]);
+    const timestamps = new Map<string, number>();
+    for (const line of result.stdout.split('\n')) {
+      const [sha, at] = line.split(FIELD_SEPARATOR);
+      if (sha?.trim() && at?.trim()) {
+        timestamps.set(sha.trim(), Number(at.trim()));
+      }
+    }
+    return timestamps;
+  }
+
   async revertCommit(ref: string): Promise<void> {
     await this.runGit(['revert', ref]);
   }
