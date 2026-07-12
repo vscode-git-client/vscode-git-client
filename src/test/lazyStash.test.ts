@@ -40,7 +40,7 @@ class FakeGitService extends GitService {
     );
   }
 
-  override async runGit(args: string[]): Promise<GitCommandResult> {
+  override runGit = async (args: string[]): Promise<GitCommandResult> => {
     this.commands.push(args);
     if (args[0] === 'reflog') {
       return {
@@ -50,7 +50,7 @@ class FakeGitService extends GitService {
       };
     }
     throw new Error(`unexpected git command: ${args.join(' ')}`);
-  }
+  };
 }
 
 describe('GitService lazy stash listing', () => {

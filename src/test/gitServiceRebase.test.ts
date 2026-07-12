@@ -41,10 +41,10 @@ class RecordingGitService extends GitService {
     );
   }
 
-  override async runGit(args: string[]): Promise<GitCommandResult> {
+  override runGit = async (args: string[]): Promise<GitCommandResult> => {
     this.commands.push(args);
     return { stdout: '', stderr: '' };
-  }
+  };
 }
 
 describe('GitService rebase', () => {
