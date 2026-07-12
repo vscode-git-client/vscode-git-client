@@ -3,9 +3,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { getConfigValue } from '../configuration';
-import { Logger } from '../logger';
-import { GitCommandQueue } from './gitCommandQueue';
+import { getConfigValue } from '../../configuration';
+import { Logger } from '../../logger';
+import { GitCommandQueue } from '../gitCommandQueue';
 import {
   BranchRef,
   CommitFilters,
@@ -26,20 +26,20 @@ import {
   WorktreePruneEntry,
   WorktreeStatus,
   SubmoduleEntry
-} from '../types';
-import { SubmoduleService, SpawnGitStreamingResult } from './submoduleService';
-import { SubmoduleLogSink } from './submoduleLogSink';
-import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from './worktreeParsing';
-import { parseTrack, parseNameStatusZ, parsePorcelainStatusZ } from './gitParsing';
+} from '../../types';
+import { SubmoduleService, SpawnGitStreamingResult } from '../submoduleService';
+import { SubmoduleLogSink } from '../submoduleLogSink';
+import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from '../worktreeParsing';
+import { parseTrack, parseNameStatusZ, parsePorcelainStatusZ } from '../gitParsing';
 import {
   buildRepositoryFingerprint,
   diffRepositoryFingerprints,
   isEmptyChangeSet,
   RepoChangeSet,
   RepositoryFingerprint
-} from './repositoryStateDiff';
+} from '../repositoryStateDiff';
 
-export type { RepoChangeSet } from './repositoryStateDiff';
+export type { RepoChangeSet } from '../repositoryStateDiff';
 
 const FIELD_SEPARATOR = '|~|';
 const RECORD_SEPARATOR = '|#|';
