@@ -1,11 +1,11 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { GIT_COMMAND_PREFIX, GitCommand } from '../config/commands';
-import { getConfigValue } from '../configuration';
-import { EditorOrchestrator } from '../editor/editorOrchestrator';
-import { confirmDangerousAction } from '../guards';
-import { Logger } from '../logger';
-import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../providers/branchTreeProvider';
+import { GIT_COMMAND_PREFIX, GitCommand } from '../../config/commands';
+import { getConfigValue } from '../../configuration';
+import { EditorOrchestrator } from '../../editor/editorOrchestrator';
+import { confirmDangerousAction } from '../../guards';
+import { Logger } from '../../logger';
+import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../../providers/branchTreeProvider';
 import {
   CommitActionContext,
   CommitFileTreeItem,
@@ -14,22 +14,22 @@ import {
   CommitSelectableFileTreeItem,
   RevisionFileTreeItem,
   WorkingTreeCompareFileTreeItem
-} from '../providers/commitFilesTreeProvider';
-import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../providers/graphTreeProvider';
-import { StashTreeItem } from '../providers/stashTreeProvider';
-import { SubmoduleTreeItem } from '../providers/submoduleTreeProvider';
-import { WorktreeTreeItem } from '../providers/worktreeTreeProvider';
-import { convertToSshUrl } from '../services/gitParsing';
-import { GitService } from '../services/gitService';
-import { resolveWorktreeTargetPath } from '../services/worktreeTargetPath';
-import { expandTemplate, loadTemplates } from '../state/commitTemplates';
-import { StateStore } from '../state/stateStore';
-import { BranchSearchView } from '../views/branchSearchView';
-import { CommitListView } from '../views/commitListView';
-import { GraphFilterSession } from '../views/graphFilterSession';
-import { GraphFilterView } from '../views/graphFilterView';
-import { pickRevisionToCompare, RevisionSelection } from '../views/revisionPicker';
-import { withSubmoduleProgress } from './helpers/with-submodule-progress';
+} from '../../providers/commitFilesTreeProvider';
+import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../../providers/graphTreeProvider';
+import { StashTreeItem } from '../../providers/stashTreeProvider';
+import { SubmoduleTreeItem } from '../../providers/submoduleTreeProvider';
+import { WorktreeTreeItem } from '../../providers/worktreeTreeProvider';
+import { convertToSshUrl } from '../../services/gitParsing';
+import { GitService } from '../../services/gitService';
+import { resolveWorktreeTargetPath } from '../../services/worktreeTargetPath';
+import { expandTemplate, loadTemplates } from '../../state/commitTemplates';
+import { StateStore } from '../../state/stateStore';
+import { BranchSearchView } from '../../views/branchSearchView';
+import { CommitListView } from '../../views/commitListView';
+import { GraphFilterSession } from '../../views/graphFilterSession';
+import { GraphFilterView } from '../../views/graphFilterView';
+import { pickRevisionToCompare, RevisionSelection } from '../../views/revisionPicker';
+import { withSubmoduleProgress } from '../helpers/with-submodule-progress';
 import {
   CherryPickIssueKind,
   CommandQuickAction,
@@ -39,7 +39,7 @@ import {
   GitScmRepository,
   SelectableChangeTreeItem,
   SelectedChangeTarget
-} from './types';
+} from '../types';
 
 export class CommandController {
   constructor(
@@ -2800,11 +2800,7 @@ export class CommandController {
           return snapshot;
         },
         clear: async () => {
-          await vscode.commands.executeCommand(
-            'setContext',
-            GitCommand.GraphFilterActive,
-            false
-          );
+          await vscode.commands.executeCommand('setContext', GitCommand.GraphFilterActive, false);
           return filterSession.clear(getMasterSnapshot());
         },
         openCommitDetails: async (sha, subject) =>
