@@ -4,85 +4,90 @@ import { CommitFilters, GraphCommit } from '../../types';
 const FIELD_SEPARATOR = '|~|';
 const RECORD_SEPARATOR = '|#|';
 
-export async function getGraph(this: GitService, maxCount: number, skip = 0, filters?: CommitFilters): Promise<GraphCommit[]> {
+export async function getGraph(
+  this: GitService,
+  maxCount: number,
+  skip = 0,
+  filters?: CommitFilters
+): Promise<GraphCommit[]> {
   const format = ['%m', '%H', '%h', '%P', '%D', '%an', '%aI', '%s'].join(FIELD_SEPARATOR);
-  
-      const args = [
-        'log',
-        '--date=iso-strict',
-        '--decorate=full',
-        `--max-count=${maxCount}`,
-        `--format=${format}${RECORD_SEPARATOR}`
-      ];
-      if (skip > 0) {
-        args.push(`--skip=${skip}`);
-      }
-  
-      if (filters?.branch) {
-        const branchValues = Array.isArray(filters.branch) ? filters.branch : [filters.branch];
-        const hasExactMatch = await this.resolveExactBranchRef(branchValues[0]);
-        if (branchValues.length === 1 && hasExactMatch) {
-          args.push(hasExactMatch);
-        } else {
-          for (const keyword of branchValues) {
-            const normalized = keyword.trim();
-            if (normalized.length > 0) {
-              args.push(`--branches=*${normalized}*`, `--remotes=*${normalized}*`);
-            }
-          }
-        }
-      } else {
-        args.push('--all');
-      }
-      if (filters?.author) {
-        const authorValues = Array.isArray(filters.author) ? filters.author : [filters.author];
-        for (const author of authorValues) {
-          const normalized = author.trim();
-          if (normalized.length > 0) {
-            args.push(`--author=${normalized}`);
-          }
+
+  const args = [
+    'log',
+    '--date=iso-strict',
+    '--decorate=full',
+    `--max-count=${maxCount}`,
+    `--format=${format}${RECORD_SEPARATOR}`
+  ];
+  if (skip > 0) {
+    args.push(`--skip=${skip}`);
+  }
+
+  if (filters?.branch) {
+    const branchValues = Array.isArray(filters.branch) ? filters.branch : [filters.branch];
+    const hasExactMatch = await this.resolveExactBranchRef(branchValues[0]);
+    if (branchValues.length === 1 && hasExactMatch) {
+      args.push(hasExactMatch);
+    } else {
+      for (const keyword of branchValues) {
+        const normalized = keyword.trim();
+        if (normalized.length > 0) {
+          args.push(`--branches=*${normalized}*`, `--remotes=*${normalized}*`);
         }
       }
-      if (filters?.message) {
-        const sha = await this.resolveShaFilter(filters.message);
-        if (sha) {
-          args.push(sha);
-        } else {
-          args.push(`--grep=${filters.message}`);
-        }
+    }
+  } else {
+    args.push('--all');
+  }
+  if (filters?.author) {
+    const authorValues = Array.isArray(filters.author) ? filters.author : [filters.author];
+    for (const author of authorValues) {
+      const normalized = author.trim();
+      if (normalized.length > 0) {
+        args.push(`--author=${normalized}`);
       }
-      if (filters?.since) {
-        args.push(`--since=${filters.since}`);
-      }
-      if (filters?.until) {
-        args.push(`--until=${filters.until}`);
-      }
-  
-      const result = await this.runGit(args);
-  
-      return result.stdout
-        .split(RECORD_SEPARATOR)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
-            line.split(FIELD_SEPARATOR);
-          const parents = parentsRaw?.split(' ').filter(Boolean) ?? [];
-          const refs = refsRaw
-            ? refsRaw
-                .split(',')
-                .map((ref) => ref.trim())
-                .filter(Boolean)
-            : [];
-          return {
-            graph,
-            sha,
-            shortSha,
-            parents,
-            refs,
-            author,
-            date,
-            subject
-          } as GraphCommit;
-        });
+    }
+  }
+  if (filters?.message) {
+    const sha = await this.resolveShaFilter(filters.message);
+    if (sha) {
+      args.push(sha);
+    } else {
+      args.push(`--grep=${filters.message}`);
+    }
+  }
+  if (filters?.since) {
+    args.push(`--since=${filters.since}`);
+  }
+  if (filters?.until) {
+    args.push(`--until=${filters.until}`);
+  }
+
+  const result = await this.runGit(args);
+
+  return result.stdout
+    .split(RECORD_SEPARATOR)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+        line.split(FIELD_SEPARATOR);
+      const parents = parentsRaw?.split(' ').filter(Boolean) ?? [];
+      const refs = refsRaw
+        ? refsRaw
+            .split(',')
+            .map((ref) => ref.trim())
+            .filter(Boolean)
+        : [];
+      return {
+        graph,
+        sha,
+        shortSha,
+        parents,
+        refs,
+        author,
+        date,
+        subject
+      } as GraphCommit;
+    });
 }

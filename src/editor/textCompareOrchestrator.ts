@@ -55,6 +55,11 @@ export function buildPickOrder(seedSide?: 'left' | 'right'): Array<'left' | 'rig
 }
 
 async function buildFileSource(uri: vscode.Uri): Promise<TextSource> {
+  const stat = await vscode.workspace.fs.stat(uri);
+  if ((stat.type & vscode.FileType.Directory) !== 0) {
+    throw new Error(`Cannot compare a directory. Please select a file.`);
+  }
+
   const document = await vscode.workspace.openTextDocument(uri);
   const content = document.getText();
   const fileName = path.basename(uri.fsPath);
