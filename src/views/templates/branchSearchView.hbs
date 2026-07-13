@@ -62,7 +62,8 @@
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
     }
-    #refresh.loading {
+    #refresh.loading .refresh-icon {
+      display: inline-block;
       animation: spin 0.8s linear infinite;
     }
     .list {
@@ -165,7 +166,7 @@
     }}
     <div class="search-row">
       <input id="search" type="text" placeholder="Filter branches or tags…" autofocus spellcheck="false" />
-      <button id="refresh" type="button" title="Refresh branches and tags" aria-label="Refresh branches and tags">⟳</button>
+      <button id="refresh" type="button" title="Refresh branches and tags" aria-label="Refresh branches and tags"><span class="refresh-icon">⟳</span></button>
       <span id="count" class="count">0 results</span>
     </div>
   </div>
