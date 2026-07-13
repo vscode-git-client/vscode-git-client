@@ -19,18 +19,29 @@ export async function getGraph(this: GitService, maxCount: number, skip = 0, fil
       }
   
       if (filters?.branch) {
-        const branchKeyword = filters.branch.trim();
-        const exactBranchRef = await this.resolveExactBranchRef(branchKeyword);
-        if (exactBranchRef) {
-          args.push(exactBranchRef);
+        const branchValues = Array.isArray(filters.branch) ? filters.branch : [filters.branch];
+        const hasExactMatch = await this.resolveExactBranchRef(branchValues[0]);
+        if (branchValues.length === 1 && hasExactMatch) {
+          args.push(hasExactMatch);
         } else {
-          args.push(`--branches=*${branchKeyword}*`, `--remotes=*${branchKeyword}*`);
+          for (const keyword of branchValues) {
+            const normalized = keyword.trim();
+            if (normalized.length > 0) {
+              args.push(`--branches=*${normalized}*`, `--remotes=*${normalized}*`);
+            }
+          }
         }
       } else {
         args.push('--all');
       }
       if (filters?.author) {
-        args.push(`--author=${filters.author}`);
+        const authorValues = Array.isArray(filters.author) ? filters.author : [filters.author];
+        for (const author of authorValues) {
+          const normalized = author.trim();
+          if (normalized.length > 0) {
+            args.push(`--author=${normalized}`);
+          }
+        }
       }
       if (filters?.message) {
         const sha = await this.resolveShaFilter(filters.message);

@@ -19,9 +19,24 @@ export function sanitizeCommitFilters(filters: CommitFilters): CommitFilters {
     const trimmed = (value ?? '').trim();
     return trimmed.length > 0 ? trimmed : undefined;
   };
+  const normalizeMulti = (
+    value: string | readonly string[] | undefined
+  ): string | readonly string[] | undefined => {
+    if (value === undefined) {
+      return undefined;
+    }
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }
+    const items = value
+      .map((v) => (typeof v === 'string' ? v.trim() : ''))
+      .filter((v) => v.length > 0);
+    return items.length > 0 ? items : undefined;
+  };
   return {
-    branch: trim(filters.branch),
-    author: trim(filters.author),
+    branch: normalizeMulti(filters.branch),
+    author: normalizeMulti(filters.author),
     message: trim(filters.message),
     since: trim(filters.since),
     until: trim(filters.until)
