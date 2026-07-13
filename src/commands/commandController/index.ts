@@ -1,236 +1,204 @@
-import * as path from 'path';
-import * as vscode from 'vscode';
-import { GIT_COMMAND_PREFIX, GitCommand } from '../../config/commands';
-import { getConfigValue } from '../../configuration';
 import { EditorOrchestrator } from '../../editor/editorOrchestrator';
-import { confirmDangerousAction } from '../../guards';
 import { Logger } from '../../logger';
-import { BranchRemoteNode, BranchTreeItem, TagTreeItem } from '../../providers/branchTreeProvider';
 import {
   CommitActionContext,
   CommitFileTreeItem,
-  CommitFolderTreeItem,
-  CommitRangeFileTreeItem,
-  CommitSelectableFileTreeItem,
-  RevisionFileTreeItem,
-  WorkingTreeCompareFileTreeItem
+  CommitSelectableFileTreeItem
 } from '../../providers/commitFilesTreeProvider';
-import { GraphCommitFileTreeItem, GraphCommitTreeItem } from '../../providers/graphTreeProvider';
-import { StashTreeItem } from '../../providers/stashTreeProvider';
-import { SubmoduleTreeItem } from '../../providers/submoduleTreeProvider';
-import { WorktreeTreeItem } from '../../providers/worktreeTreeProvider';
-import { convertToSshUrl } from '../../services/gitParsing';
 import { GitService } from '../../services/gitService';
-import { resolveWorktreeTargetPath } from '../../services/worktreeTargetPath';
-import { expandTemplate, loadTemplates } from '../../state/commitTemplates';
 import { StateStore } from '../../state/stateStore';
-import { BranchSearchView } from '../../views/branchSearchView';
-import { CommitListView } from '../../views/commitListView';
-import { GraphFilterSession } from '../../views/graphFilterSession';
-import { GraphFilterView } from '../../views/graphFilterView';
-import { pickRevisionToCompare, RevisionSelection } from '../../views/revisionPicker';
-import { withSubmoduleProgress } from '../helpers/with-submodule-progress';
-import {
-  CherryPickIssueKind,
-  GitScmExtensionExports,
-  GitScmRepository,
-  MergeIssueKind,
-  RebaseIssueKind,
-  SelectableChangeTreeItem,
-  SelectedChangeTarget
-} from '../types';
 import { openBranchActionHub } from './openBranchActionHub';
 import { openCompareWorkflow } from './openCompareWorkflow';
 import { openQuickActions } from './openQuickActions';
 import { register } from './register';
 
-import { openBranchCommits } from './openBranchCommits';
-import { openRefCommits } from './openRefCommits';
-import { openDirectoryTimeline } from './openDirectoryTimeline';
-import { sshPull } from './sshPull';
-import { openDiffWorkflow } from './openDiffWorkflow';
-import { pickConflictPathArg } from './pickConflictPathArg';
-import { pickConflictPath } from './pickConflictPath';
-import { normalizeBranchActionHubArg } from './normalizeBranchActionHubArg';
-import { resolveBranchNameForActionHub } from './resolveBranchNameForActionHub';
-import { pickBranchName } from './pickBranchName';
-import { pickWorktreeRevision } from './pickWorktreeRevision';
-import { pickWorktreeTargetPath } from './pickWorktreeTargetPath';
-import { pickStashRef } from './pickStashRef';
-import { pickCommitSha } from './pickCommitSha';
-import { pickFileFromWorkspace } from './pickFileFromWorkspace';
-import { getBuiltInGitRepository } from './getBuiltInGitRepository';
-import { getActiveFilePath } from './getActiveFilePath';
-import { openCommitDetails } from './openCommitDetails';
-import { openSelectedFileDiffs } from './openSelectedFileDiffs';
-import { openCommitActionContextDiffs } from './openCommitActionContextDiffs';
-import { pickPatchOutputTarget } from './pickPatchOutputTarget';
-import { pickPatchSource } from './pickPatchSource';
-import { readPatchFromFile } from './readPatchFromFile';
 import { applyPatchToWorkingTree } from './applyPatchToWorkingTree';
-import { resolveSelectedCommitFiles } from './resolveSelectedCommitFiles';
-import { toSelectedChangeTarget } from './toSelectedChangeTarget';
-import { toSelectedItems } from './toSelectedItems';
-import { extractSelectableItem } from './extractSelectableItem';
+import { asBranchItem } from './asBranchItem';
+import { asBranchRemoteItem } from './asBranchRemoteItem';
+import { asCommitRangeFileItem } from './asCommitRangeFileItem';
+import { asCommitViewFileItem } from './asCommitViewFileItem';
+import { asFileResourceUri } from './asFileResourceUri';
+import { asGraphFileItem } from './asGraphFileItem';
+import { asGraphItem } from './asGraphItem';
+import { asRevisionViewFileItem } from './asRevisionViewFileItem';
+import { asStashItem } from './asStashItem';
+import { asTagItem } from './asTagItem';
+import { asWorkingTreeCompareFileItem } from './asWorkingTreeCompareFileItem';
 import { classifyCherryPickIssue } from './classifyCherryPickIssue';
 import { classifyMergeIssue } from './classifyMergeIssue';
 import { classifyRebaseIssue } from './classifyRebaseIssue';
+import { extractSelectableItem } from './extractSelectableItem';
+import { getActiveFilePath } from './getActiveFilePath';
+import { getBuiltInGitRepository } from './getBuiltInGitRepository';
 import { getErrorSummary } from './getErrorSummary';
-import { startMergeOperation } from './startMergeOperation';
-import { startRebaseOperation } from './startRebaseOperation';
-import { handleRebaseConflict } from './handleRebaseConflict';
-import { handleOperationConflict } from './handleOperationConflict';
-import { showRebaseProgressFeedback } from './showRebaseProgressFeedback';
-import { openOperationConflictEditors } from './openOperationConflictEditors';
-import { asBranchItem } from './asBranchItem';
-import { asBranchRemoteItem } from './asBranchRemoteItem';
-import { asTagItem } from './asTagItem';
-import { asStashItem } from './asStashItem';
-import { asGraphItem } from './asGraphItem';
-import { asGraphFileItem } from './asGraphFileItem';
-import { asCommitViewFileItem } from './asCommitViewFileItem';
-import { asRevisionViewFileItem } from './asRevisionViewFileItem';
-import { legacyCommandId } from './legacyCommandId';
-import { asCommitRangeFileItem } from './asCommitRangeFileItem';
-import { asWorkingTreeCompareFileItem } from './asWorkingTreeCompareFileItem';
-import { asFileResourceUri } from './asFileResourceUri';
-import { toExplorerResourceUris } from './toExplorerResourceUris';
-import { toBranchName } from './toBranchName';
-import { toRepoFilePath } from './toRepoFilePath';
-import { toCommitSha } from './toCommitSha';
-import { toCommitSubject } from './toCommitSubject';
-import { resolveCommitSubject } from './resolveCommitSubject';
-import { toGraphCommitShas } from './toGraphCommitShas';
-import { toTagRef } from './toTagRef';
-import { toTagRevision } from './toTagRevision';
-import { orderShasForCherryPick } from './orderShasForCherryPick';
-import { handleCherryPick } from './handleCherryPick';
-import { handleOpenFileDiff } from './handleOpenFileDiff';
-import { handleCherryPickSelectedChanges } from './handleCherryPickSelectedChanges';
-import { handleCreatePatchSelectedChanges } from './handleCreatePatchSelectedChanges';
-import { handleRevertSelectedChanges } from './handleRevertSelectedChanges';
 import { handleApplyPatch } from './handleApplyPatch';
-import { handleEditCommitMessage } from './handleEditCommitMessage';
-import { handlePushAllUpToHere } from './handlePushAllUpToHere';
-import { handleOperationAbort } from './handleOperationAbort';
-import { handleOperationContinue } from './handleOperationContinue';
-import { handleShelveResource } from './handleShelveResource';
-import { handleCommitTemplate } from './handleCommitTemplate';
-import { handleGenerateCommitMessage } from './handleGenerateCommitMessage';
-import { handleScmAmendFromInput } from './handleScmAmendFromInput';
-import { handleDirectoryTimelineOpen } from './handleDirectoryTimelineOpen';
-import { handleCompareWithRevision } from './handleCompareWithRevision';
-import { handleResetCurrentToCommit } from './handleResetCurrentToCommit';
-import { handleStashCreate } from './handleStashCreate';
+import { handleBranchActionHub } from './handleBranchActionHub';
+import { handleBranchCheckout } from './handleBranchCheckout';
+import { handleBranchCompareWithCurrent } from './handleBranchCompareWithCurrent';
+import { handleBranchCreate } from './handleBranchCreate';
+import { handleBranchDelete } from './handleBranchDelete';
+import { handleBranchMergeIntoCurrent } from './handleBranchMergeIntoCurrent';
+import { handleBranchOpenCommits } from './handleBranchOpenCommits';
+import { handleBranchRebaseOnto } from './handleBranchRebaseOnto';
+import { handleBranchRename } from './handleBranchRename';
 import { handleBranchSearch } from './handleBranchSearch';
-import { handleGraphFilter } from './handleGraphFilter';
-import { handleSetRemoteUrl } from './handleSetRemoteUrl';
-import { handleConflictResolve } from './handleConflictResolve';
-import { handleStashApplyPop } from './handleStashApplyPop';
-import { handleSubmoduleDeinit } from './handleSubmoduleDeinit';
-import { handleSubmoduleStagePointerChange } from './handleSubmoduleStagePointerChange';
-import { handleSubmoduleDiffPointer } from './handleSubmoduleDiffPointer';
-import { handleSubmodulePullTrackedBranch } from './handleSubmodulePullTrackedBranch';
-import { handleSubmoduleCheckoutRecorded } from './handleSubmoduleCheckoutRecorded';
-import { handleSubmoduleOpenTerminal } from './handleSubmoduleOpenTerminal';
-import { handleSubmoduleOpenInNewWindow } from './handleSubmoduleOpenInNewWindow';
-import { handleSubmoduleOpen } from './handleSubmoduleOpen';
-import { handleSubmoduleSyncAll } from './handleSubmoduleSyncAll';
-import { handleSubmoduleSync } from './handleSubmoduleSync';
-import { handleSubmoduleUpdateRecursive } from './handleSubmoduleUpdateRecursive';
-import { handleSubmoduleUpdateAll } from './handleSubmoduleUpdateAll';
-import { handleSubmoduleUpdate } from './handleSubmoduleUpdate';
-import { handleSubmoduleInitAll } from './handleSubmoduleInitAll';
-import { handleSubmoduleInit } from './handleSubmoduleInit';
-import { handleSubmoduleRefresh } from './handleSubmoduleRefresh';
-import { handleWorktreeOpenTerminal } from './handleWorktreeOpenTerminal';
-import { handleWorktreeRevealInFinder } from './handleWorktreeRevealInFinder';
-import { handleWorktreePrune } from './handleWorktreePrune';
-import { handleWorktreePrunePreview } from './handleWorktreePrunePreview';
-import { handleWorktreeUnlock } from './handleWorktreeUnlock';
-import { handleWorktreeLock } from './handleWorktreeLock';
-import { handleWorktreeRemoveForce } from './handleWorktreeRemoveForce';
-import { handleWorktreeRemove } from './handleWorktreeRemove';
-import { handleWorktreeAddDetached } from './handleWorktreeAddDetached';
-import { handleWorktreeAddNewBranch } from './handleWorktreeAddNewBranch';
-import { handleWorktreeAddFromBranch } from './handleWorktreeAddFromBranch';
-import { handleWorktreeOpenInNewWindow } from './handleWorktreeOpenInNewWindow';
-import { handleWorktreeOpen } from './handleWorktreeOpen';
-import { handleWorktreeRefresh } from './handleWorktreeRefresh';
-import { handleFileBlameOpen } from './handleFileBlameOpen';
+import { handleBranchSearchRefresh } from './handleBranchSearchRefresh';
+import { handleBranchTrack } from './handleBranchTrack';
+import { handleBranchUntrack } from './handleBranchUntrack';
+import { handleCherryPick } from './handleCherryPick';
+import { handleCherryPickSelectedChanges } from './handleCherryPickSelectedChanges';
 import { handleCommitAmend } from './handleCommitAmend';
-import { handleUnstageFile } from './handleUnstageFile';
-import { handleStageFile } from './handleStageFile';
-import { handleStagePatch } from './handleStagePatch';
-import { handleGitSshPullCustom } from './handleGitSshPullCustom';
-import { handleGitSshPullBitbucket } from './handleGitSshPullBitbucket';
-import { handleGitSshPullGitlab } from './handleGitSshPullGitlab';
-import { handleGitSshPullGithub } from './handleGitSshPullGithub';
+import { handleCommitTemplate } from './handleCommitTemplate';
+import { handleCommitViewClose } from './handleCommitViewClose';
+import { handleCompareOpen } from './handleCompareOpen';
+import { handleCompareWithRevision } from './handleCompareWithRevision';
+import { handleCompareWithRevisionSwapDirection } from './handleCompareWithRevisionSwapDirection';
+import { handleConflictAcceptBoth } from './handleConflictAcceptBoth';
+import { handleConflictAcceptOurs } from './handleConflictAcceptOurs';
+import { handleConflictAcceptTheirs } from './handleConflictAcceptTheirs';
+import { handleConflictResolve } from './handleConflictResolve';
+import { handleCreatePatchSelectedChanges } from './handleCreatePatchSelectedChanges';
+import { handleDiffOpen } from './handleDiffOpen';
+import { handleDirectoryTimelineOpen } from './handleDirectoryTimelineOpen';
+import { handleEditCommitMessage } from './handleEditCommitMessage';
+import { handleFileBlameOpen } from './handleFileBlameOpen';
+import { handleGenerateCommitMessage } from './handleGenerateCommitMessage';
 import { handleGitFetchPrune } from './handleGitFetchPrune';
 import { handleGitPullWithPreview } from './handleGitPullWithPreview';
 import { handleGitPushWithPreview } from './handleGitPushWithPreview';
-import { handleOperationSkip } from './handleOperationSkip';
-import { handleConflictAcceptBoth } from './handleConflictAcceptBoth';
-import { handleConflictAcceptTheirs } from './handleConflictAcceptTheirs';
-import { handleConflictAcceptOurs } from './handleConflictAcceptOurs';
-import { handleMergeFinalize } from './handleMergeFinalize';
-import { handleMergePrevious } from './handleMergePrevious';
-import { handleMergeNext } from './handleMergeNext';
-import { handleMergeOpenConflict } from './handleMergeOpenConflict';
-import { handleCompareOpen } from './handleCompareOpen';
-import { handleDiffOpen } from './handleDiffOpen';
-import { handleGraphLoadMore } from './handleGraphLoadMore';
+import { handleGitSshPullBitbucket } from './handleGitSshPullBitbucket';
+import { handleGitSshPullCustom } from './handleGitSshPullCustom';
+import { handleGitSshPullGithub } from './handleGitSshPullGithub';
+import { handleGitSshPullGitlab } from './handleGitSshPullGitlab';
+import { handleGraphCheckoutCommit } from './handleGraphCheckoutCommit';
+import { handleGraphCherryPickRange } from './handleGraphCherryPickRange';
 import { handleGraphClearFilter } from './handleGraphClearFilter';
-import { handleGraphShowRepositoryAtRevision } from './handleGraphShowRepositoryAtRevision';
-import { handleGraphCreatePatchForRange } from './handleGraphCreatePatchForRange';
+import { handleGraphCompareWithCurrent } from './handleGraphCompareWithCurrent';
+import { handleGraphCopyCommitId } from './handleGraphCopyCommitId';
+import { handleGraphCopyCommitMessage } from './handleGraphCopyCommitMessage';
+import { handleGraphCreateBranchHere } from './handleGraphCreateBranchHere';
 import { handleGraphCreatePatch } from './handleGraphCreatePatch';
+import { handleGraphCreatePatchForRange } from './handleGraphCreatePatchForRange';
+import { handleGraphCreateTagHere } from './handleGraphCreateTagHere';
+import { handleGraphFilter } from './handleGraphFilter';
 import { handleGraphGoToChildCommit } from './handleGraphGoToChildCommit';
 import { handleGraphGoToParentCommit } from './handleGraphGoToParentCommit';
-import { handleGraphRebaseInteractiveFromHere } from './handleGraphRebaseInteractiveFromHere';
-import { handleGraphCompareWithCurrent } from './handleGraphCompareWithCurrent';
-import { handleGraphRevert } from './handleGraphRevert';
-import { handleGraphCherryPickRange } from './handleGraphCherryPickRange';
-import { handleGraphCreateTagHere } from './handleGraphCreateTagHere';
-import { handleGraphCreateBranchHere } from './handleGraphCreateBranchHere';
-import { handleGraphCheckoutCommit } from './handleGraphCheckoutCommit';
-import { handleGraphOpenRepositoryFileAtRevision } from './handleGraphOpenRepositoryFileAtRevision';
-import { handleCompareWithRevisionSwapDirection } from './handleCompareWithRevisionSwapDirection';
-import { handleWorkingTreeCompareOpenFileDiff } from './handleWorkingTreeCompareOpenFileDiff';
-import { handleGraphCopyCommitMessage } from './handleGraphCopyCommitMessage';
-import { handleGraphCopyCommitId } from './handleGraphCopyCommitId';
+import { handleGraphLoadMore } from './handleGraphLoadMore';
 import { handleGraphOpenCommitRangeDetails } from './handleGraphOpenCommitRangeDetails';
 import { handleGraphOpenDetails } from './handleGraphOpenDetails';
-import { handleStashPreviewPatch } from './handleStashPreviewPatch';
-import { handleStashRename } from './handleStashRename';
+import { handleGraphOpenRepositoryFileAtRevision } from './handleGraphOpenRepositoryFileAtRevision';
+import { handleGraphRebaseInteractiveFromHere } from './handleGraphRebaseInteractiveFromHere';
+import { handleGraphRevert } from './handleGraphRevert';
+import { handleGraphShowRepositoryAtRevision } from './handleGraphShowRepositoryAtRevision';
+import { handleMergeFinalize } from './handleMergeFinalize';
+import { handleMergeNext } from './handleMergeNext';
+import { handleMergeOpenConflict } from './handleMergeOpenConflict';
+import { handleMergePrevious } from './handleMergePrevious';
+import { handleOpenFileDiff } from './handleOpenFileDiff';
+import { handleOperationAbort } from './handleOperationAbort';
+import { handleOperationConflict } from './handleOperationConflict';
+import { handleOperationContinue } from './handleOperationContinue';
+import { handleOperationSkip } from './handleOperationSkip';
+import { handlePushAllUpToHere } from './handlePushAllUpToHere';
+import { handleQuickActions } from './handleQuickActions';
+import { handleRebaseConflict } from './handleRebaseConflict';
+import { handleRefresh } from './handleRefresh';
+import { handleRemoteAdd } from './handleRemoteAdd';
+import { handleRemoteDelete } from './handleRemoteDelete';
+import { handleResetCurrentToCommit } from './handleResetCurrentToCommit';
+import { handleRevertSelectedChanges } from './handleRevertSelectedChanges';
+import { handleScmAmendFromInput } from './handleScmAmendFromInput';
+import { handleSetRemoteUrl } from './handleSetRemoteUrl';
+import { handleShelveResource } from './handleShelveResource';
+import { handleStageFile } from './handleStageFile';
+import { handleStagePatch } from './handleStagePatch';
+import { handleStashApply } from './handleStashApply';
+import { handleStashApplyPop } from './handleStashApplyPop';
+import { handleStashCreate } from './handleStashCreate';
 import { handleStashDrop } from './handleStashDrop';
 import { handleStashPop } from './handleStashPop';
-import { handleStashApply } from './handleStashApply';
+import { handleStashPreviewPatch } from './handleStashPreviewPatch';
+import { handleStashRename } from './handleStashRename';
 import { handleStashUnshelve } from './handleStashUnshelve';
-import { handleBranchCompareWithCurrent } from './handleBranchCompareWithCurrent';
-import { handleBranchRebaseOnto } from './handleBranchRebaseOnto';
-import { handleBranchMergeIntoCurrent } from './handleBranchMergeIntoCurrent';
-import { handleBranchUntrack } from './handleBranchUntrack';
-import { handleBranchTrack } from './handleBranchTrack';
-import { handleBranchDelete } from './handleBranchDelete';
-import { handleBranchRename } from './handleBranchRename';
-import { handleRemoteDelete } from './handleRemoteDelete';
-import { handleRemoteAdd } from './handleRemoteAdd';
-import { handleTagCreateCurrent } from './handleTagCreateCurrent';
-import { handleTagCreatePatch } from './handleTagCreatePatch';
-import { handleTagCompareWithCurrent } from './handleTagCompareWithCurrent';
-import { handleTagShowRepositoryAtRevision } from './handleTagShowRepositoryAtRevision';
-import { handleTagCopyRevisionNumber } from './handleTagCopyRevisionNumber';
+import { handleSubmoduleCheckoutRecorded } from './handleSubmoduleCheckoutRecorded';
+import { handleSubmoduleDeinit } from './handleSubmoduleDeinit';
+import { handleSubmoduleDiffPointer } from './handleSubmoduleDiffPointer';
+import { handleSubmoduleInit } from './handleSubmoduleInit';
+import { handleSubmoduleInitAll } from './handleSubmoduleInitAll';
+import { handleSubmoduleOpen } from './handleSubmoduleOpen';
+import { handleSubmoduleOpenInNewWindow } from './handleSubmoduleOpenInNewWindow';
+import { handleSubmoduleOpenTerminal } from './handleSubmoduleOpenTerminal';
+import { handleSubmodulePullTrackedBranch } from './handleSubmodulePullTrackedBranch';
+import { handleSubmoduleRefresh } from './handleSubmoduleRefresh';
+import { handleSubmoduleStagePointerChange } from './handleSubmoduleStagePointerChange';
+import { handleSubmoduleSync } from './handleSubmoduleSync';
+import { handleSubmoduleSyncAll } from './handleSubmoduleSyncAll';
+import { handleSubmoduleUpdate } from './handleSubmoduleUpdate';
+import { handleSubmoduleUpdateAll } from './handleSubmoduleUpdateAll';
+import { handleSubmoduleUpdateRecursive } from './handleSubmoduleUpdateRecursive';
 import { handleTagCheckout } from './handleTagCheckout';
 import { handleTagCheckoutNewBranch } from './handleTagCheckoutNewBranch';
-import { handleBranchCreate } from './handleBranchCreate';
+import { handleTagCompareWithCurrent } from './handleTagCompareWithCurrent';
+import { handleTagCopyRevisionNumber } from './handleTagCopyRevisionNumber';
+import { handleTagCreateCurrent } from './handleTagCreateCurrent';
+import { handleTagCreatePatch } from './handleTagCreatePatch';
 import { handleTagOpenCommits } from './handleTagOpenCommits';
-import { handleBranchCheckout } from './handleBranchCheckout';
-import { handleBranchSearchRefresh } from './handleBranchSearchRefresh';
-import { handleBranchOpenCommits } from './handleBranchOpenCommits';
-import { handleBranchActionHub } from './handleBranchActionHub';
-import { handleQuickActions } from './handleQuickActions';
-import { handleCommitViewClose } from './handleCommitViewClose';
-import { handleRefresh } from './handleRefresh';
+import { handleTagShowRepositoryAtRevision } from './handleTagShowRepositoryAtRevision';
+import { handleUnstageFile } from './handleUnstageFile';
+import { handleWorkingTreeCompareOpenFileDiff } from './handleWorkingTreeCompareOpenFileDiff';
+import { handleWorktreeAddDetached } from './handleWorktreeAddDetached';
+import { handleWorktreeAddFromBranch } from './handleWorktreeAddFromBranch';
+import { handleWorktreeAddNewBranch } from './handleWorktreeAddNewBranch';
+import { handleWorktreeLock } from './handleWorktreeLock';
+import { handleWorktreeOpen } from './handleWorktreeOpen';
+import { handleWorktreeOpenInNewWindow } from './handleWorktreeOpenInNewWindow';
+import { handleWorktreeOpenTerminal } from './handleWorktreeOpenTerminal';
+import { handleWorktreePrune } from './handleWorktreePrune';
+import { handleWorktreePrunePreview } from './handleWorktreePrunePreview';
+import { handleWorktreeRefresh } from './handleWorktreeRefresh';
+import { handleWorktreeRemove } from './handleWorktreeRemove';
+import { handleWorktreeRemoveForce } from './handleWorktreeRemoveForce';
+import { handleWorktreeRevealInFinder } from './handleWorktreeRevealInFinder';
+import { handleWorktreeUnlock } from './handleWorktreeUnlock';
+import { legacyCommandId } from './legacyCommandId';
+import { normalizeBranchActionHubArg } from './normalizeBranchActionHubArg';
+import { openBranchCommits } from './openBranchCommits';
+import { openCommitActionContextDiffs } from './openCommitActionContextDiffs';
+import { openCommitDetails } from './openCommitDetails';
+import { openDiffWorkflow } from './openDiffWorkflow';
+import { openDirectoryTimeline } from './openDirectoryTimeline';
+import { openOperationConflictEditors } from './openOperationConflictEditors';
+import { openRefCommits } from './openRefCommits';
+import { openSelectedFileDiffs } from './openSelectedFileDiffs';
+import { orderShasForCherryPick } from './orderShasForCherryPick';
+import { pickBranchName } from './pickBranchName';
+import { pickCommitSha } from './pickCommitSha';
+import { pickConflictPath } from './pickConflictPath';
+import { pickConflictPathArg } from './pickConflictPathArg';
+import { pickFileFromWorkspace } from './pickFileFromWorkspace';
+import { pickPatchOutputTarget } from './pickPatchOutputTarget';
+import { pickPatchSource } from './pickPatchSource';
+import { pickStashRef } from './pickStashRef';
+import { pickWorktreeRevision } from './pickWorktreeRevision';
+import { pickWorktreeTargetPath } from './pickWorktreeTargetPath';
+import { readPatchFromFile } from './readPatchFromFile';
+import { resolveBranchNameForActionHub } from './resolveBranchNameForActionHub';
+import { resolveCommitSubject } from './resolveCommitSubject';
+import { resolveSelectedCommitFiles } from './resolveSelectedCommitFiles';
+import { showRebaseProgressFeedback } from './showRebaseProgressFeedback';
+import { sshPull } from './sshPull';
+import { startMergeOperation } from './startMergeOperation';
+import { startRebaseOperation } from './startRebaseOperation';
+import { toBranchName } from './toBranchName';
+import { toCommitSha } from './toCommitSha';
+import { toCommitSubject } from './toCommitSubject';
+import { toExplorerResourceUris } from './toExplorerResourceUris';
+import { toGraphCommitShas } from './toGraphCommitShas';
+import { toRepoFilePath } from './toRepoFilePath';
+import { toSelectedChangeTarget } from './toSelectedChangeTarget';
+import { toSelectedItems } from './toSelectedItems';
+import { toTagRef } from './toTagRef';
+import { toTagRevision } from './toTagRevision';
 
 export class CommandController {
   constructor(
@@ -333,8 +301,6 @@ export class CommandController {
 
   public readonly openOperationConflictEditors = openOperationConflictEditors;
 
-  // ── Promoted type guard methods (Phase 1) ──────────────────────────────
-
   public readonly asBranchItem = asBranchItem;
 
   public readonly asBranchRemoteItem = asBranchRemoteItem;
@@ -376,8 +342,6 @@ export class CommandController {
   public readonly toTagRef = toTagRef;
 
   public readonly toTagRevision = toTagRevision;
-
-  // ── Command handler methods (Phase 2) ─────────────────────────────────
 
   public readonly orderShasForCherryPick = orderShasForCherryPick;
 
@@ -427,110 +391,211 @@ export class CommandController {
 
   public readonly handleStashApplyPop = handleStashApplyPop;
 
-  // ── Extracted command handler methods (Phase 3) ────────────────
-
   public readonly handleSubmoduleDeinit = handleSubmoduleDeinit;
+
   public readonly handleSubmoduleStagePointerChange = handleSubmoduleStagePointerChange;
+
   public readonly handleSubmoduleDiffPointer = handleSubmoduleDiffPointer;
+
   public readonly handleSubmodulePullTrackedBranch = handleSubmodulePullTrackedBranch;
+
   public readonly handleSubmoduleCheckoutRecorded = handleSubmoduleCheckoutRecorded;
+
   public readonly handleSubmoduleOpenTerminal = handleSubmoduleOpenTerminal;
+
   public readonly handleSubmoduleOpenInNewWindow = handleSubmoduleOpenInNewWindow;
+
   public readonly handleSubmoduleOpen = handleSubmoduleOpen;
+
   public readonly handleSubmoduleSyncAll = handleSubmoduleSyncAll;
+
   public readonly handleSubmoduleSync = handleSubmoduleSync;
+
   public readonly handleSubmoduleUpdateRecursive = handleSubmoduleUpdateRecursive;
+
   public readonly handleSubmoduleUpdateAll = handleSubmoduleUpdateAll;
+
   public readonly handleSubmoduleUpdate = handleSubmoduleUpdate;
+
   public readonly handleSubmoduleInitAll = handleSubmoduleInitAll;
+
   public readonly handleSubmoduleInit = handleSubmoduleInit;
+
   public readonly handleSubmoduleRefresh = handleSubmoduleRefresh;
+
   public readonly handleWorktreeOpenTerminal = handleWorktreeOpenTerminal;
+
   public readonly handleWorktreeRevealInFinder = handleWorktreeRevealInFinder;
+
   public readonly handleWorktreePrune = handleWorktreePrune;
+
   public readonly handleWorktreePrunePreview = handleWorktreePrunePreview;
+
   public readonly handleWorktreeUnlock = handleWorktreeUnlock;
+
   public readonly handleWorktreeLock = handleWorktreeLock;
+
   public readonly handleWorktreeRemoveForce = handleWorktreeRemoveForce;
+
   public readonly handleWorktreeRemove = handleWorktreeRemove;
+
   public readonly handleWorktreeAddDetached = handleWorktreeAddDetached;
+
   public readonly handleWorktreeAddNewBranch = handleWorktreeAddNewBranch;
+
   public readonly handleWorktreeAddFromBranch = handleWorktreeAddFromBranch;
+
   public readonly handleWorktreeOpenInNewWindow = handleWorktreeOpenInNewWindow;
+
   public readonly handleWorktreeOpen = handleWorktreeOpen;
+
   public readonly handleWorktreeRefresh = handleWorktreeRefresh;
+
   public readonly handleFileBlameOpen = handleFileBlameOpen;
+
   public readonly handleCommitAmend = handleCommitAmend;
+
   public readonly handleUnstageFile = handleUnstageFile;
+
   public readonly handleStageFile = handleStageFile;
+
   public readonly handleStagePatch = handleStagePatch;
+
   public readonly handleGitSshPullCustom = handleGitSshPullCustom;
+
   public readonly handleGitSshPullBitbucket = handleGitSshPullBitbucket;
+
   public readonly handleGitSshPullGitlab = handleGitSshPullGitlab;
+
   public readonly handleGitSshPullGithub = handleGitSshPullGithub;
+
   public readonly handleGitFetchPrune = handleGitFetchPrune;
+
   public readonly handleGitPullWithPreview = handleGitPullWithPreview;
+
   public readonly handleGitPushWithPreview = handleGitPushWithPreview;
+
   public readonly handleOperationSkip = handleOperationSkip;
+
   public readonly handleConflictAcceptBoth = handleConflictAcceptBoth;
+
   public readonly handleConflictAcceptTheirs = handleConflictAcceptTheirs;
+
   public readonly handleConflictAcceptOurs = handleConflictAcceptOurs;
+
   public readonly handleMergeFinalize = handleMergeFinalize;
+
   public readonly handleMergePrevious = handleMergePrevious;
+
   public readonly handleMergeNext = handleMergeNext;
+
   public readonly handleMergeOpenConflict = handleMergeOpenConflict;
+
   public readonly handleCompareOpen = handleCompareOpen;
+
   public readonly handleDiffOpen = handleDiffOpen;
+
   public readonly handleGraphLoadMore = handleGraphLoadMore;
+
   public readonly handleGraphClearFilter = handleGraphClearFilter;
+
   public readonly handleGraphShowRepositoryAtRevision = handleGraphShowRepositoryAtRevision;
+
   public readonly handleGraphCreatePatchForRange = handleGraphCreatePatchForRange;
+
   public readonly handleGraphCreatePatch = handleGraphCreatePatch;
+
   public readonly handleGraphGoToChildCommit = handleGraphGoToChildCommit;
+
   public readonly handleGraphGoToParentCommit = handleGraphGoToParentCommit;
+
   public readonly handleGraphRebaseInteractiveFromHere = handleGraphRebaseInteractiveFromHere;
+
   public readonly handleGraphCompareWithCurrent = handleGraphCompareWithCurrent;
+
   public readonly handleGraphRevert = handleGraphRevert;
+
   public readonly handleGraphCherryPickRange = handleGraphCherryPickRange;
+
   public readonly handleGraphCreateTagHere = handleGraphCreateTagHere;
+
   public readonly handleGraphCreateBranchHere = handleGraphCreateBranchHere;
+
   public readonly handleGraphCheckoutCommit = handleGraphCheckoutCommit;
+
   public readonly handleGraphOpenRepositoryFileAtRevision = handleGraphOpenRepositoryFileAtRevision;
+
   public readonly handleCompareWithRevisionSwapDirection = handleCompareWithRevisionSwapDirection;
+
   public readonly handleWorkingTreeCompareOpenFileDiff = handleWorkingTreeCompareOpenFileDiff;
+
   public readonly handleGraphCopyCommitMessage = handleGraphCopyCommitMessage;
+
   public readonly handleGraphCopyCommitId = handleGraphCopyCommitId;
+
   public readonly handleGraphOpenCommitRangeDetails = handleGraphOpenCommitRangeDetails;
+
   public readonly handleGraphOpenDetails = handleGraphOpenDetails;
+
   public readonly handleStashPreviewPatch = handleStashPreviewPatch;
+
   public readonly handleStashRename = handleStashRename;
+
   public readonly handleStashDrop = handleStashDrop;
+
   public readonly handleStashPop = handleStashPop;
+
   public readonly handleStashApply = handleStashApply;
+
   public readonly handleStashUnshelve = handleStashUnshelve;
+
   public readonly handleBranchCompareWithCurrent = handleBranchCompareWithCurrent;
+
   public readonly handleBranchRebaseOnto = handleBranchRebaseOnto;
+
   public readonly handleBranchMergeIntoCurrent = handleBranchMergeIntoCurrent;
+
   public readonly handleBranchUntrack = handleBranchUntrack;
+
   public readonly handleBranchTrack = handleBranchTrack;
+
   public readonly handleBranchDelete = handleBranchDelete;
+
   public readonly handleBranchRename = handleBranchRename;
+
   public readonly handleRemoteDelete = handleRemoteDelete;
+
   public readonly handleRemoteAdd = handleRemoteAdd;
+
   public readonly handleTagCreateCurrent = handleTagCreateCurrent;
+
   public readonly handleTagCreatePatch = handleTagCreatePatch;
+
   public readonly handleTagCompareWithCurrent = handleTagCompareWithCurrent;
+
   public readonly handleTagShowRepositoryAtRevision = handleTagShowRepositoryAtRevision;
+
   public readonly handleTagCopyRevisionNumber = handleTagCopyRevisionNumber;
+
   public readonly handleTagCheckout = handleTagCheckout;
+
   public readonly handleTagCheckoutNewBranch = handleTagCheckoutNewBranch;
+
   public readonly handleBranchCreate = handleBranchCreate;
+
   public readonly handleTagOpenCommits = handleTagOpenCommits;
+
   public readonly handleBranchCheckout = handleBranchCheckout;
+
   public readonly handleBranchSearchRefresh = handleBranchSearchRefresh;
+
   public readonly handleBranchOpenCommits = handleBranchOpenCommits;
+
   public readonly handleBranchActionHub = handleBranchActionHub;
+
   public readonly handleQuickActions = handleQuickActions;
+
   public readonly handleCommitViewClose = handleCommitViewClose;
+
   public readonly handleRefresh = handleRefresh;
 }

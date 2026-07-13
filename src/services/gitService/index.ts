@@ -1,192 +1,156 @@
-import * as cp from 'child_process';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
 import * as vscode from 'vscode';
-import { getConfigValue } from '../../configuration';
 import { Logger } from '../../logger';
+import { BranchRef, RepositoryContext, TagRef } from '../../types';
 import { GitCommandQueue } from '../gitCommandQueue';
-import {
-  BranchRef,
-  CommitFilters,
-  CommitDetails,
-  CommitFileChange,
-  CompareResult,
-  GitCommandResult,
-  GitOperationState,
-  GraphCommit,
-  MergeConflictFile,
-  RepositoryContext,
-  ResolvedCommitMeta,
-  StashEntry,
-  TagRef,
-  WorkingTreeChange,
-  WorkingTreeFileChange,
-  WorktreeEntry,
-  WorktreePruneEntry,
-  WorktreeStatus,
-  SubmoduleEntry
-} from '../../types';
-import { SubmoduleService, SpawnGitStreamingResult } from '../submoduleService';
-import { SubmoduleLogSink } from '../submoduleLogSink';
-import { parseWorktreeListPorcelain, parseWorktreePruneDryRun } from '../worktreeParsing';
-import { parseTrack, parseNameStatusZ, parsePorcelainStatusZ } from '../gitParsing';
-import {
-  buildRepositoryFingerprint,
-  diffRepositoryFingerprints,
-  isEmptyChangeSet,
-  RepoChangeSet,
-  RepositoryFingerprint
-} from '../repositoryStateDiff';
+import { SubmoduleService } from '../submoduleService';
 
-import { getGitRoot } from './getGitRoot';
-import { toRepoRelative } from './toRepoRelative';
-import { isRepo } from './isRepo';
-import { getCurrentBranch } from './getCurrentBranch';
-import { getCurrentHeadSha } from './getCurrentHeadSha';
-import { getLocalBranches } from './getLocalBranches';
-import { getRemoteBranches } from './getRemoteBranches';
-import { getBranches } from './getBranches';
-import { parseBranchLines } from './parseBranchLines';
-import { getRemoteFetchUrls } from './getRemoteFetchUrls';
-import { getTagsBasic } from './getTagsBasic';
-import { mergeTagAvailability } from './mergeTagAvailability';
-import { getTags } from './getTags';
-import { getTagAvailabilityByRemote } from './getTagAvailabilityByRemote';
-import { createBranch } from './createBranch';
-import { createTag } from './createTag';
-import { setRemoteUrl } from './setRemoteUrl';
+import { addAll } from './addAll';
+import { addDetachedWorktree } from './addDetachedWorktree';
 import { addRemote } from './addRemote';
-import { deleteRemote } from './deleteRemote';
-import { renameBranch } from './renameBranch';
-import { deleteBranch } from './deleteBranch';
+import { addWorktree } from './addWorktree';
+import { addWorktreeBranch } from './addWorktreeBranch';
+import { amendCommit } from './amendCommit';
+import { applyCommitFilesPatch } from './applyCommitFilesPatch';
+import { applyMergeEditorColumnLayout } from './applyMergeEditorColumnLayout';
+import { applyPatchToWorkingTree } from './applyPatchToWorkingTree';
+import { applyStash } from './applyStash';
+import { canApplyPatchToWorkingTree } from './canApplyPatchToWorkingTree';
 import { checkoutBranch } from './checkoutBranch';
 import { checkoutCommit } from './checkoutCommit';
-import { trackBranch } from './trackBranch';
-import { untrackBranch } from './untrackBranch';
-import { mergeIntoCurrent } from './mergeIntoCurrent';
-import { rebaseCurrentOnto } from './rebaseCurrentOnto';
-import { rebaseInteractive } from './rebaseInteractive';
-import { mergeAbort } from './mergeAbort';
-import { rebaseAbort } from './rebaseAbort';
-import { rebaseContinue } from './rebaseContinue';
-import { rebaseSkip } from './rebaseSkip';
-import { cherryPickAbort } from './cherryPickAbort';
-import { cherryPickContinue } from './cherryPickContinue';
-import { cherryPickSkip } from './cherryPickSkip';
-import { revertAbort } from './revertAbort';
-import { revertContinue } from './revertContinue';
-import { resolveConflictOurs } from './resolveConflictOurs';
-import { resolveConflictTheirs } from './resolveConflictTheirs';
-import { getOperationState } from './getOperationState';
-import { getVsCodeGitApi } from './getVsCodeGitApi';
-import { getVsCodeGitRoot } from './getVsCodeGitRoot';
-import { getVsCodeRepository } from './getVsCodeRepository';
-import { onRepositoryStateChange } from './onRepositoryStateChange';
-import { onRepositoryAvailable } from './onRepositoryAvailable';
-import { onRepositoryClosed } from './onRepositoryClosed';
-import { toAbsoluteRepoPath } from './toAbsoluteRepoPath';
-import { uniqueChangePaths } from './uniqueChangePaths';
-import { getChangedFilesFromVsCodeGit } from './getChangedFilesFromVsCodeGit';
-import { samePath } from './samePath';
-import { getGitDir } from './getGitDir';
+import { checkoutRecordedSubmoduleCommit } from './checkoutRecordedSubmoduleCommit';
 import { cherryPick } from './cherryPick';
+import { cherryPickAbort } from './cherryPickAbort';
 import { cherryPickCommitFiles } from './cherryPickCommitFiles';
+import { cherryPickContinue } from './cherryPickContinue';
 import { cherryPickRange } from './cherryPickRange';
-import { getCommitTimestamps } from './getCommitTimestamps';
-import { revertCommit } from './revertCommit';
-import { revertCommitFiles } from './revertCommitFiles';
-import { resetCurrent } from './resetCurrent';
-import { isCommitInCurrentBranch } from './isCommitInCurrentBranch';
-import { getStashes } from './getStashes';
+import { cherryPickSkip } from './cherryPickSkip';
+import { commit } from './commit';
+import { createBranch } from './createBranch';
 import { createStash } from './createStash';
-import { applyStash } from './applyStash';
+import { createTag } from './createTag';
+import { deinitSubmodule } from './deinitSubmodule';
+import { deleteBranch } from './deleteBranch';
+import { deleteRemote } from './deleteRemote';
+import { directoryHistory } from './directoryHistory';
 import { dropStash } from './dropStash';
-import { renameStash } from './renameStash';
-import { getStashPatch } from './getStashPatch';
-import { getGraph } from './getGraph';
-import { resolveExactBranchRef } from './resolveExactBranchRef';
-import { refExists } from './refExists';
-import { refPatternExists } from './refPatternExists';
-import { resolveShaFilter } from './resolveShaFilter';
-import { getCommitDetails } from './getCommitDetails';
-import { getParentCommit } from './getParentCommit';
-import { getFilesAtRevision } from './getFilesAtRevision';
-import { getPatchForCommit } from './getPatchForCommit';
-import { getPatchForCommitRange } from './getPatchForCommitRange';
-import { getPatchForCommitFiles } from './getPatchForCommitFiles';
-import { getPatchBetweenRefsForFiles } from './getPatchBetweenRefsForFiles';
-import { getPatchBetweenWorkingTreeAndRefForFiles } from './getPatchBetweenWorkingTreeAndRefForFiles';
-import { canApplyPatchToWorkingTree } from './canApplyPatchToWorkingTree';
-import { isPatchAlreadyApplied } from './isPatchAlreadyApplied';
-import { applyPatchToWorkingTree } from './applyPatchToWorkingTree';
-import { reverseApplyPatchToWorkingTree } from './reverseApplyPatchToWorkingTree';
-import { getCompare } from './getCompare';
-import { tryGetMergeBaseCommit } from './tryGetMergeBaseCommit';
+import { fetchPrune } from './fetchPrune';
+import { fileBlame } from './fileBlame';
+import { fileHistory } from './fileHistory';
+import { generateCommitMessage } from './generateCommitMessage';
+import { getBranches } from './getBranches';
 import { getChangedFiles } from './getChangedFiles';
-import { stashFiles } from './stashFiles';
-import { unstashToWorkingTree } from './unstashToWorkingTree';
-import { getStagedFiles } from './getStagedFiles';
-import { getMergeConflicts } from './getMergeConflicts';
+import { getChangedFilesFromVsCodeGit } from './getChangedFilesFromVsCodeGit';
+import { getCommitDetails } from './getCommitDetails';
+import { getCommitTimestamps } from './getCommitTimestamps';
+import { getCompare } from './getCompare';
+import { getCurrentBranch } from './getCurrentBranch';
+import { getCurrentHeadSha } from './getCurrentHeadSha';
 import { getFileContentFromRef } from './getFileContentFromRef';
-import { isMissingFileContentError } from './isMissingFileContentError';
-import { getFilesInCommit } from './getFilesInCommit';
-import { getFilesInCommitWithStatus } from './getFilesInCommitWithStatus';
+import { getFilesAtRevision } from './getFilesAtRevision';
 import { getFilesChangedBetween } from './getFilesChangedBetween';
 import { getFilesChangedBetweenRefsWithStatus } from './getFilesChangedBetweenRefsWithStatus';
 import { getFilesChangedBetweenWorkingTreeAndRef } from './getFilesChangedBetweenWorkingTreeAndRef';
-import { resolveRevisionToCommit } from './resolveRevisionToCommit';
-import { stageFile } from './stageFile';
-import { unstageFile } from './unstageFile';
-import { getOutgoingIncomingPreview } from './getOutgoingIncomingPreview';
-import { push } from './push';
-import { pull } from './pull';
-import { fetchPrune } from './fetchPrune';
-import { addAll } from './addAll';
-import { stagePatch } from './stagePatch';
-import { amendCommit } from './amendCommit';
-import { commit } from './commit';
-import { getHeadCommitMessage } from './getHeadCommitMessage';
-import { generateCommitMessage } from './generateCommitMessage';
-import { fileHistory } from './fileHistory';
-import { directoryHistory } from './directoryHistory';
-import { streamLogRecords } from './streamLogRecords';
-import { fileBlame } from './fileBlame';
-import { openMergeEditor } from './openMergeEditor';
-import { applyMergeEditorColumnLayout } from './applyMergeEditorColumnLayout';
+import { getFilesInCommit } from './getFilesInCommit';
+import { getFilesInCommitWithStatus } from './getFilesInCommitWithStatus';
 import { getFileStageContent } from './getFileStageContent';
-import { getWorktrees } from './getWorktrees';
-import { addWorktree } from './addWorktree';
-import { addWorktreeBranch } from './addWorktreeBranch';
-import { addDetachedWorktree } from './addDetachedWorktree';
-import { removeWorktree } from './removeWorktree';
-import { lockWorktree } from './lockWorktree';
-import { unlockWorktree } from './unlockWorktree';
+import { getGitDir } from './getGitDir';
+import { getGitRoot } from './getGitRoot';
+import { getGraph } from './getGraph';
+import { getHeadCommitMessage } from './getHeadCommitMessage';
+import { getLocalBranches } from './getLocalBranches';
+import { getMergeConflicts } from './getMergeConflicts';
+import { getOperationState } from './getOperationState';
+import { getOutgoingIncomingPreview } from './getOutgoingIncomingPreview';
+import { getParentCommit } from './getParentCommit';
+import { getPatchBetweenRefsForFiles } from './getPatchBetweenRefsForFiles';
+import { getPatchBetweenWorkingTreeAndRefForFiles } from './getPatchBetweenWorkingTreeAndRefForFiles';
+import { getPatchForCommit } from './getPatchForCommit';
+import { getPatchForCommitFiles } from './getPatchForCommitFiles';
+import { getPatchForCommitRange } from './getPatchForCommitRange';
 import { getPrunableWorktrees } from './getPrunableWorktrees';
-import { pruneWorktrees } from './pruneWorktrees';
-import { getWorktreeStatus } from './getWorktreeStatus';
-import { getSubmodules } from './getSubmodules';
-import { initSubmodule } from './initSubmodule';
-import { initAllSubmodules } from './initAllSubmodules';
-import { updateSubmodule } from './updateSubmodule';
-import { updateAllSubmodules } from './updateAllSubmodules';
-import { syncSubmodule } from './syncSubmodule';
-import { deinitSubmodule } from './deinitSubmodule';
-import { checkoutRecordedSubmoduleCommit } from './checkoutRecordedSubmoduleCommit';
-import { pullSubmoduleTrackedBranch } from './pullSubmoduleTrackedBranch';
+import { getRemoteBranches } from './getRemoteBranches';
+import { getRemoteFetchUrls } from './getRemoteFetchUrls';
+import { getStagedFiles } from './getStagedFiles';
+import { getStashes } from './getStashes';
+import { getStashPatch } from './getStashPatch';
 import { getSubmodulePointerDiff } from './getSubmodulePointerDiff';
-import { stageSubmodulePointer } from './stageSubmodulePointer';
+import { getSubmodules } from './getSubmodules';
+import { getTagAvailabilityByRemote } from './getTagAvailabilityByRemote';
+import { getTags } from './getTags';
+import { getTagsBasic } from './getTagsBasic';
+import { getVsCodeGitApi } from './getVsCodeGitApi';
+import { getVsCodeGitRoot } from './getVsCodeGitRoot';
+import { getVsCodeRepository } from './getVsCodeRepository';
+import { getWorktrees } from './getWorktrees';
+import { getWorktreeStatus } from './getWorktreeStatus';
+import { initAllSubmodules } from './initAllSubmodules';
+import { initSubmodule } from './initSubmodule';
+import { isCommitInCurrentBranch } from './isCommitInCurrentBranch';
+import { isMissingFileContentError } from './isMissingFileContentError';
+import { isPatchAlreadyApplied } from './isPatchAlreadyApplied';
+import { isRepo } from './isRepo';
+import { lockWorktree } from './lockWorktree';
 import { logGitDuration } from './logGitDuration';
-import { runGitAt } from './runGitAt';
+import { mergeAbort } from './mergeAbort';
+import { mergeIntoCurrent } from './mergeIntoCurrent';
+import { mergeTagAvailability } from './mergeTagAvailability';
+import { onRepositoryAvailable } from './onRepositoryAvailable';
+import { onRepositoryClosed } from './onRepositoryClosed';
+import { onRepositoryStateChange } from './onRepositoryStateChange';
+import { openMergeEditor } from './openMergeEditor';
+import { parseBranchLines } from './parseBranchLines';
+import { pruneWorktrees } from './pruneWorktrees';
+import { pull } from './pull';
+import { pullSubmoduleTrackedBranch } from './pullSubmoduleTrackedBranch';
+import { push } from './push';
+import { rebaseAbort } from './rebaseAbort';
+import { rebaseContinue } from './rebaseContinue';
+import { rebaseCurrentOnto } from './rebaseCurrentOnto';
+import { rebaseInteractive } from './rebaseInteractive';
+import { rebaseSkip } from './rebaseSkip';
+import { refExists } from './refExists';
+import { refPatternExists } from './refPatternExists';
+import { removeWorktree } from './removeWorktree';
+import { renameBranch } from './renameBranch';
+import { renameStash } from './renameStash';
+import { resetCurrent } from './resetCurrent';
+import { resolveConflictOurs } from './resolveConflictOurs';
+import { resolveConflictTheirs } from './resolveConflictTheirs';
+import { resolveExactBranchRef } from './resolveExactBranchRef';
+import { resolveRevisionToCommit } from './resolveRevisionToCommit';
+import { resolveShaFilter } from './resolveShaFilter';
+import { reverseApplyPatchToWorkingTree } from './reverseApplyPatchToWorkingTree';
+import { revertAbort } from './revertAbort';
+import { revertCommit } from './revertCommit';
+import { revertCommitFiles } from './revertCommitFiles';
+import { revertContinue } from './revertContinue';
 import { runGit } from './runGit';
 import { runGitAllowExitCodes } from './runGitAllowExitCodes';
-import { applyCommitFilesPatch } from './applyCommitFilesPatch';
+import { runGitAt } from './runGitAt';
 import { runGitWithStdin } from './runGitWithStdin';
+import { samePath } from './samePath';
+import { setRemoteUrl } from './setRemoteUrl';
+import { stageFile } from './stageFile';
+import { stagePatch } from './stagePatch';
+import { stageSubmodulePointer } from './stageSubmodulePointer';
+import { stashFiles } from './stashFiles';
+import { streamLogRecords } from './streamLogRecords';
+import { syncSubmodule } from './syncSubmodule';
+import { toAbsoluteRepoPath } from './toAbsoluteRepoPath';
+import { toRepoRelative } from './toRepoRelative';
+import { trackBranch } from './trackBranch';
+import { tryGetMergeBaseCommit } from './tryGetMergeBaseCommit';
+import { uniqueChangePaths } from './uniqueChangePaths';
+import { unlockWorktree } from './unlockWorktree';
+import { unstageFile } from './unstageFile';
+import { unstashToWorkingTree } from './unstashToWorkingTree';
+import { untrackBranch } from './untrackBranch';
+import { updateAllSubmodules } from './updateAllSubmodules';
+import { updateSubmodule } from './updateSubmodule';
 
 export type { RepoChangeSet } from '../repositoryStateDiff';
 
 const FIELD_SEPARATOR = '|~|';
-const RECORD_SEPARATOR = '|#|';
 
 interface VsCodeGitChange {
   readonly uri: vscode.Uri;
@@ -235,11 +199,6 @@ interface VsCodeGitApi {
   openRepository(root: vscode.Uri): Promise<VsCodeGitRepository | null>;
   readonly onDidOpenRepository?: vscode.Event<VsCodeGitRepository>;
   readonly onDidCloseRepository?: vscode.Event<VsCodeGitRepository>;
-}
-
-interface VsCodeGitExtension {
-  readonly enabled: boolean;
-  getAPI(version: 1): VsCodeGitApi;
 }
 
 export class GitService {
@@ -497,7 +456,8 @@ export class GitService {
 
   public readonly getPatchBetweenRefsForFiles = getPatchBetweenRefsForFiles;
 
-  public readonly getPatchBetweenWorkingTreeAndRefForFiles = getPatchBetweenWorkingTreeAndRefForFiles;
+  public readonly getPatchBetweenWorkingTreeAndRefForFiles =
+    getPatchBetweenWorkingTreeAndRefForFiles;
 
   public readonly canApplyPatchToWorkingTree = canApplyPatchToWorkingTree;
 
@@ -640,53 +600,4 @@ export class GitService {
   public readonly applyCommitFilesPatch = applyCommitFilesPatch;
 
   public readonly runGitWithStdin = runGitWithStdin;
-}
-
-function parseGraphRows(raw: string): GraphCommit[] {
-  return raw
-    .split(RECORD_SEPARATOR)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
-        line.split(FIELD_SEPARATOR);
-      return {
-        graph,
-        sha,
-        shortSha,
-        parents: parentsRaw?.split(' ').filter(Boolean) ?? [],
-        refs: refsRaw
-          ? refsRaw
-              .split(',')
-              .map((r) => r.trim())
-              .filter(Boolean)
-          : [],
-        author,
-        date,
-        subject
-      };
-    });
-}
-
-function parseShortStat(
-  raw: string
-): { files: number; insertions: number; deletions: number } | undefined {
-  const line = raw
-    .split('\n')
-    .map((value) => value.trim())
-    .find((value) => value.length > 0);
-
-  if (!line) {
-    return undefined;
-  }
-
-  const filesMatch = line.match(/(\d+)\s+files?\s+changed/);
-  const insertionsMatch = line.match(/(\d+)\s+insertions?\(\+\)/);
-  const deletionsMatch = line.match(/(\d+)\s+deletions?\(-\)/);
-
-  return {
-    files: Number(filesMatch?.[1] ?? 0),
-    insertions: Number(insertionsMatch?.[1] ?? 0),
-    deletions: Number(deletionsMatch?.[1] ?? 0)
-  };
 }
