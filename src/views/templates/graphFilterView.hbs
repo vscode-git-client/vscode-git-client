@@ -211,6 +211,10 @@
 
   {{> partials/graphContextMenu}}
 
+  <div id="refresh-context-menu" class="context-menu" role="menu" aria-label="Refresh context menu" style="min-width:120px">
+    <button class="menu-item" data-action="refresh">Refresh</button>
+  </div>
+
   <script>
     const vscode = acquireVsCodeApi();
     const form = document.getElementById('form');
@@ -245,6 +249,42 @@
     let inputRevision = 0;
 
     {{> partials/scripts/commitContextMenu}}
+
+    const refreshContextMenu = (() => {
+      const menu = document.getElementById('refresh-context-menu');
+      if (!menu) { return { close() {}, open() {} }; }
+      const close = () => menu.classList.remove('visible');
+      const open = (x, y) => {
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+        menu.classList.add('visible');
+        const menuRect = menu.getBoundingClientRect();
+        const viewport = window.visualViewport;
+        const viewportLeft = viewport ? viewport.offsetLeft : 0;
+        const viewportTop = viewport ? viewport.offsetTop : 0;
+        const viewportWidth = viewport ? viewport.width : window.innerWidth;
+        const viewportHeight = viewport ? viewport.height : window.innerHeight;
+        const minX = viewportLeft + 8;
+        const minY = viewportTop + 8;
+        const maxX = Math.max(minX, viewportLeft + viewportWidth - menuRect.width - 8);
+        const maxY = Math.max(minY, viewportTop + viewportHeight - menuRect.height - 8);
+        menu.style.left = Math.max(minX, Math.min(x, maxX)) + 'px';
+        menu.style.top = Math.max(minY, Math.min(y, maxY)) + 'px';
+      };
+      menu.addEventListener('click', (event) => {
+        const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-action]') : null;
+        if (!target || target.disabled) { return; }
+        const action = target.getAttribute('data-action');
+        if (action === 'refresh') {
+          cancelPendingApply();
+          vscode.postMessage({ type: 'apply', filters: collect(), inputRevision });
+          close();
+        }
+      });
+      window.addEventListener('blur', close);
+      window.addEventListener('scroll', close, true);
+      return { close, open };
+    })();
 
     let selectionAnchorSha = null;
 
@@ -716,6 +756,11 @@
         if (!commitContextMenu.contains(event.target)) { commitContextMenu.close(); }
         return;
       }
+      const refreshMenu = document.getElementById('refresh-context-menu');
+      if (refreshMenu && refreshMenu.classList.contains('visible') && !refreshMenu.contains(event.target)) {
+        refreshContextMenu.close();
+        return;
+      }
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
       if (!row) { return; }
       const sha = row.getAttribute('data-sha') || '';
@@ -743,8 +788,16 @@
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
       if (!row) {
         commitContextMenu.close();
+        refreshContextMenu.close();
+        // Let interactive elements keep their native context menu (inputs, textareas, etc.)
+        const tag = (event.target && event.target.tagName) ? event.target.tagName.toLowerCase() : '';
+        const isInteractive = tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' || (event.target && event.target.isContentEditable);
+        if (isInteractive) { return; }
+        event.preventDefault();
+        refreshContextMenu.open(event.clientX, event.clientY);
         return;
       }
+      refreshContextMenu.close();
       updateSelection(row, event, { forContextMenu: true });
       row._vscodeGitClientSelectedShas = getSelectedCommitShas();
       row._vscodeGitClientSelectedSubjects = getSelectedCommitRows()

@@ -173,6 +173,10 @@
   <div id="list" class="list"></div>
   {{{branchContextMenuHtml}}}
 
+  <div id="refresh-context-menu" class="context-menu" role="menu" aria-label="Refresh context menu" style="min-width:120px">
+    <button class="menu-item" data-command="refresh">Refresh</button>
+  </div>
+
   <script>
     const vscode = acquireVsCodeApi();
     const searchInput = document.getElementById('search');
@@ -398,14 +402,44 @@
       menu.style.top = targetY + 'px';
     }
 
+    const refreshContextMenu = (() => {
+      const menu = document.getElementById('refresh-context-menu');
+      if (!menu) { return { close() {}, open() {} }; }
+      const close = () => menu.classList.remove('visible');
+      const open = (x, y) => {
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+        menu.classList.add('visible');
+        const menuRect = menu.getBoundingClientRect();
+        const maxX = Math.max(8, window.innerWidth - menuRect.width - 8);
+        const maxY = Math.max(8, window.innerHeight - menuRect.height - 8);
+        menu.style.left = Math.max(8, Math.min(x, maxX)) + 'px';
+        menu.style.top = Math.max(8, Math.min(y, maxY)) + 'px';
+      };
+      menu.addEventListener('click', (event) => {
+        const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-command]') : null;
+        if (!target || target.disabled) { return; }
+        const command = target.getAttribute('data-command');
+        if (command === 'refresh') {
+          close();
+          vscode.postMessage({ type: 'refresh' });
+        }
+      });
+      window.addEventListener('blur', close);
+      window.addEventListener('scroll', close, true);
+      return { close, open };
+    })();
+
     searchInput.addEventListener('input', () => {
       closeMenu();
+      refreshContextMenu.close();
       applyFilter();
     });
 
     if (refreshBtn) {
       refreshBtn.addEventListener('click', () => {
         closeMenu();
+        refreshContextMenu.close();
         vscode.postMessage({ type: 'refresh' });
       });
     }
@@ -416,6 +450,11 @@
         const activeMenu = getActiveMenu();
         if (activeMenu && activeMenu.classList.contains('visible')) {
           closeMenu();
+          return;
+        }
+        const refreshMenu = document.getElementById('refresh-context-menu');
+        if (refreshMenu && refreshMenu.classList.contains('visible')) {
+          refreshContextMenu.close();
           return;
         }
         vscode.postMessage({ type: 'close' });
@@ -446,15 +485,27 @@
       if (activeMenu && activeMenu.classList.contains('visible') && !activeMenu.contains(event.target)) {
         closeMenu();
       }
+      const refreshMenu = document.getElementById('refresh-context-menu');
+      if (refreshMenu && refreshMenu.classList.contains('visible') && !refreshMenu.contains(event.target)) {
+        refreshContextMenu.close();
+      }
     });
 
     document.addEventListener('contextmenu', (event) => {
       const row = event.target && event.target.closest ? event.target.closest('.row') : null;
       if (!row) {
         closeMenu();
+        refreshContextMenu.close();
+        // Let interactive elements keep their native context menu (inputs, textareas, etc.)
+        const tag = (event.target && event.target.tagName) ? event.target.tagName.toLowerCase() : '';
+        const isInteractive = tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' || (event.target && event.target.isContentEditable);
+        if (isInteractive) { return; }
+        event.preventDefault();
+        refreshContextMenu.open(event.clientX, event.clientY);
         return;
       }
 
+      refreshContextMenu.close();
       event.preventDefault();
       const name = row.dataset.name;
       const kind = row.dataset.kind;
