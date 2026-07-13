@@ -21,6 +21,8 @@ export enum GitCommand {
   RemoteSetUrlMissing = 'vscodeGitClient.remote.setUrlMissing',
   RemoteAdd = 'vscodeGitClient.remote.add',
   RemoteDelete = 'vscodeGitClient.remote.delete',
+  RemoteFetch = 'vscodeGitClient.remote.fetch',
+  RemoteFetchAll = 'vscodeGitClient.remote.fetchAll',
   BranchRename = 'vscodeGitClient.branch.rename',
   BranchDelete = 'vscodeGitClient.branch.delete',
   BranchTrack = 'vscodeGitClient.branch.track',

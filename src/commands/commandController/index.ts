@@ -105,6 +105,8 @@ import { handleRebaseConflict } from './handleRebaseConflict';
 import { handleRefresh } from './handleRefresh';
 import { handleRemoteAdd } from './handleRemoteAdd';
 import { handleRemoteDelete } from './handleRemoteDelete';
+import { handleRemoteFetch } from './handleRemoteFetch';
+import { handleRemoteFetchAll } from './handleRemoteFetchAll';
 import { handleResetCurrentToCommit } from './handleResetCurrentToCommit';
 import { handleRevertSelectedChanges } from './handleRevertSelectedChanges';
 import { handleScmAmendFromInput } from './handleScmAmendFromInput';
@@ -564,6 +566,10 @@ export class CommandController {
   public readonly handleBranchRename = handleBranchRename;
 
   public readonly handleRemoteDelete = handleRemoteDelete;
+
+  public readonly handleRemoteFetch = handleRemoteFetch;
+
+  public readonly handleRemoteFetchAll = handleRemoteFetchAll;
 
   public readonly handleRemoteAdd = handleRemoteAdd;
 

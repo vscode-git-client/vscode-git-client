@@ -205,6 +205,14 @@
         "title": "Delete this remote"
       },
       {
+        "command": "vscodeGitClient.remote.fetch",
+        "title": "Fetch"
+      },
+      {
+        "command": "vscodeGitClient.remote.fetchAll",
+        "title": "Fetch All"
+      },
+      {
         "command": "vscodeGitClient.tag.checkoutNewBranch",
         "title": "Checkout New Branch"
       },
@@ -847,9 +855,19 @@
           "group": "navigation@1"
         },
         {
+          "command": "vscodeGitClient.remote.fetch",
+          "when": "view == vscodeGitClient.branches && viewItem == branchRemoteGroup",
+          "group": "navigation@2"
+        },
+        {
           "command": "vscodeGitClient.remote.add",
           "when": "view == vscodeGitClient.branches && viewItem == branchSectionRemote",
           "group": "inline@1"
+        },
+        {
+          "command": "vscodeGitClient.remote.fetchAll",
+          "when": "view == vscodeGitClient.branches && viewItem == branchSectionRemote",
+          "group": "inline@2"
         },
         {
           "command": "vscodeGitClient.refresh",
@@ -1115,7 +1133,7 @@
         },
         {
           "command": "vscodeGitClient.textCompare.open",
-          "when": "resourceScheme == file",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
           "group": "z_vscodeGitClient@3"
         }
       ],
