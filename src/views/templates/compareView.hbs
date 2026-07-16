@@ -10,6 +10,9 @@
       min-height: 0;
       margin-bottom: 16px;
     }
+    .grid.horizontal {
+      flex-direction: row;
+    }
     .filters {
       display: grid;
       grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) minmax(150px, 180px) minmax(150px, 180px) auto;
@@ -297,13 +300,19 @@
           <button id="mode-toggle-list" type="button" role="tab" aria-selected="{{#if isListMode}}true{{else}}false{{/if}}" class="{{#if isListMode}}active{{/if}}" data-mode="list">List</button>
           <button id="mode-toggle-graph" type="button" role="tab" aria-selected="{{#if isGraphMode}}true{{else}}false{{/if}}" class="{{#if isGraphMode}}active{{/if}}" data-mode="graph">Graph</button>
         </div>
+        {{#if isListMode}}
+        <div class="mode-toggle" role="tablist" aria-label="Compare pane layout">
+          <button id="layout-toggle-vertical" type="button" role="tab" aria-selected="{{#unless isHorizontalLayout}}true{{else}}false{{/unless}}" class="{{#unless isHorizontalLayout}}active{{/unless}}" data-layout="vertical">Vertical</button>
+          <button id="layout-toggle-horizontal" type="button" role="tab" aria-selected="{{#if isHorizontalLayout}}true{{else}}false{{/if}}" class="{{#if isHorizontalLayout}}active{{/if}}" data-layout="horizontal">Horizontal</button>
+        </div>
+        {{/if}}
         <button id="btn-refresh" type="button" title="Refresh" aria-label="Refresh">⟳</button>
         <button id="filter-export-excel" class="filter-export" type="button" title="{{exportButtonLabel}}">{{exportButtonLabel}}</button>
       </div>
     </div>
   </section>
   {{#if isListMode}}
-  <div class="grid">
+  <div class="grid{{#if isHorizontalLayout}} horizontal{{/if}}">
     {{> partials/compareCommitTable side="left" total=leftTotal ref=leftRef rows=leftCommits}}
 
     {{> partials/compareCommitTable side="right" total=rightTotal ref=rightRef rows=rightCommits}}
@@ -332,8 +341,11 @@
     const allAuthors = {{{authorsJson}}};
     const compareViewMode = '{{mode}}';
     const isGraphMode = compareViewMode === 'graph';
+    const compareLayoutOrientation = '{{orientation}}';
     const modeToggleListBtn = document.getElementById('mode-toggle-list');
     const modeToggleGraphBtn = document.getElementById('mode-toggle-graph');
+    const layoutToggleVerticalBtn = document.getElementById('layout-toggle-vertical');
+    const layoutToggleHorizontalBtn = document.getElementById('layout-toggle-horizontal');
     const authorInput = document.getElementById('filter-author');
     const authorAutocomplete = document.getElementById('author-autocomplete');
     const messageInput = document.getElementById('filter-message');
@@ -977,6 +989,17 @@
     }
     if (modeToggleGraphBtn) {
       modeToggleGraphBtn.addEventListener('click', () => sendModeChange('graph'));
+    }
+    const sendLayoutChange = (orientation) => {
+      if (orientation !== compareLayoutOrientation) {
+        vscode.postMessage({ type: 'setCompareLayout', orientation });
+      }
+    };
+    if (layoutToggleVerticalBtn) {
+      layoutToggleVerticalBtn.addEventListener('click', () => sendLayoutChange('vertical'));
+    }
+    if (layoutToggleHorizontalBtn) {
+      layoutToggleHorizontalBtn.addEventListener('click', () => sendLayoutChange('horizontal'));
     }
   </script>
 {{> partials/documentEnd}}
