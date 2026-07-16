@@ -1244,6 +1244,15 @@
           "default": "csv",
           "description": "Default export format for Compare Branches webview. CSV exports two branch-specific files; Excel exports one .xlsx with two sheets."
         },
+        "vscodeGitClient.compare.listLayout": {
+          "type": "string",
+          "enum": [
+            "vertical",
+            "horizontal"
+          ],
+          "default": "vertical",
+          "description": "Default pane layout for Compare Branches List mode. vertical stacks the two branches' commit tables; horizontal places them side by side. Only used as the initial value for a workspace — once you use the Vertical/Horizontal toggle in the webview, that choice persists for the workspace."
+        },
         "vscodeGitClient.compareWithRevision.defaultDirection": {
           "type": "string",
           "enum": [

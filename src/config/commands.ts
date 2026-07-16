@@ -155,7 +155,8 @@ export enum GitCommand {
   // State keys
   ChangelistsStateKey = 'vscodeGitClient.changelists',
   RecentComparePairsKey = 'vscodeGitClient.recentComparePairs',
-  CompareViewModeKey = 'vscodeGitClient.compareViewMode'
+  CompareViewModeKey = 'vscodeGitClient.compareViewMode',
+  CompareLayoutOrientationKey = 'vscodeGitClient.compareLayoutOrientation'
 }
 
 export const GIT_COMMAND_PREFIX = 'vscodeGitClient.';

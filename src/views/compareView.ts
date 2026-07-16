@@ -14,6 +14,13 @@ export interface CompareViewModeStore {
   setCompareViewMode(mode: CompareViewMode): Promise<void>;
 }
 
+export type CompareLayoutOrientation = 'vertical' | 'horizontal';
+
+export interface CompareLayoutOrientationStore {
+  getCompareLayoutOrientation(): CompareLayoutOrientation;
+  setCompareLayoutOrientation(orientation: CompareLayoutOrientation): Promise<void>;
+}
+
 interface CommitClickMessage {
   readonly type: 'commitClick';
   readonly sha: string;
@@ -61,6 +68,11 @@ interface SetCompareModeMessage {
   readonly mode: CompareViewMode;
 }
 
+interface SetCompareLayoutMessage {
+  readonly type: 'setCompareLayout';
+  readonly orientation: CompareLayoutOrientation;
+}
+
 interface SelectionChangeMessage {
   readonly type: 'selectionChange';
   readonly count: number;
@@ -74,6 +86,7 @@ type IncomingMessage =
   | RefreshMessage
   | RefreshCompleteMessage
   | SetCompareModeMessage
+  | SetCompareLayoutMessage
   | SelectionChangeMessage;
 
 export class CompareView {
@@ -85,6 +98,7 @@ export class CompareView {
     private readonly onCommitClick: (sha: string, subject: string) => Promise<void>,
     private readonly onCommitRangeClick: (selection: CompareCommitRangeSelection) => Promise<void>,
     private readonly modeStore: CompareViewModeStore,
+    private readonly layoutStore: CompareLayoutOrientationStore,
     private readonly onRefresh: (leftRef: string, rightRef: string) => Promise<void>
   ) {
     this.panel = vscode.window.createWebviewPanel(
@@ -130,7 +144,8 @@ export class CompareView {
     this.panel.webview.html = renderCompareHtml(
       result,
       this.getCompareExportFormat(),
-      this.modeStore.getCompareViewMode()
+      this.modeStore.getCompareViewMode(),
+      this.layoutStore.getCompareLayoutOrientation()
     );
   }
 
@@ -141,7 +156,8 @@ export class CompareView {
     this.panel.webview.html = renderCompareHtml(
       this.currentResult,
       this.getCompareExportFormat(),
-      this.modeStore.getCompareViewMode()
+      this.modeStore.getCompareViewMode(),
+      this.layoutStore.getCompareLayoutOrientation()
     );
   }
 
@@ -166,6 +182,12 @@ export class CompareView {
 
     if (isSetCompareModeMessage(message)) {
       await this.modeStore.setCompareViewMode(message.mode);
+      this.rerender();
+      return;
+    }
+
+    if (isSetCompareLayoutMessage(message)) {
+      await this.layoutStore.setCompareLayoutOrientation(message.orientation);
       this.rerender();
       return;
     }
@@ -374,7 +396,8 @@ export class CompareView {
 function renderCompareHtml(
   result: CompareResult,
   exportFormat: CompareExportFormat,
-  mode: CompareViewMode
+  mode: CompareViewMode,
+  orientation: CompareLayoutOrientation
 ): string {
   const graphData = mode === 'graph' ? buildGraphRenderData(result) : undefined;
   return renderTemplate('compareView.hbs', {
@@ -392,6 +415,8 @@ function renderCompareHtml(
     mode,
     isListMode: mode === 'list',
     isGraphMode: mode === 'graph',
+    orientation,
+    isHorizontalLayout: orientation === 'horizontal',
     graphSvg: graphData ? graphData.svg : '',
     graphRows: graphData ? graphData.rows : '',
     graphSvgHeight: graphData ? graphData.svgHeight : 0,
@@ -615,6 +640,17 @@ function isSetCompareModeMessage(value: unknown): value is SetCompareModeMessage
   const candidate = value as Record<string, unknown>;
   return (
     candidate.type === 'setCompareMode' && (candidate.mode === 'list' || candidate.mode === 'graph')
+  );
+}
+
+function isSetCompareLayoutMessage(value: unknown): value is SetCompareLayoutMessage {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    candidate.type === 'setCompareLayout' &&
+    (candidate.orientation === 'vertical' || candidate.orientation === 'horizontal')
   );
 }
 
