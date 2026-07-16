@@ -17,7 +17,7 @@ const tagContextMenuItems = [
   { command: GitCommand.TagCheckout, label: 'Checkout Tag' },
   { command: GitCommand.TagCheckoutNewBranch, label: 'Checkout New Branch' },
   { separator: true },
-  { command: GitCommand.TagCopyRevisionNumber, label: 'Copy Revision Number' },
+  { command: GitCommand.TagCopyRevisionNumber, label: 'Copy Commit Hash' },
   { command: GitCommand.TagShowRepositoryAtRevision, label: 'View Repository At Revision' },
   { command: GitCommand.TagCompareWithCurrent, label: 'Compare With Current' },
   { command: GitCommand.TagCreatePatch, label: 'Create Patch' }
