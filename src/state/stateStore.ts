@@ -26,8 +26,10 @@ export type { RefreshScope } from './refreshScheduler';
 const RECENT_COMPARE_PAIRS_KEY = GitCommand.RecentComparePairsKey;
 const LEGACY_RECENT_COMPARE_PAIRS_KEY = 'intelliGit.recentComparePairs';
 const COMPARE_VIEW_MODE_KEY = GitCommand.CompareViewModeKey;
+const COMPARE_LAYOUT_ORIENTATION_KEY = GitCommand.CompareLayoutOrientationKey;
 
 export type CompareViewMode = 'list' | 'graph';
+export type CompareLayoutOrientation = 'vertical' | 'horizontal';
 
 function branchesEqual(a: readonly BranchRef[], b: readonly BranchRef[]): boolean {
   if (a.length !== b.length) {
@@ -622,5 +624,16 @@ export class StateStore {
 
   async setCompareViewMode(mode: CompareViewMode): Promise<void> {
     await this.workspaceState.update(COMPARE_VIEW_MODE_KEY, mode);
+  }
+
+  getCompareLayoutOrientation(): CompareLayoutOrientation {
+    const defaultOrientation = getConfigValue<string>('compare.listLayout', 'vertical');
+    const fallback: CompareLayoutOrientation = defaultOrientation === 'horizontal' ? 'horizontal' : 'vertical';
+    const raw = this.workspaceState.get<string>(COMPARE_LAYOUT_ORIENTATION_KEY, fallback);
+    return raw === 'horizontal' ? 'horizontal' : 'vertical';
+  }
+
+  async setCompareLayoutOrientation(orientation: CompareLayoutOrientation): Promise<void> {
+    await this.workspaceState.update(COMPARE_LAYOUT_ORIENTATION_KEY, orientation);
   }
 }
