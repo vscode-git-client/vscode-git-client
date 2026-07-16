@@ -99,7 +99,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 - `Cmd/Ctrl+A` to select all visible commits in the active pane.
 - `Esc` to clear selection.
 - Merged Commit Details for a continuous selected range.
-- Fuzzy message, author, exclude-message regex, and from/to date filters.
+- Fuzzy message, author, exclude-message regex, and from/to date filters. The message field also matches a pasted commit SHA (full or short), same as Filter Graph.
 - Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible, while row selection and multi-select shortcuts stay available.
 - Optional filters to ignore merge commits.
 - Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.

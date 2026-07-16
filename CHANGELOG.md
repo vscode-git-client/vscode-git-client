@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - **Git Graph TreeView missing "Reset Current Branch to Commit"** — the native Git Graph TreeView commit context menu was missing `Reset Current Branch To Commit`, present only in the Filter Graph webview's context menu. Both now expose the action consistently.
 - **Text Compare command registration** — `vscodeGitClient.textCompare.open` is now registered before the repository-context check so the Git-agnostic command is available even when no workspace folder is open.
 - **Text Compare premature close** — the session no longer disposes immediately on open when VS Code is still settling tabs between `openTextDocument` and `vscode.diff`. A `sessionSettled` flag defers the standalone-tab balance check until after the diff editor stabilises.
+- **Compare Branches — Message filter missing commit ID matching** — the "Message" field only fuzzy-matched the commit subject, so pasting a commit SHA (full or short) found nothing, unlike Filter Graph's equivalent field. It now also matches against the commit hash, same as Filter Graph.
 
 ### Added
 - **Text Compare** — new generic, Git-agnostic comparison command. Open `Text Compare: Compare Files...` from the Command Palette, or right-click a file in the Explorer and choose `Text Compare`. Each side can be a workspace file, the current clipboard contents, or an empty buffer. Both sides open as editable temporary untitled files and are discarded when the comparison tab closes.
