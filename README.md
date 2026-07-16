@@ -101,6 +101,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 - Merged Commit Details for a continuous selected range.
 - Fuzzy message, author, exclude-message regex, and from/to date filters.
 - Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible, while row selection and multi-select shortcuts stay available.
+- List mode supports a Vertical/Horizontal pane layout toggle next to the List/Graph toggle. Vertical (default) stacks the two branches' commit tables; Horizontal places them side by side. Your choice persists for the workspace; `vscodeGitClient.compare.listLayout` sets the initial default.
 - Optional filters to ignore merge commits.
 - Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.
 - Export as two CSV files or one Excel workbook with two sheets.
@@ -233,6 +234,7 @@ Supported editor workflows include:
 | `vscodeGitClient.performance.refreshDebounceMs`        | `250`           | Debounce delay for VS Code Git repository-state auto-refresh events                                                                                                              |
 | `vscodeGitClient.performance.saveRefreshDebounceMs`    | `150`           | Debounce delay for save-triggered working-tree refresh events                                                                                                                    |
 | `vscodeGitClient.compare.exportFormat`                 | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets                                                                                  |
+| `vscodeGitClient.compare.listLayout`                   | `"vertical"`    | Initial Compare Branches List-mode pane layout (`vertical` stacked or `horizontal` side by side); only applies until the in-webview toggle is used, after which the choice persists per workspace |
 | `vscodeGitClient.compareWithRevision.defaultDirection` | `"forward"`     | Compare with Revision diff direction: `forward` opens working tree on the left and selected revision on the right; `reverse` swaps those sides                                   |
 | `vscodeGitClient.commitMessageTemplates`               | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders                                                                            |
 | `vscodeGitClient.commitMessageTicketPattern`           | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                                                                                                   |
