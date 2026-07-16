@@ -542,7 +542,7 @@ function renderCommitRows(commits: GraphCommit[], side: 'left' | 'right'): strin
       const rel = escapeHtml(date.label);
       const full = escapeHtml(date.title);
       const graph = escapeHtml(renderGraphGlyph(commit.graph));
-      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit id: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject">${escapeHtml(commit.subject)}</td><td class="col-author">${escapeHtml(commit.author)}</td><td class="col-date muted"><span title="${full}">${rel}</span></td></tr>`;
+      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit hash: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject">${escapeHtml(commit.subject)}</td><td class="col-author">${escapeHtml(commit.author)}</td><td class="col-date muted"><span title="${full}">${rel}</span></td></tr>`;
     })
     .join('');
 }

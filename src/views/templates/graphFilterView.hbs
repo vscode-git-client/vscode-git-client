@@ -499,7 +499,7 @@
       const full = escapeHtml(commit.dateTitle || '');
       const dateText = escapeHtml(commit.dateLabel || '');
       const graph = escapeHtml(renderGraphGlyph(commit.graph));
-      return '<tr class="commit-row" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit id: ' + sha + '">' + graph + '</td><td class="col-subject" title="' + subject + '">' + subject + '</td><td class="col-author" title="' + author + '">' + author + '</td><td class="col-date muted"><span title="' + full + '">' + dateText + '</span></td></tr>';
+      return '<tr class="commit-row" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit hash: ' + sha + '">' + graph + '</td><td class="col-subject" title="' + subject + '">' + subject + '</td><td class="col-author" title="' + author + '">' + author + '</td><td class="col-date muted"><span title="' + full + '">' + dateText + '</span></td></tr>';
     }
 
     function scoreMatch(candidate, keyword) {
