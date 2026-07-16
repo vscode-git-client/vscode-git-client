@@ -1,0 +1,47 @@
+{
+  "planPath": "docs/superpowers/plans/2026-07-16-compare-branches-layout-orientation.md",
+  "tasks": [
+    {
+      "id": 0,
+      "subject": "Task 1: Add CompareLayoutOrientationKey command constant and the listLayout setting",
+      "status": "completed",
+      "description": "**Goal:** Register the workspaceState key and the extension setting the rest of the feature depends on.\n\n**Files:**\n- Modify: src/config/commands.ts:156-158\n- Modify: package.json:1238-1246\n\n**Acceptance Criteria:**\n- [ ] GitCommand.CompareLayoutOrientationKey exists and equals 'vscodeGitClient.compareLayoutOrientation'.\n- [ ] package.json declares vscodeGitClient.compare.listLayout as a string enum (vertical/horizontal), default vertical.\n- [ ] npm run compile succeeds.\n\n**Verify:** npm run compile -> exits 0 with no errors.\n\n```json:metadata\n{\"files\": [\"src/config/commands.ts\", \"package.json\"], \"verifyCommand\": \"npm run compile\", \"acceptanceCriteria\": [\"GitCommand.CompareLayoutOrientationKey exists\", \"package.json has vscodeGitClient.compare.listLayout setting\", \"npm run compile succeeds\"]}\n```"
+    },
+    {
+      "id": 1,
+      "subject": "Task 2: Add CompareLayoutOrientation get/set to StateStore",
+      "status": "completed",
+      "blockedBy": [0],
+      "description": "**Goal:** StateStore can read the persisted layout orientation (falling back to the compare.listLayout setting when unset) and persist a new choice.\n\n**Files:**\n- Modify: src/state/stateStore.ts:26-30 and :618-626\n- Test: src/test/stateStoreCompareLayout.test.ts (new)\n\n**Acceptance Criteria:**\n- [ ] CompareLayoutOrientation type declared.\n- [ ] getCompareLayoutOrientation() returns workspaceState value when present, else falls back to getConfigValue('compare.listLayout', 'vertical').\n- [ ] setCompareLayoutOrientation(orientation) persists to workspaceState.\n- [ ] New test file passes.\n\n**Verify:** npm test -> all tests pass, including 3 new cases in stateStoreCompareLayout.test.ts.\n\n```json:metadata\n{\"files\": [\"src/state/stateStore.ts\", \"src/test/stateStoreCompareLayout.test.ts\"], \"verifyCommand\": \"npm test\", \"acceptanceCriteria\": [\"CompareLayoutOrientation type declared\", \"getCompareLayoutOrientation falls back to setting\", \"setCompareLayoutOrientation persists\", \"tests pass\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 3: Add CompareLayoutOrientation support to CompareView",
+      "status": "completed",
+      "blockedBy": [1],
+      "description": "**Goal:** CompareView accepts a layoutStore, threads the orientation into the rendered template data, and handles the new setCompareLayout message from the webview.\n\n**Files:**\n- Modify: src/views/compareView.ts (types, messages/union, constructor, render/rerender, handleMessage, renderCompareHtml, type guards)\n\n**Acceptance Criteria:**\n- [ ] CompareLayoutOrientation, CompareLayoutOrientationStore, SetCompareLayoutMessage, isSetCompareLayoutMessage declared/exported.\n- [ ] CompareView constructor takes a 5th parameter layoutStore: CompareLayoutOrientationStore.\n- [ ] renderCompareHtml template data includes orientation and isHorizontalLayout.\n- [ ] handleMessage persists setCompareLayout messages via layoutStore.setCompareLayoutOrientation and rerenders.\n\n**Verify:** npx tsc --noEmit -p . -> only expected error is the CompareView constructor call in editorOrchestrator.ts (fixed in Task 4).\n\n```json:metadata\n{\"files\": [\"src/views/compareView.ts\"], \"verifyCommand\": \"npx tsc --noEmit -p .\", \"acceptanceCriteria\": [\"CompareLayoutOrientationStore interface added\", \"constructor takes layoutStore\", \"renderCompareHtml includes orientation/isHorizontalLayout\", \"handleMessage handles setCompareLayout\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 4: Wire layoutStore into EditorOrchestrator.ensureCompareView()",
+      "status": "completed",
+      "blockedBy": [2],
+      "description": "**Goal:** Resolve the compile error from Task 3 by supplying the new constructor argument backed by StateStore.\n\n**Files:**\n- Modify: src/editor/editorOrchestrator.ts:331-359\n\n**Acceptance Criteria:**\n- [ ] ensureCompareView() passes a layoutStore object literal delegating to this.state.getCompareLayoutOrientation/setCompareLayoutOrientation.\n- [ ] npx tsc --noEmit -p . reports zero errors.\n\n**Verify:** npx tsc --noEmit -p . -> exits 0, no errors.\n\n```json:metadata\n{\"files\": [\"src/editor/editorOrchestrator.ts\"], \"verifyCommand\": \"npx tsc --noEmit -p .\", \"acceptanceCriteria\": [\"ensureCompareView passes layoutStore\", \"tsc reports zero errors\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 5: Add the Vertical/Horizontal toggle and CSS/JS to compareView.hbs",
+      "status": "completed",
+      "blockedBy": [3],
+      "description": "**Goal:** Render a second .mode-toggle button group (List mode only) and make the .grid layout respond to isHorizontalLayout.\n\n**Files:**\n- Modify: src/views/templates/compareView.hbs (CSS, HTML, grid class, JS)\n\n**Acceptance Criteria:**\n- [ ] .grid.horizontal { flex-direction: row; } CSS rule added.\n- [ ] grid div applies horizontal class when isHorizontalLayout is true.\n- [ ] Second .mode-toggle group (layout-toggle-vertical / layout-toggle-horizontal) renders only when isListMode, correct active/aria-selected state.\n- [ ] Clicking a layout button posts { type: 'setCompareLayout', orientation } only when different from current orientation.\n\n**Verify:** npm run compile -> exits 0.\n\n```json:metadata\n{\"files\": [\"src/views/templates/compareView.hbs\"], \"verifyCommand\": \"npm run compile\", \"acceptanceCriteria\": [\".grid.horizontal CSS added\", \"toggle only visible in List mode\", \"JS posts setCompareLayout message\"]}\n```"
+    },
+    {
+      "id": 5,
+      "subject": "Task 6: Manual smoke test, docs updates, and final verification",
+      "status": "completed",
+      "blockedBy": [4],
+      "description": "**Goal:** Confirm the feature works end-to-end in the Extension Development Host, then update README.md and CHANGELOG.md per project convention.\n\n**Files:**\n- Modify: README.md (feature bullets, settings table)\n- Modify: CHANGELOG.md (Unreleased -> Added)\n\n**Acceptance Criteria:**\n- [ ] Manually verified in Extension Development Host: toggle appears next to List/Graph only in List mode, switching persists across panel close/reopen, setting changes initial orientation for a fresh workspace.\n- [ ] README.md documents the new toggle and setting.\n- [ ] CHANGELOG.md has a new Added bullet.\n- [ ] npm test passes.\n- [ ] GitNexus detect_changes() run and reviewed before considering feature complete.\n\n**Verify:** npm test -> all tests pass. Manual verification steps in plan.\n\n```json:metadata\n{\"files\": [\"README.md\", \"CHANGELOG.md\"], \"verifyCommand\": \"npm test\", \"acceptanceCriteria\": [\"manual smoke test passed\", \"README updated\", \"CHANGELOG updated\", \"npm test passes\", \"detect_changes reviewed\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-07-16T00:00:00Z"
+}
