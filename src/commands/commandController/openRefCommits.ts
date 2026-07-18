@@ -22,8 +22,15 @@ export async function openRefCommits(this: CommandController, id: string, title:
       );
   
       view.setLoading(true);
+      // Match Filter Graph's cached-state-first loading: refreshing refs can
+      // include slow remote checks, but the selected ref is already known and
+      // must not wait before its history query starts.
+      void this.state.refreshBranches().catch((error) => {
+        this.logger.info(
+          `openRefCommits: refreshBranches failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
       try {
-        await this.state.refreshBranches();
         const commits = await this.git.getGraph(maxCommits, 0, { branch: ref });
         view.update({
           id,

@@ -51,7 +51,7 @@ Common actions are available from right-click menus and the Branch Action Hub. L
 - Rebase the current branch onto another branch.
 - Reset the current branch to a selected commit with `soft`, `mixed`, or `hard` confirmation.
 - Compare a branch with the current branch.
-- Open branch or tag commits in `Git Graph`.
+- Open branch or tag commits in `Git Graph`; the history query starts immediately from the selected ref while any background branch refresh continues separately.
 - Add a remote from the Remote section plus button, change/set remote URLs with immediate update feedback, or delete a remote from its context menu after confirmation.
 
 Tags appear with branches and support checkout, checkout-new-branch, copy revision, repository-at-revision, compare-with-current, patch preview, and graph navigation actions. The branch/tag search panel opens the appropriate branch or tag action menu when you click a result, uses tag-specific actions for tag rows, and can refresh its branch/tag list from the input-row button or webview context menu.
