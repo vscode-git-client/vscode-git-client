@@ -23,6 +23,9 @@
       --filter-input-font-family: var(--vscode-font-family);
     }
     {{> partials/styles/filterFieldAtoms}}
+    .filter-input.invalid {
+      border-color: var(--vscode-inputValidation-errorBorder, #d93025);
+    }
     {{> partials/styles/fieldClear}}
     {{> partials/styles/autocomplete listClass="autocomplete-list" optionClass="autocomplete-option" shadowAlpha="0.25"}}
     .filter-tags-row {
@@ -197,6 +200,17 @@
         label="Until"
         clearLabel="until"
       }}
+      <div style="grid-column: 1 / span 3">
+        {{> partials/molecules/textFilterField
+          id="exclude-message"
+          name="exclude-message"
+          label="Exclude message (regex)"
+          placeholder="Merge pull request|WIP"
+          clearLabel="Exclude message regex"
+          autocompleteAttr="off"
+          spellcheck="false"
+        }}
+      </div>
     </section>
 
     <section class="commit-preview">
@@ -239,6 +253,7 @@
     const filterTagsRow = document.getElementById('filter-tags-row');
     const sinceInput = document.getElementById('since');
     const untilInput = document.getElementById('until');
+    const excludeMessageInput = document.getElementById('exclude-message');
     const previewHeader = document.getElementById('preview-header');
     const previewBody = document.getElementById('preview-body');
     const cancelButton = document.getElementById('cancel');
@@ -484,6 +499,28 @@
       return Number.isFinite(timestamp) ? timestamp : undefined;
     }
 
+    function setInvalidRegexState(isInvalid) {
+      if (!excludeMessageInput) { return; }
+      excludeMessageInput.classList.toggle('invalid', isInvalid);
+      excludeMessageInput.title = isInvalid ? 'Invalid regex' : '';
+    }
+
+    function parseExcludeMessageRegex() {
+      const source = (excludeMessageInput && excludeMessageInput.value ? excludeMessageInput.value : '').trim();
+      if (!source) {
+        setInvalidRegexState(false);
+        return undefined;
+      }
+      try {
+        const regex = new RegExp(source, 'i');
+        setInvalidRegexState(false);
+        return regex;
+      } catch (_error) {
+        setInvalidRegexState(true);
+        return undefined;
+      }
+    }
+
     function renderGraphGlyph(graph) {
       if (graph === '<') { return '◀'; }
       if (graph === '>') { return '▶'; }
@@ -550,6 +587,7 @@
       renderTags();
       sinceInput.value = '';
       untilInput.value = '';
+      if (excludeMessageInput) { excludeMessageInput.value = ''; setInvalidRegexState(false); }
       branchAutocomplete.close();
       authorAutocomplete.close();
       inputRevision += 1;
@@ -566,7 +604,7 @@
       renderPreview();
     }
 
-    function buildMatchPredicate(f) {
+    function buildMatchPredicate(f, excludeRegex) {
       const message = (f.message || '').trim().toLowerCase();
       const authorValues = Array.isArray(f.author) ? f.author : (f.author ? [f.author] : []);
       const authorFilters = authorValues.map(function (a) { return String(a || '').trim().toLowerCase(); }).filter(Boolean);
@@ -581,12 +619,13 @@
         const authorOk = authorFilters.length === 0 || authorFilters.some(function (a) { return authorLower.includes(a); });
         const sinceOk = since === undefined || (Number.isFinite(commitDate) && commitDate >= since);
         const untilOk = until === undefined || (Number.isFinite(commitDate) && commitDate <= until);
-        return messageOk && authorOk && sinceOk && untilOk;
+        const excludeOk = !excludeRegex || !excludeRegex.test(commit.subject || '');
+        return messageOk && authorOk && sinceOk && untilOk && excludeOk;
       };
     }
 
     function getFilteredCommits() {
-      return state.commits.filter(buildMatchPredicate(collect()));
+      return state.commits.filter(buildMatchPredicate(collect(), parseExcludeMessageRegex()));
     }
 
     function updatePreviewHeader() {
@@ -736,7 +775,7 @@
 
       detachVirtScrollListener();
 
-      const matchingRows = newCommits.filter(buildMatchPredicate(collect())).map(buildRow);
+      const matchingRows = newCommits.filter(buildMatchPredicate(collect(), parseExcludeMessageRegex())).map(buildRow);
 
       if (matchingRows.length > 0 && previewBody.querySelector('td[colspan]')) {
         previewBody.innerHTML = '';
@@ -1041,6 +1080,11 @@
           renderTags();
           authorAutocomplete.close();
         }
+        if (targetId === 'exclude-message') {
+          setInvalidRegexState(false);
+          noteFilterTextChanged();
+          return;
+        }
         noteFilterInputChanged();
       });
     });
@@ -1048,6 +1092,9 @@
       input.addEventListener('input', noteFilterInputChanged);
       input.addEventListener('change', noteFilterInputChanged);
     });
+    if (excludeMessageInput) {
+      excludeMessageInput.addEventListener('input', noteFilterTextChanged);
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
