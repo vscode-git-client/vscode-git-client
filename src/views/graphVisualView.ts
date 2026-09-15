@@ -43,7 +43,7 @@ export class GraphVisualView {
             break;
           case 'action':
           case 'commitAction':
-            await handleCommitAction({
+            const shouldRefresh = await handleCommitAction({
               type: 'commitAction',
               action:
                 message.action === 'copyHash'
@@ -60,6 +60,9 @@ export class GraphVisualView {
               sha: message.sha,
               subject: message.subject
             });
+            if (shouldRefresh) {
+              await this.refresh();
+            }
             break;
         }
       })

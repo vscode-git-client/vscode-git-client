@@ -10,6 +10,19 @@ import {
 import { renderTemplate } from './templateRenderer';
 import { BranchRef, TagRef } from '../types';
 
+
+// Commands that modify repository history or state
+const historyModifyingCommands = new Set<string>([
+  GitCommand.BranchCheckout,
+  GitCommand.BranchMergeIntoCurrent,
+  GitCommand.BranchRebaseOnto,
+  GitCommand.TagCheckout
+]);
+
+function isHistoryModifyingCommand(command: string): boolean {
+  return historyModifyingCommands.has(command);
+}
+
 export interface BranchSearchHandlers {
   checkout(name: string): Promise<void>;
   checkoutTag(name: string): Promise<void>;
@@ -157,11 +170,17 @@ export class BranchSearchView {
       case 'branchCommand':
         if (isBranchContextMenuCommand(message.command)) {
           await this.handlers.runCommand(message.command, message.name);
+          if (isHistoryModifyingCommand(message.command)) {
+            await this.refresh();
+          }
         }
         return;
       case 'tagCommand':
         if (isTagContextMenuCommand(message.command)) {
           await this.handlers.runCommand(message.command, message.name);
+          if (isHistoryModifyingCommand(message.command)) {
+            await this.refresh();
+          }
         }
         return;
       case 'close':
