@@ -334,6 +334,7 @@
   {{/if}}
 
   {{> partials/compareContextMenu}}
+  {{> partials/comparePaneContextMenu}}
 
   <script>
     const vscode = acquireVsCodeApi();
@@ -360,6 +361,66 @@
     let authorActiveIndex = -1;
 
     {{> partials/scripts/commitContextMenu}}
+
+    const paneContextMenu = (() => {
+      const menu = document.getElementById('pane-context-menu');
+      if (!menu) {
+        return { close: () => {}, contains: () => false, isVisible: () => false, open: () => {} };
+      }
+
+      const close = () => {
+        menu.classList.remove('visible');
+      };
+
+      const contains = (target) => menu.contains(target);
+      const isVisible = () => menu.classList.contains('visible');
+
+      const open = (x, y) => {
+        menu.style.left = '0px';
+        menu.style.top = '0px';
+        menu.classList.add('visible');
+
+        const menuRect = menu.getBoundingClientRect();
+        const viewport = window.visualViewport;
+        const viewportLeft = viewport ? viewport.offsetLeft : 0;
+        const viewportTop = viewport ? viewport.offsetTop : 0;
+        const viewportWidth = viewport ? viewport.width : window.innerWidth;
+        const viewportHeight = viewport ? viewport.height : window.innerHeight;
+
+        const minX = viewportLeft + 8;
+        const minY = viewportTop + 8;
+        const maxX = Math.max(minX, viewportLeft + viewportWidth - menuRect.width - 8);
+        const maxY = Math.max(minY, viewportTop + viewportHeight - menuRect.height - 8);
+        const targetX = Math.max(minX, Math.min(x, maxX));
+        const targetY = Math.max(minY, Math.min(y, maxY));
+
+        menu.style.left = targetX + 'px';
+        menu.style.top = targetY + 'px';
+      };
+
+      menu.addEventListener('click', (event) => {
+        const target = event.target && event.target.closest ? event.target.closest('.menu-item[data-action]') : null;
+        if (!target) {
+          return;
+        }
+
+        const action = target.getAttribute('data-action');
+        if (action === 'refresh') {
+          const refreshBtn = document.getElementById('btn-refresh');
+          if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('loading');
+          }
+          vscode.postMessage({ type: 'refresh' });
+        }
+        close();
+      });
+
+      window.addEventListener('blur', close);
+      window.addEventListener('scroll', close, true);
+
+      return { close, contains, isVisible, open };
+    })();
 
     let selectionAnchorSha = null;
     let activePane = 'left';
@@ -526,6 +587,10 @@
     };
 
     document.addEventListener('click', (event) => {
+      if (paneContextMenu.isVisible()) {
+        if (!paneContextMenu.contains(event.target)) { paneContextMenu.close(); }
+        return;
+      }
       if (commitContextMenu.isVisible()) {
         if (!commitContextMenu.contains(event.target)) { commitContextMenu.close(); }
         return;
@@ -557,6 +622,8 @@
       const row = event.target && event.target.closest ? event.target.closest('.commit-row') : null;
       if (!row) {
         commitContextMenu.close();
+        event.preventDefault();
+        paneContextMenu.open(event.clientX, event.clientY);
         return;
       }
       updateSelection(row, event, { forContextMenu: true });
@@ -581,6 +648,7 @@
       if (event.key === 'Escape') {
         event.preventDefault();
         commitContextMenu.close();
+        paneContextMenu.close();
         clearCommitSelection();
         selectionAnchorSha = null;
       }
