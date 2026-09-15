@@ -39,6 +39,7 @@ export class GraphFilterView {
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
   private applyRequestId = 0;
+  private currentFilters: CommitFilters = {};
 
   private constructor(
     private readonly handlers: GraphFilterHandlers,
@@ -143,7 +144,14 @@ export class GraphFilterView {
           return;
         }
       }
-      await handleCommitAction(message);
+      const shouldRefresh = await handleCommitAction(message);
+      if (shouldRefresh) {
+        const requestId = ++this.applyRequestId;
+        const snapshot = await this.handlers.apply(this.currentFilters);
+        if (requestId === this.applyRequestId) {
+          this.postSnapshot(snapshot);
+        }
+      }
       return;
     }
     switch (message.type) {
@@ -167,7 +175,9 @@ export class GraphFilterView {
         const requestId = ++this.applyRequestId;
         const inputRevision =
           typeof message.inputRevision === 'number' ? message.inputRevision : undefined;
-        const snapshot = await this.handlers.apply(sanitizeCommitFilters(message.filters));
+        const sanitizedFilters = sanitizeCommitFilters(message.filters);
+        this.currentFilters = sanitizedFilters;
+        const snapshot = await this.handlers.apply(sanitizedFilters);
         if (requestId !== this.applyRequestId) {
           return;
         }
@@ -176,6 +186,7 @@ export class GraphFilterView {
       }
       case 'clear':
         this.applyRequestId++;
+        this.currentFilters = {};
         this.postSnapshot(await this.handlers.clear());
         return;
       case 'close':

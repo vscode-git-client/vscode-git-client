@@ -17,7 +17,17 @@ export async function openRefCommits(this: CommandController, id: string, title:
           openCommitDetails: async (sha, subject) =>
             this.openCommitDetails(sha, subject, { allowToggle: true }),
           getCommitFiles: async (sha) => this.git.getFilesInCommit(sha),
-          openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
+          openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
+          refresh: async () => {
+            const commits = await this.git.getGraph(maxCommits, 0, { branch: ref });
+            return {
+              id,
+              title,
+              hint: `Showing up to ${maxCommits} commits reachable from ${ref}. Filters update the table locally.`,
+              branches: this.state.branches,
+              commits
+            };
+          }
         }
       );
   

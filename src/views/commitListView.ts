@@ -22,6 +22,7 @@ export interface CommitListHandlers {
   openCommitDetails(sha: string, subject: string): Promise<void>;
   getCommitFiles(sha: string): Promise<string[]>;
   openFileDiff(sha: string, filePath: string): Promise<void>;
+  refresh?(): Promise<CommitListOptions>;
 }
 
 type IncomingMessage =
@@ -131,7 +132,11 @@ export class CommitListView {
       return;
     }
     if (isCommitActionMessage(message)) {
-      await handleCommitAction(message);
+      const shouldRefresh = await handleCommitAction(message);
+      if (shouldRefresh && this.handlers.refresh) {
+        const updatedOptions = await this.handlers.refresh();
+        this.update(updatedOptions);
+      }
       return;
     }
     switch (message.type) {

@@ -23,7 +23,20 @@ export async function openDirectoryTimeline(this: CommandController, repoRelativ
           openCommitDetails: async (sha, subject) =>
             this.openCommitDetails(sha, subject, { allowToggle: true }),
           getCommitFiles: async (sha) => (await this.git.getFilesInCommit(sha)).filter(isInDirectory),
-          openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath)
+          openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
+          refresh: async () => {
+            const commits: import('../../types').GraphCommit[] = [];
+            await this.git.directoryHistory(repoRelativePath, (batch) => {
+              commits.push(...batch);
+            });
+            return {
+              id,
+              title,
+              hint,
+              branches: this.state.branches,
+              commits
+            };
+          }
         }
       );
   

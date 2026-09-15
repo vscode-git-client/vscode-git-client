@@ -227,7 +227,16 @@ export class CompareView {
       return;
     }
 
-    await handleCommitAction(message);
+    const shouldRefresh = await handleCommitAction(message);
+    if (shouldRefresh && this.currentResult) {
+      try {
+        await this.onRefresh(this.currentResult.leftRef, this.currentResult.rightRef);
+      } finally {
+        void this.panel.webview.postMessage({
+          type: 'refreshComplete'
+        } satisfies RefreshCompleteMessage);
+      }
+    }
   }
 
   private resolveContinuousSelection(
