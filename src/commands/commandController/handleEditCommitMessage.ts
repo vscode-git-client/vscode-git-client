@@ -58,7 +58,9 @@ export async function handleEditCommitMessage(this: CommandController, arg?: unk
   try {
     const escapedMessageFile = messageFile.replace(/'/g, "'\\''");
     const escapedSha = sha.replace(/'/g, "'\\''");
-    const sequenceEditor = `sh -c 'TODO_FILE="$1"; sed -i.bak -e "s/^pick ${escapedSha}/reword ${escapedSha}/" "$TODO_FILE"; rm -f "$TODO_FILE.bak"' --`;
+    // The rebase todo list abbreviates commit SHAs, so matching the full SHA
+    // directly leaves the command as `pick` and makes the rebase a no-op.
+    const sequenceEditor = `sh -c 'TODO_FILE="$1"; TARGET_SHA="${escapedSha}"; TODO_TMP="$TODO_FILE.tmp"; while IFS= read -r LINE || [ -n "$LINE" ]; do case "$LINE" in "pick "*) TODO_SHA="\${LINE#pick }"; TODO_SHA="\${TODO_SHA%% *}"; case "$TARGET_SHA" in "$TODO_SHA"*) LINE="reword \${LINE#pick }";; esac;; esac; printf "%s\\n" "$LINE"; done < "$TODO_FILE" > "$TODO_TMP" && mv "$TODO_TMP" "$TODO_FILE"' --`;
     const editor = `sh -c 'cat '"'"'${escapedMessageFile}'"'"' > "$1"' --`;
 
     await this.startRebaseOperation(async () => {
