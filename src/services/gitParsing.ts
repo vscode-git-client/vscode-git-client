@@ -73,19 +73,70 @@ export function parseNameStatusZ(stdout: string): NameStatusEntry[] {
 }
 
 /**
- * Converts a remote URL to SSH format for the given target host.
- * Returns null if the URL is already SSH for that host, or cannot be parsed.
+ * Converts a remote URL to SSH format. When targetHost is given, the URL's
+ * path is rewritten onto that host. When omitted, the host is taken from the
+ * URL itself (pure scheme conversion).
+ * Returns null if the URL is already SSH (for that host), or cannot be parsed.
  */
-export function convertToSshUrl(currentUrl: string, targetHost: string): string | null {
-  if (currentUrl.startsWith(`git@${targetHost}:`)) {
+export function convertToSshUrl(currentUrl: string, targetHost?: string): string | null {
+  const trimmed = currentUrl.trim();
+  if (targetHost) {
+    if (trimmed.startsWith(`git@${targetHost}:`)) {
+      return null;
+    }
+    const match = trimmed.match(/^https?:\/\/[^/]+\/(.+)$/) ?? trimmed.match(/^git@[^:]+:(.+)$/);
+    if (!match) {
+      return null;
+    }
+    return `git@${targetHost}:${match[1]}`;
+  }
+  // Host inferred from the URL — only meaningful for scheme conversion.
+  const scp = trimmed.match(/^([^@/]+)@([^:]+):(.+)$/);
+  if (scp) {
+    return null; // already scp-style SSH
+  }
+  const sshUrl = trimmed.match(/^ssh:\/\/(?:([^@/]+)@)?([^/:]+)(?::\d+)?\/(.+)$/);
+  if (sshUrl) {
+    return null; // already ssh://
+  }
+  const https = trimmed.match(/^https?:\/\/(?:[^@/]+@)?([^/]+)\/(.+)$/);
+  if (!https) {
     return null;
   }
-  const match =
-    currentUrl.match(/^https?:\/\/[^/]+\/(.+)$/) ?? currentUrl.match(/^git@[^:]+:(.+)$/);
-  if (!match) {
+  return `git@${https[1]}:${https[2]}`;
+}
+
+/**
+ * Converts a remote URL to HTTPS format. Accepts scp-style (`git@host:path`)
+ * and `ssh://git@host[:port]/path` forms; the port is dropped (meaningless
+ * for HTTPS). Returns null if the URL is already HTTPS or cannot be parsed.
+ */
+export function convertToHttpsUrl(currentUrl: string): string | null {
+  const trimmed = currentUrl.trim();
+  const scp = trimmed.match(/^(?:[^@/]+)@([^:]+):(.+)$/);
+  if (scp && !/^https?:\/\//.test(trimmed)) {
+    return `https://${scp[1]}/${scp[2]}`;
+  }
+  const sshUrl = trimmed.match(/^ssh:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/);
+  if (sshUrl) {
+    return `https://${sshUrl[1]}/${sshUrl[2]}`;
+  }
+  if (/^https?:\/\//.test(trimmed)) {
     return null;
   }
-  return `git@${targetHost}:${match[1]}`;
+  return null;
+}
+
+/** Classifies a remote URL by transport scheme, for UI hints. */
+export function detectUrlScheme(url: string): 'ssh' | 'https' | 'other' {
+  const trimmed = url.trim();
+  if (/^https?:\/\//.test(trimmed)) {
+    return 'https';
+  }
+  if (/^ssh:\/\//.test(trimmed) || /^[^@/\s]+@[^:\s]+:(?!\/\/)/.test(trimmed)) {
+    return 'ssh';
+  }
+  return 'other';
 }
 
 export function parsePorcelainStatusZ(stdout: string): PorcelainStatusEntry[] {

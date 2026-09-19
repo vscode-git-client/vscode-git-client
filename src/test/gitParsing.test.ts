@@ -1,7 +1,9 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
 import {
+  convertToHttpsUrl,
   convertToSshUrl,
+  detectUrlScheme,
   formatComparisonSummary,
   parsePorcelainStatusZ,
   parseRevListComparison,
@@ -245,5 +247,83 @@ describe('convertToSshUrl', () => {
       convertToSshUrl('git@gitlab.com:org/repo.git', 'github.com'),
       'git@github.com:org/repo.git'
     );
+  });
+});
+
+describe('convertToSshUrl (host inferred from URL)', () => {
+  it('converts HTTPS to SSH keeping the host', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://github.com/org/repo.git'),
+      'git@github.com:org/repo.git'
+    );
+  });
+
+  it('returns null for scp-style SSH already in place', () => {
+    assert.strictEqual(convertToSshUrl('git@github.com:org/repo.git'), null);
+  });
+
+  it('returns null for ssh:// URLs', () => {
+    assert.strictEqual(convertToSshUrl('ssh://git@github.com/org/repo.git'), null);
+  });
+
+  it('strips credentials before inferring the host', () => {
+    assert.strictEqual(
+      convertToSshUrl('https://user@github.com/org/repo.git'),
+      'git@github.com:org/repo.git'
+    );
+  });
+
+  it('returns null for unparseable URLs', () => {
+    assert.strictEqual(convertToSshUrl('not-a-url'), null);
+  });
+});
+
+describe('convertToHttpsUrl', () => {
+  it('converts scp-style git@host:path', () => {
+    assert.strictEqual(
+      convertToHttpsUrl('git@github.com:org/repo.git'),
+      'https://github.com/org/repo.git'
+    );
+  });
+
+  it('converts ssh:// URLs and drops the port', () => {
+    assert.strictEqual(
+      convertToHttpsUrl('ssh://git@github.com:22/org/repo.git'),
+      'https://github.com/org/repo.git'
+    );
+  });
+
+  it('converts ssh:// without a port', () => {
+    assert.strictEqual(
+      convertToHttpsUrl('ssh://git@gitlab.com/group/project.git'),
+      'https://gitlab.com/group/project.git'
+    );
+  });
+
+  it('returns null when already HTTPS', () => {
+    assert.strictEqual(convertToHttpsUrl('https://github.com/org/repo.git'), null);
+    assert.strictEqual(convertToHttpsUrl('http://github.com/org/repo.git'), null);
+  });
+
+  it('returns null for unparseable URLs', () => {
+    assert.strictEqual(convertToHttpsUrl('ftp://example.com/repo'), null);
+    assert.strictEqual(convertToHttpsUrl('garbage'), null);
+  });
+});
+
+describe('detectUrlScheme', () => {
+  it('classifies scp-style and ssh:// as ssh', () => {
+    assert.strictEqual(detectUrlScheme('git@github.com:org/repo.git'), 'ssh');
+    assert.strictEqual(detectUrlScheme('ssh://git@github.com/org/repo.git'), 'ssh');
+  });
+
+  it('classifies http(s) as https', () => {
+    assert.strictEqual(detectUrlScheme('https://github.com/org/repo.git'), 'https');
+    assert.strictEqual(detectUrlScheme('http://github.com/org/repo.git'), 'https');
+  });
+
+  it('classifies anything else as other', () => {
+    assert.strictEqual(detectUrlScheme('ftp://example.com/repo'), 'other');
+    assert.strictEqual(detectUrlScheme(''), 'other');
   });
 });

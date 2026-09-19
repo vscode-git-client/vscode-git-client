@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **vscode-git-client**
+This project is indexed by GitNexus as **vscode-git-client** (4803 symbols, 10360 relationships, 258 execution flows).
 
 > Index stale? Run `node .gitnexus/run.cjs analyze --index-only` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? Bootstrap with `npx`, `bunx`, or `pnpm dlx` — e.g. `bunx gitnexus@latest analyze` (npm 11 npx crash; #1939).
 
@@ -23,22 +23,22 @@ This project is indexed by GitNexus as **vscode-git-client**
 
 ## Resources
 
-| Resource                                           | Use for                                  |
-|----------------------------------------------------|------------------------------------------|
-| `gitnexus://repo/vscode-git-client/context`        | Codebase overview, check index freshness |
-| `gitnexus://repo/vscode-git-client/clusters`       | All functional areas                     |
-| `gitnexus://repo/vscode-git-client/processes`      | All execution flows                      |
-| `gitnexus://repo/vscode-git-client/process/{name}` | Step-by-step execution trace             |
+| Resource | Use for |
+| --- | --- |
+| `gitnexus://repo/vscode-git-client/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/vscode-git-client/clusters` | All functional areas |
+| `gitnexus://repo/vscode-git-client/processes` | All execution flows |
+| `gitnexus://repo/vscode-git-client/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
-| Task                                         | Read this skill file                               |
-|----------------------------------------------|----------------------------------------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md`       |
-| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus-debugging/SKILL.md`       |
-| Rename / extract / split / refactor          | `.claude/skills/gitnexus-refactoring/SKILL.md`     |
-| Tools, resources, schema reference           | `.claude/skills/gitnexus-guide/SKILL.md`           |
-| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus-cli/SKILL.md`             |
+| Task | Read this skill file |
+| --- | --- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->

@@ -71,6 +71,7 @@ import { getPatchForCommitRange } from './getPatchForCommitRange';
 import { getPrunableWorktrees } from './getPrunableWorktrees';
 import { getRemoteBranches } from './getRemoteBranches';
 import { getRemoteFetchUrls } from './getRemoteFetchUrls';
+import { getConfig, setConfig } from './gitConfig';
 import { getRecoveryReflogEntries } from './getRecoveryReflogEntries';
 import { getRecoverySnapshotFiles } from './getRecoverySnapshotFiles';
 import { getStagedFiles } from './getStagedFiles';
@@ -333,6 +334,10 @@ export class GitService {
   public readonly setRemoteUrl = setRemoteUrl;
 
   public readonly addRemote = addRemote;
+
+  public readonly getConfig = getConfig;
+
+  public readonly setConfig = setConfig;
 
   public readonly deleteRemote = deleteRemote;
 

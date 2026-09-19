@@ -24,6 +24,8 @@ export enum GitCommand {
   RemoteDelete = 'vscodeGitClient.remote.delete',
   RemoteFetch = 'vscodeGitClient.remote.fetch',
   RemoteFetchAll = 'vscodeGitClient.remote.fetchAll',
+  RemoteConvertUrl = 'vscodeGitClient.remote.convertUrl',
+  RepoConfigOpen = 'vscodeGitClient.repoConfig.open',
   BranchRename = 'vscodeGitClient.branch.rename',
   BranchDelete = 'vscodeGitClient.branch.delete',
   BranchTrack = 'vscodeGitClient.branch.track',

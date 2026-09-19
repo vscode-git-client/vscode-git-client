@@ -63,20 +63,12 @@ export async function openQuickActions(this: CommandController): Promise<void> {
       run: async () => vscode.commands.executeCommand(GitCommand.GitPullWithPreview)
     },
     {
-      label: 'Force SSH pull (GitHub)',
-      run: async () => vscode.commands.executeCommand(GitCommand.GitSshPullGithub)
+      label: 'Convert remote URL (HTTPS / SSH)',
+      run: async () => vscode.commands.executeCommand(GitCommand.RemoteConvertUrl)
     },
     {
-      label: 'Force SSH pull (GitLab)',
-      run: async () => vscode.commands.executeCommand(GitCommand.GitSshPullGitlab)
-    },
-    {
-      label: 'Force SSH pull (Bitbucket)',
-      run: async () => vscode.commands.executeCommand(GitCommand.GitSshPullBitbucket)
-    },
-    {
-      label: 'Force SSH pull (Custom server)',
-      run: async () => vscode.commands.executeCommand(GitCommand.GitSshPullCustom)
+      label: 'Repository settings',
+      run: async () => vscode.commands.executeCommand(GitCommand.RepoConfigOpen)
     },
     {
       label: 'Stage selected hunks',

@@ -116,9 +116,14 @@ import { handleRecoveryToggleAllRefs } from './handleRecoveryToggleAllRefs';
 import { handleRefresh } from './handleRefresh';
 import { handleRepositorySelect } from './handleRepositorySelect';
 import { handleRemoteAdd } from './handleRemoteAdd';
+import { handleRemoteConvertUrl } from './handleRemoteConvertUrl';
 import { handleRemoteDelete } from './handleRemoteDelete';
 import { handleRemoteFetch } from './handleRemoteFetch';
 import { handleRemoteFetchAll } from './handleRemoteFetchAll';
+import { handleRepoConfigCredentialHelper } from './handleRepoConfigCredentialHelper';
+import { handleRepoConfigOpen } from './handleRepoConfigOpen';
+import { handleRepoConfigSslVerify } from './handleRepoConfigSslVerify';
+import { handleRepoConfigUser } from './handleRepoConfigUser';
 import { handleResetCurrentToCommit } from './handleResetCurrentToCommit';
 import { handleRevertSelectedChanges } from './handleRevertSelectedChanges';
 import { handleScmAmendFromInput } from './handleScmAmendFromInput';
@@ -607,6 +612,16 @@ export class CommandController {
   public readonly handleRemoteFetchAll = handleRemoteFetchAll;
 
   public readonly handleRemoteAdd = handleRemoteAdd;
+
+  public readonly handleRemoteConvertUrl = handleRemoteConvertUrl;
+
+  public readonly handleRepoConfigOpen = handleRepoConfigOpen;
+
+  public readonly handleRepoConfigUser = handleRepoConfigUser;
+
+  public readonly handleRepoConfigCredentialHelper = handleRepoConfigCredentialHelper;
+
+  public readonly handleRepoConfigSslVerify = handleRepoConfigSslVerify;
 
   public readonly handleTagCreateCurrent = handleTagCreateCurrent;
 

@@ -1,38 +1,50 @@
 import type { CommandController } from '.';
-import { GitCommand } from '../../config/commands';
 import * as vscode from 'vscode';
+import { pickRevisionToCompare } from '../../views/revisionPicker';
 
 export async function openCompareWorkflow(this: CommandController): Promise<void> {
-  const left =
-    (
-      await vscode.window.showInputBox({
-        title: 'Compare branches',
-        placeHolder: 'Left ref (default: current branch)'
-      })
-    )?.trim() || (await this.git.getCurrentBranch());
+  const currentBranch = await this.git.getCurrentBranch();
 
-  const right =
-    (
-      await vscode.window.showInputBox({
-        title: `Compare against ${left}`,
-        placeHolder: 'Right ref'
-      })
-    )?.trim() ?? '';
-
-  if (!right) {
+  const left = await vscode.window.showQuickPick(
+    [
+      {
+        label: currentBranch,
+        description: 'current branch',
+        index: 0
+      },
+      { label: 'Choose another revision…', index: 1 }
+    ],
+    { title: 'Compare branches — left side', placeHolder: 'Default: current branch' }
+  );
+  if (!left) {
     return;
   }
 
-  await this.editor.openBranchCompare(left, right);
-
-  const followUp = await vscode.window.showQuickPick(
-    ['Open changed file diff', 'Cherry-pick commit range', 'No more actions'],
-    { title: 'Branch comparison action' }
-  );
-
-  if (followUp === 'Open changed file diff') {
-    await this.editor.openBranchComparisonFileDiff(left, right);
-  } else if (followUp === 'Cherry-pick commit range') {
-    await vscode.commands.executeCommand(GitCommand.GraphCherryPickRange);
+  let leftRef = currentBranch;
+  if (left.index === 1) {
+    const leftSelection = await pickRevisionToCompare(
+      this.git,
+      () => this.state.branches,
+      () => this.state.tags,
+      () => this.state.refreshBranches(),
+      { title: 'Compare branches — left side', allowTypedRevision: true }
+    );
+    if (!leftSelection) {
+      return;
+    }
+    leftRef = leftSelection.ref;
   }
+
+  const rightSelection = await pickRevisionToCompare(
+    this.git,
+    () => this.state.branches,
+    () => this.state.tags,
+    () => this.state.refreshBranches(),
+    { title: `Compare against ${leftRef}`, allowTypedRevision: true }
+  );
+  if (!rightSelection) {
+    return;
+  }
+
+  await this.editor.openBranchCompare(leftRef, rightSelection.ref);
 }

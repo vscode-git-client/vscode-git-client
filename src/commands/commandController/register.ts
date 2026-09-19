@@ -88,6 +88,10 @@ export function register(this: CommandController, context: vscode.ExtensionConte
 
   register(GitCommand.RemoteFetchAll, this.handleRemoteFetchAll.bind(this));
 
+  register(GitCommand.RemoteConvertUrl, this.handleRemoteConvertUrl.bind(this));
+
+  register(GitCommand.RepoConfigOpen, this.handleRepoConfigOpen.bind(this));
+
   register(GitCommand.BranchRename, this.handleBranchRename.bind(this));
 
   register(GitCommand.BranchDelete, this.handleBranchDelete.bind(this));

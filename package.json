@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.21.3",
+  "version": "1.22.0",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -125,7 +125,8 @@
     "commands": [
       {
         "command": "vscodeGitClient.refresh",
-        "title": "Refresh"
+        "title": "Refresh",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.repository.select",
@@ -134,303 +135,384 @@
       },
       {
         "command": "vscodeGitClient.recovery.open",
-        "title": "Open Recovery Center"
+        "title": "Open Recovery Center",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.refreshReflog",
-        "title": "Refresh Reflog"
+        "title": "Refresh Reflog",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.toggleAllRefs",
-        "title": "Toggle HEAD / All Refs"
+        "title": "Toggle HEAD / All Refs",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.scan",
-        "title": "Scan Repository"
+        "title": "Scan Repository",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.cancelScan",
-        "title": "Cancel Scan"
+        "title": "Cancel Scan",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.preview",
-        "title": "Preview Recovery Snapshot"
+        "title": "Preview Recovery Snapshot",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.createBranch",
-        "title": "Create Recovery Branch"
+        "title": "Create Recovery Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.openWorktree",
-        "title": "Open in Recovery Worktree"
+        "title": "Open in Recovery Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.recovery.cherryPick",
-        "title": "Cherry-pick Recovery Commit"
+        "title": "Cherry-pick Recovery Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.quickActions",
         "title": "Quick Git Actions",
-        "icon": "$(ellipsis)"
+        "icon": "$(ellipsis)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.checkout",
-        "title": "Checkout Branch"
+        "title": "Checkout Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.actionHub",
-        "title": "Branch Action Hub"
+        "title": "Branch Action Hub",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.openCommits",
-        "title": "Open Branch Commits"
+        "title": "Open Branch Commits",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.create",
         "title": "Create Branch",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.rename",
-        "title": "Rename Branch"
+        "title": "Rename Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.delete",
-        "title": "Delete Branch"
+        "title": "Delete Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.track",
-        "title": "Track Remote Branch"
+        "title": "Track Remote Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.untrack",
-        "title": "Untrack Branch"
+        "title": "Untrack Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.mergeIntoCurrent",
-        "title": "Merge Into Current"
+        "title": "Merge Into Current",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.rebaseOnto",
-        "title": "Rebase Current Onto Branch"
+        "title": "Rebase Current Onto Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.resetCurrentToCommit",
-        "title": "Reset Current Branch To Commit"
+        "title": "Reset Current Branch To Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.compareWithCurrent",
-        "title": "Compare With Current Branch"
+        "title": "Compare With Current Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.search",
         "title": "Search Branches",
-        "icon": "$(search)"
+        "icon": "$(search)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.branch.search.refresh",
         "title": "Refresh",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.setUrl",
-        "title": "Change remote URL"
+        "title": "Change remote URL",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.changeUrl",
-        "title": "Change remote URL"
+        "title": "Change remote URL",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.setUrlMissing",
-        "title": "Set remote url"
+        "title": "Set remote url",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.add",
         "title": "Add Git remote",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.delete",
-        "title": "Delete this remote"
+        "title": "Delete this remote",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.fetch",
-        "title": "Fetch"
+        "title": "Fetch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.fetchAll",
-        "title": "Fetch All"
+        "title": "Fetch All",
+        "category": "VS Code Git Client"
+      },
+      {
+        "command": "vscodeGitClient.remote.convertUrl",
+        "title": "Convert Remote URL (HTTPS / SSH)",
+        "category": "VS Code Git Client"
+      },
+      {
+        "command": "vscodeGitClient.repoConfig.open",
+        "title": "Repository Settings",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.checkoutNewBranch",
-        "title": "Checkout New Branch"
+        "title": "Checkout New Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.openCommits",
-        "title": "Open Tag Commits"
+        "title": "Open Tag Commits",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.checkout",
-        "title": "Checkout"
+        "title": "Checkout",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.copyRevisionNumber",
-        "title": "Copy Revision Number"
+        "title": "Copy Revision Number",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.showRepositoryAtRevision",
-        "title": "View Repository At Revision"
+        "title": "View Repository At Revision",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.compareWithCurrent",
-        "title": "Compare With Current"
+        "title": "Compare With Current",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.createPatch",
-        "title": "Create Patch"
+        "title": "Create Patch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.tag.createCurrent",
         "title": "Create new tag for current",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.create",
-        "title": "Create Stash"
+        "title": "Create Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.apply",
-        "title": "Apply Stash"
+        "title": "Apply Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.pop",
-        "title": "Pop Stash"
+        "title": "Pop Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.drop",
-        "title": "Drop Stash"
+        "title": "Drop Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.rename",
-        "title": "Rename Stash"
+        "title": "Rename Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.previewPatch",
-        "title": "Preview Stash Patch"
+        "title": "Preview Stash Patch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.openDetails",
-        "title": "Open Commit Details"
+        "title": "Open Commit Details",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.openCommitRangeDetails",
-        "title": "Open Commit Range Details"
+        "title": "Open Commit Range Details",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.copyCommitId",
-        "title": "Copy Commit Hash"
+        "title": "Copy Commit Hash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.copyCommitMessage",
-        "title": "Copy Commit Message"
+        "title": "Copy Commit Message",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.openFileDiff",
-        "title": "Open Diffs"
+        "title": "Open Diffs",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.checkoutCommit",
         "title": "Checkout Commit",
-        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.createBranchHere",
         "title": "Create Branch At Commit",
-        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.createTagHere",
-        "title": "Create Tag At Commit"
+        "title": "Create Tag At Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.cherryPick",
-        "title": "Cherry-pick Commit"
+        "title": "Cherry-pick Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.cherryPickRange",
-        "title": "Cherry-pick Commit Range"
+        "title": "Cherry-pick Commit Range",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.revert",
-        "title": "Revert Commit"
+        "title": "Revert Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.rebaseInteractiveFromHere",
-        "title": "Interactive Rebase From Commit"
+        "title": "Interactive Rebase From Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.compareWithCurrent",
         "title": "Compare Commit With Current",
-        "enablement": "!vscodeGitClient.graphMultiCommitSelection"
+        "enablement": "!vscodeGitClient.graphMultiCommitSelection",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.createPatch",
-        "title": "Create Patch From Commit"
+        "title": "Create Patch From Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.createPatchForRange",
-        "title": "Create Patch From Commit Range"
+        "title": "Create Patch From Commit Range",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.showRepositoryAtRevision",
-        "title": "Show Repository At Revision"
+        "title": "Show Repository At Revision",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.openRepositoryFileAtRevision",
-        "title": "Open File At Revision"
+        "title": "Open File At Revision",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.goToParentCommit",
-        "title": "Go To Parent Commit"
+        "title": "Go To Parent Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.filter",
         "title": "Filter Graph",
-        "icon": "$(filter)"
+        "icon": "$(filter)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.clearFilter",
         "title": "Clear Graph Filters",
-        "icon": "$(filter-filled)"
+        "icon": "$(filter-filled)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.graph.loadMore",
         "title": "Load More Commits",
-        "category": "Git Client"
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.diff.open",
-        "title": "Open Diff"
+        "title": "Open Diff",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.compare.open",
-        "title": "Compare Branches"
+        "title": "Compare Branches",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.merge.openConflict",
-        "title": "Open Conflict In Merge Editor"
+        "title": "Open Conflict In Merge Editor",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.merge.next",
-        "title": "Next Conflict"
+        "title": "Next Conflict",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.merge.previous",
-        "title": "Previous Conflict"
+        "title": "Previous Conflict",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.merge.finalize",
-        "title": "Finalize Merge Resolution"
+        "title": "Finalize Merge Resolution",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.conflict.acceptOurs",
@@ -464,230 +546,285 @@
       },
       {
         "command": "vscodeGitClient.git.pushWithPreview",
-        "title": "Push (Preview)"
+        "title": "Push (Preview)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.pullWithPreview",
-        "title": "Pull (Preview)"
+        "title": "Pull (Preview)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.fetchPrune",
-        "title": "Fetch --prune"
+        "title": "Fetch --prune",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.sshPull.github",
-        "title": "Force SSH Pull (GitHub)"
+        "title": "Force SSH Pull (GitHub)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.sshPull.gitlab",
-        "title": "Force SSH Pull (GitLab)"
+        "title": "Force SSH Pull (GitLab)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.sshPull.bitbucket",
-        "title": "Force SSH Pull (Bitbucket)"
+        "title": "Force SSH Pull (Bitbucket)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.git.sshPull.custom",
-        "title": "Force SSH Pull (Custom Server)"
+        "title": "Force SSH Pull (Custom Server)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stage.patch",
-        "title": "Stage Selected Hunks"
+        "title": "Stage Selected Hunks",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stage.file",
-        "title": "Stage File"
+        "title": "Stage File",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.scm.shelveResource",
-        "title": "Shelve Changes (VS Code Git Client)"
+        "title": "Shelve Changes (VS Code Git Client)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.unstage.file",
-        "title": "Unstage File"
+        "title": "Unstage File",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commit.amend",
-        "title": "Amend Last Commit"
+        "title": "Amend Last Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.scm.commitTemplate",
-        "title": "Insert Commit Template (SCM)"
+        "title": "Insert Commit Template (SCM)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.scm.amendFromInput",
-        "title": "Amend Last Commit (SCM Input)"
+        "title": "Amend Last Commit (SCM Input)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.compareWithRevision",
-        "title": "Compare with Revision"
+        "title": "Compare with Revision",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.compareWithRevision.swapDirection",
-        "title": "Swap Compare Direction"
+        "title": "Swap Compare Direction",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.directoryTimeline.open",
-        "title": "Open Directory Timeline"
+        "title": "Open Directory Timeline",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.workingTreeCompare.openFileDiff",
-        "title": "Open Working-Tree Compare File Diff"
+        "title": "Open Working-Tree Compare File Diff",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.fileBlame.open",
-        "title": "Open File Blame"
+        "title": "Open File Blame",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.stash.unshelve",
-        "title": "Unshelve Stash"
+        "title": "Unshelve Stash",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commitView.close",
         "title": "Close Commit Details",
-        "icon": "$(close)"
+        "icon": "$(close)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commit.revertSelectedChanges",
-        "title": "Revert Selected Changes"
+        "title": "Revert Selected Changes",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commit.cherryPickSelectedChanges",
-        "title": "Cherry-pick Selected Changes"
+        "title": "Cherry-pick Selected Changes",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commit.createPatchSelectedChanges",
-        "title": "Create Patch"
+        "title": "Create Patch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.commit.applyPatch",
-        "title": "Apply Patch to Working Tree"
+        "title": "Apply Patch to Working Tree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.refresh",
-        "title": "Refresh Worktrees"
+        "title": "Refresh Worktrees",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.open",
-        "title": "Open Worktree in This Window"
+        "title": "Open Worktree in This Window",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.openInNewWindow",
         "title": "Open Worktree in New Window",
-        "icon": "$(empty-window)"
+        "icon": "$(empty-window)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.addFromBranch",
         "title": "Add Worktree from Existing Branch",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.addNewBranch",
-        "title": "Add Worktree with New Branch"
+        "title": "Add Worktree with New Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.addDetached",
-        "title": "Add Detached Worktree"
+        "title": "Add Detached Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.remove",
-        "title": "Remove Worktree"
+        "title": "Remove Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.removeForce",
-        "title": "Force Remove Worktree"
+        "title": "Force Remove Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.lock",
-        "title": "Lock Worktree"
+        "title": "Lock Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.unlock",
-        "title": "Unlock Worktree"
+        "title": "Unlock Worktree",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.prunePreview",
-        "title": "Preview Prunable Worktrees"
+        "title": "Preview Prunable Worktrees",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.prune",
         "title": "Prune Stale Worktrees",
-        "icon": "$(trash)"
+        "icon": "$(trash)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.revealInFinder",
-        "title": "Reveal in Finder / Explorer"
+        "title": "Reveal in Finder / Explorer",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.worktree.openTerminal",
-        "title": "Open Terminal Here"
+        "title": "Open Terminal Here",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.refresh",
-        "title": "Refresh Submodules"
+        "title": "Refresh Submodules",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.init",
-        "title": "Init Submodule"
+        "title": "Init Submodule",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.initAll",
         "title": "Init All Submodules",
-        "icon": "$(refresh)"
+        "icon": "$(refresh)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.update",
-        "title": "Update Submodule"
+        "title": "Update Submodule",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.updateAll",
         "title": "Update All Submodules",
-        "icon": "$(arrow-down)"
+        "icon": "$(arrow-down)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.updateRecursive",
-        "title": "Update All Submodules (Recursive)"
+        "title": "Update All Submodules (Recursive)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.sync",
-        "title": "Sync Submodule URL"
+        "title": "Sync Submodule URL",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.syncAll",
-        "title": "Sync All Submodule URLs"
+        "title": "Sync All Submodule URLs",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.open",
-        "title": "Open Submodule in This Window"
+        "title": "Open Submodule in This Window",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.openInNewWindow",
         "title": "Open in a New Window",
-        "icon": "$(empty-window)"
+        "icon": "$(empty-window)",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.openTerminal",
-        "title": "Open in a New Terminal"
+        "title": "Open in a New Terminal",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.checkoutRecorded",
-        "title": "Checkout Recorded Commit"
+        "title": "Checkout Recorded Commit",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.pullTrackedBranch",
-        "title": "Pull Tracked Branch"
+        "title": "Pull Tracked Branch",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.diffPointer",
-        "title": "Show Pointer Diff"
+        "title": "Show Pointer Diff",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.stagePointerChange",
-        "title": "Stage Pointer Change"
+        "title": "Stage Pointer Change",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.submodule.deinit",
-        "title": "Deinit Submodule"
+        "title": "Deinit Submodule",
+        "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.textCompare.open",
@@ -928,6 +1065,11 @@
           "command": "vscodeGitClient.remote.fetchAll",
           "when": "view == vscodeGitClient.branches && viewItem == branchSectionRemote",
           "group": "inline@2"
+        },
+        {
+          "command": "vscodeGitClient.remote.convertUrl",
+          "when": "view == vscodeGitClient.branches && viewItem == branchSectionRemote",
+          "group": "inline@3"
         },
         {
           "command": "vscodeGitClient.refresh",

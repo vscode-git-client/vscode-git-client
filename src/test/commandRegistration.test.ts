@@ -10,6 +10,13 @@ import pkg from '../../package.json';
 /** Every command string declared in package.json contributes.commands. */
 const pkgCommands = new Set(pkg.contributes.commands.map((c: { command: string }) => c.command));
 
+const PALETTE_CATEGORY = 'VS Code Git Client';
+
+/** Commands intentionally outside the standard Palette category. */
+const CATEGORY_WHITELIST: Record<string, string> = {
+  'vscodeGitClient.textCompare.open': 'Text Compare'
+};
+
 /**
  * The subset of GitCommand enum entries whose values appear in package.json's
  * contributes.commands array.  These are the entries that represent actual
@@ -34,6 +41,28 @@ describe('Command Registration', () => {
       missing,
       [],
       `package.json commands missing from GitCommand enum (${missing.length}):\n${missing.join('\n')}`
+    );
+  });
+
+  // ── 1b. Command Palette category ───────────────────────────────────────
+
+  it('every command in package.json declares the standard Palette category', () => {
+    const offenders: string[] = [];
+    for (const cmd of pkg.contributes.commands as Array<{
+      command: string;
+      category?: string;
+    }>) {
+      const expected = CATEGORY_WHITELIST[cmd.command] ?? PALETTE_CATEGORY;
+      if (cmd.category !== expected) {
+        offenders.push(
+          `${cmd.command}: ${JSON.stringify(cmd.category)} (expected ${JSON.stringify(expected)})`
+        );
+      }
+    }
+    assert.deepStrictEqual(
+      offenders,
+      [],
+      `contributes.commands entries without the expected category (${offenders.length}):\n${offenders.join('\n')}`
     );
   });
 
