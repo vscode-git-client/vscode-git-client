@@ -56,6 +56,7 @@ import { getGitDir } from './getGitDir';
 import { getGitRoot } from './getGitRoot';
 import { getRepositorySelectionRoots } from './getRepositorySelectionRoots';
 import { getGraph } from './getGraph';
+import { getTotalCommitCount } from './getTotalCommitCount';
 import { getVisualGraphData } from './getVisualGraphData';
 import { getHeadCommitMessage } from './getHeadCommitMessage';
 import { getLocalBranches } from './getLocalBranches';
@@ -469,6 +470,8 @@ export class GitService {
   public readonly getStashPatch = getStashPatch;
 
   public readonly getGraph = getGraph;
+
+  public readonly getTotalCommitCount = getTotalCommitCount;
 
   public readonly getVisualGraphData = getVisualGraphData;
 

@@ -19,6 +19,7 @@ export interface GraphFilterHandlers {
   getCommitFiles(sha: string): Promise<string[]>;
   openFileDiff(sha: string, filePath: string): Promise<void>;
   loadMore(): Promise<{ commits: GraphCommit[]; hasMore: boolean }>;
+  getTotalCount(): Promise<number>;
 }
 
 type IncomingMessage =
@@ -121,14 +122,17 @@ export class GraphFilterView {
     branches: BranchRef[] = this.getInitial().branches,
     inputRevision?: number
   ): void {
-    void this.panel.webview.postMessage({
-      type: 'init',
-      filters: snapshot.filters,
-      branches: collectBranchNames(branches),
-      commits: serializeCommits(snapshot.commits),
-      hasMore: snapshot.hasMore,
-      inputRevision,
-      virtThreshold: getConfigValue<number>('commitListVirtualizationThreshold', 200)
+    void this.handlers.getTotalCount().then((totalCount) => {
+      void this.panel.webview.postMessage({
+        type: 'init',
+        filters: snapshot.filters,
+        branches: collectBranchNames(branches),
+        commits: serializeCommits(snapshot.commits),
+        hasMore: snapshot.hasMore,
+        totalCount,
+        inputRevision,
+        virtThreshold: getConfigValue<number>('commitListVirtualizationThreshold', 200)
+      });
     });
   }
 

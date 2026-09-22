@@ -40,7 +40,8 @@ export async function handleGraphFilter(this: CommandController): Promise<void> 
           openFileDiff: async (sha, filePath) => this.editor.openCommitFileDiff(sha, filePath),
           loadMore: async () => {
             return filterSession.loadMore(getMasterSnapshot());
-          }
+          },
+          getTotalCount: async () => this.git.getTotalCommitCount()
         },
         () => ({
           ...filterSession.getSnapshot(getMasterSnapshot()),

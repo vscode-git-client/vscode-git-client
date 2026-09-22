@@ -131,6 +131,13 @@
       color: var(--muted);
       padding: 6px 8px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .preview-header-total {
+      opacity: 0.7;
+      white-space: nowrap;
     }
     {{> partials/styles/flexScrollArea className="preview-table-wrap" overflow="auto"}}
     {{> partials/styles/tableBase cellPadding="6px 4px"}}
@@ -214,7 +221,7 @@
     </section>
 
     <section class="commit-preview">
-      <div class="preview-header" id="preview-header">Matching commits: 0</div>
+      <div class="preview-header" id="preview-header"><span id="preview-header-left">Matching commits: 0</span><span class="preview-header-total" id="preview-header-total"></span></div>
       <div class="preview-table-wrap">
         {{> partials/commitTable tbodyId="preview-body"}}
         <div id="load-more-sentinel" style="height:1px"></div>
@@ -245,7 +252,8 @@
       streamingSeen: false,
       virtThreshold: 200,
       selectedBranches: [],
-      selectedAuthors: []
+      selectedAuthors: [],
+      totalCount: 0
     };
     const messageInput = document.getElementById('message');
     const branchInput = document.getElementById('branch');
@@ -255,6 +263,8 @@
     const untilInput = document.getElementById('until');
     const excludeMessageInput = document.getElementById('exclude-message');
     const previewHeader = document.getElementById('preview-header');
+    const previewHeaderLeft = document.getElementById('preview-header-left');
+    const previewHeaderTotal = document.getElementById('preview-header-total');
     const previewBody = document.getElementById('preview-body');
     const cancelButton = document.getElementById('cancel');
     const clearButton = document.getElementById('clear');
@@ -421,6 +431,9 @@
         state.hasMore = Boolean(msg.hasMore);
         state.streaming = false;
         state.streamingSeen = false;
+        if (typeof msg.totalCount === 'number' && msg.totalCount > 0) {
+          state.totalCount = msg.totalCount;
+        }
         if (typeof msg.virtThreshold === 'number' && msg.virtThreshold >= 0) {
           state.virtThreshold = msg.virtThreshold;
         }
@@ -473,7 +486,7 @@
       if (msg && msg.type === 'loadMoreError') {
         state.loading = false;
         state.loadMoreErrored = true;
-        previewHeader.textContent = previewHeader.textContent + ' — error loading more (re-apply filters to retry)';
+        if (previewHeaderLeft) { previewHeaderLeft.textContent = (previewHeaderLeft.textContent || '') + ' — error loading more (re-apply filters to retry)'; }
         return;
       }
     });
@@ -631,7 +644,8 @@
     function updatePreviewHeader() {
       const filtered = getFilteredCommits();
       if (state.streaming) {
-        previewHeader.textContent = 'Loading commits... ' + filtered.length + ' loaded so far';
+        if (previewHeaderLeft) { previewHeaderLeft.textContent = 'Loading commits... ' + filtered.length + ' loaded so far'; }
+        if (previewHeaderTotal) { previewHeaderTotal.textContent = state.totalCount > 0 ? state.totalCount + ' total in repo' : ''; }
         return;
       }
       let label = 'Matching commits: ' + filtered.length;
@@ -640,7 +654,10 @@
       } else if (state.streamingSeen) {
         label += ' (all loaded)';
       }
-      previewHeader.textContent = label;
+      if (previewHeaderLeft) { previewHeaderLeft.textContent = label; }
+      if (previewHeaderTotal) {
+        previewHeaderTotal.textContent = state.totalCount > 0 ? state.totalCount + ' total in repo' : '';
+      }
     }
 
     // --- Hybrid virtualization ---------------------------------------------
@@ -733,7 +750,8 @@
 
     function renderPreview() {
       if (state.loading) {
-        previewHeader.textContent = 'Loading commits...';
+        if (previewHeaderLeft) { previewHeaderLeft.textContent = 'Loading commits...'; }
+        if (previewHeaderTotal) { previewHeaderTotal.textContent = ''; }
         previewBody.innerHTML = '<tr><td colspan="4">Loading commits...</td></tr>';
         detachVirtScrollListener();
         return;
