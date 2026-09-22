@@ -12,6 +12,15 @@ export async function handleEditCommitMessage(this: CommandController, arg?: unk
     return;
   }
 
+  const isOnCurrentBranch = await this.git.isCommitInCurrentBranch(sha);
+  if (!isOnCurrentBranch) {
+    void vscode.window.showErrorMessage(
+      `Cannot edit commit message: commit ${sha.slice(0, 8)} is not on the current branch. ` +
+        'Check out the branch that contains this commit first.'
+    );
+    return;
+  }
+
   const details = await this.git.getCommitDetails(sha);
   if (!details.commit.subject) {
     void vscode.window.showErrorMessage(
