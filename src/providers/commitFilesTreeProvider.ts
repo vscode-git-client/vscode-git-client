@@ -273,7 +273,6 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     const canRevert = await this.git.isCommitInCurrentBranch(sha);
     this.activeState = { mode: 'commit', sha, subject, files, canRevertSelected: canRevert };
     this.updateViewTitle(`Commit Details ${formatRevisionNumber(sha)}`);
-    this.emitter.fire();
     await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
     await vscode.commands.executeCommand(
       'setContext',
@@ -291,6 +290,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       !canRevert
     );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
+    this.emitter.fire();
   }
 
   isShowingCommit(sha: string): boolean {
@@ -302,7 +302,6 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
     const files = filePaths.map((filePath) => ({ path: filePath }));
     this.activeState = { mode: 'revision', sha, files };
     this.updateViewTitle(`Repository ${formatRevisionNumber(sha)}`);
-    this.emitter.fire();
     await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
     await vscode.commands.executeCommand(
       'setContext',
@@ -320,6 +319,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       false
     );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
+    this.emitter.fire();
   }
 
   async showCommitRange({
@@ -337,7 +337,6 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   }): Promise<void> {
     this.activeState = { mode: 'range', fromRef, toRef, fromLabel, toLabel, files };
     this.updateViewTitle(`Commit Details ${fromLabel}..${toLabel}`);
-    this.emitter.fire();
     await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
     await vscode.commands.executeCommand(
       'setContext',
@@ -355,6 +354,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       true
     );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
+    this.emitter.fire();
   }
 
   async showWorkingTreeComparison({
@@ -370,7 +370,6 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
   }): Promise<void> {
     this.activeState = { mode: 'workingTreeCompare', ref, refLabel, scopePath, files };
     this.updateViewTitle('Commit Details');
-    this.emitter.fire();
     await vscode.commands.executeCommand('setContext', GitCommand.CommitViewVisible, true);
     await vscode.commands.executeCommand(
       'setContext',
@@ -388,6 +387,7 @@ export class CommitFilesTreeProvider implements vscode.TreeDataProvider<CommitVi
       true
     );
     await vscode.commands.executeCommand(`${CommitFilesTreeProviderViewId}.focus`);
+    this.emitter.fire();
   }
 
   async clear(): Promise<void> {
