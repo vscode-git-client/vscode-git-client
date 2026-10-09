@@ -155,6 +155,11 @@
           return;
         }
 
+        const suppressAutoRefresh =
+          action === 'cherryPick' &&
+          typeof matchingMessagesCheckbox !== 'undefined' &&
+          Boolean(matchingMessagesCheckbox && matchingMessagesCheckbox.checked);
+
         vscode.postMessage({
           type: 'commitAction',
           action,
@@ -163,7 +168,8 @@
           subject: selectedSubjects[0] || '',
           subjects: selectedSubjects,
           isContinuous: typeof isContinuousSelection === 'function' ? isContinuousSelection() : false,
-          reverseOrder: event.shiftKey === true
+          reverseOrder: event.shiftKey === true,
+          suppressAutoRefresh
         });
         close();
       });

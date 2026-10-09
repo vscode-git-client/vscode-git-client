@@ -29,6 +29,7 @@ export interface CommitActionMessage {
   readonly subjects?: readonly string[];
   readonly isContinuous?: boolean;
   readonly reverseOrder?: boolean;
+  readonly suppressAutoRefresh?: boolean;
 }
 
 export async function handleCommitAction(message: CommitActionMessage): Promise<boolean> {
@@ -186,6 +187,8 @@ export function isCommitActionMessage(value: unknown): value is CommitActionMess
     (candidate.subject === undefined || typeof candidate.subject === 'string') &&
     (candidate.isContinuous === undefined || typeof candidate.isContinuous === 'boolean') &&
     (candidate.reverseOrder === undefined || typeof candidate.reverseOrder === 'boolean') &&
+    (candidate.suppressAutoRefresh === undefined ||
+      typeof candidate.suppressAutoRefresh === 'boolean') &&
     hasValidShas &&
     hasValidSubjects
   );

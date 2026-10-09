@@ -228,7 +228,7 @@ export class CompareView {
     }
 
     const shouldRefresh = await handleCommitAction(message);
-    if (shouldRefresh && this.currentResult) {
+    if (shouldRefresh && !message.suppressAutoRefresh && this.currentResult) {
       try {
         await this.onRefresh(this.currentResult.leftRef, this.currentResult.rightRef);
       } finally {
