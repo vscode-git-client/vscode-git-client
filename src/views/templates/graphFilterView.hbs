@@ -22,6 +22,15 @@
       --filter-input-padding: 7px 8px;
       --filter-input-font-family: var(--vscode-font-family);
     }
+    .filter-col-span-3 {
+      grid-column: 1 / span 3;
+    }
+    .filter-col-4 {
+      grid-column: 4;
+    }
+    .filter-col-5 {
+      grid-column: 5;
+    }
     {{> partials/styles/filterFieldAtoms}}
     .filter-input.invalid {
       border-color: var(--vscode-inputValidation-errorBorder, #d93025);
@@ -161,53 +170,63 @@
 
   <form id="form">
     <section class="filters-inline">
-      {{> partials/molecules/textFilterField
-        id="message"
-        name="message"
-        label="Message"
-        note="(subject/id)"
-        placeholder="fix login, HOTFIX-123, short SHA"
-        clearLabel="message"
-        autofocus=true
-        spellcheck="false"
-      }}
-      {{> partials/molecules/textFilterField
-        id="branch"
-        name="branch"
-        label="Branch"
-        placeholder="main, feature/login"
-        clearLabel="branch"
-        autocompleteAttr="off"
-        spellcheck="false"
-        autocompleteId="branch-list"
-        autocompleteClass="autocomplete-list"
-        autocompleteLabel="Branch suggestions"
-      }}
-      {{> partials/molecules/textFilterField
-        id="author"
-        name="author"
-        label="Author"
-        placeholder="name or email"
-        clearLabel="author"
-        autocompleteAttr="off"
-        spellcheck="false"
-        autocompleteId="author-list"
-        autocompleteClass="autocomplete-list"
-        autocompleteLabel="Author suggestions"
-      }}
-      {{> partials/molecules/dateFilterField
-        id="since"
-        name="since"
-        label="Since"
-        clearLabel="since"
-      }}
-      {{> partials/molecules/dateFilterField
-        id="until"
-        name="until"
-        label="Until"
-        clearLabel="until"
-      }}
-      <div style="grid-column: 1 / span 3">
+      <div class="filter-col-span-3">
+        {{> partials/molecules/textFilterField
+          id="message"
+          name="message"
+          label="Message"
+          note="(subject/id)"
+          placeholder="fix login, HOTFIX-123, short SHA"
+          clearLabel="message"
+          autofocus=true
+          spellcheck="false"
+        }}
+      </div>
+      <div class="filter-col-4">
+        {{> partials/molecules/textFilterField
+          id="branch"
+          name="branch"
+          label="Branch"
+          placeholder="main, feature/login"
+          clearLabel="branch"
+          autocompleteAttr="off"
+          spellcheck="false"
+          autocompleteId="branch-list"
+          autocompleteClass="autocomplete-list"
+          autocompleteLabel="Branch suggestions"
+        }}
+      </div>
+      <div class="filter-col-5">
+        {{> partials/molecules/textFilterField
+          id="author"
+          name="author"
+          label="Author"
+          placeholder="name or email"
+          clearLabel="author"
+          autocompleteAttr="off"
+          spellcheck="false"
+          autocompleteId="author-list"
+          autocompleteClass="autocomplete-list"
+          autocompleteLabel="Author suggestions"
+        }}
+      </div>
+      <div class="filter-col-4">
+        {{> partials/molecules/dateFilterField
+          id="since"
+          name="since"
+          label="Since"
+          clearLabel="since"
+        }}
+      </div>
+      <div class="filter-col-5">
+        {{> partials/molecules/dateFilterField
+          id="until"
+          name="until"
+          label="Until"
+          clearLabel="until"
+        }}
+      </div>
+      <div class="filter-col-span-3">
         {{> partials/molecules/textFilterField
           id="exclude-message"
           name="exclude-message"
