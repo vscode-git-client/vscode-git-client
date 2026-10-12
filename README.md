@@ -334,6 +334,8 @@ Key command IDs, not exhaustive:
 
 Legacy `intelliGit.*` command aliases are registered after activation so existing keybindings and integrations keep working during migration.
 
+For stash naming consistency, canonical IDs are now `vscodeGitClient.scm.stashResource` and `vscodeGitClient.stash.popToWorkingTree`; legacy IDs `vscodeGitClient.scm.shelveResource` and `vscodeGitClient.stash.unshelve` remain registered as backward-compatible aliases.
+
 ## Current Boundaries
 
 - Single repository per window, using the first workspace folder.

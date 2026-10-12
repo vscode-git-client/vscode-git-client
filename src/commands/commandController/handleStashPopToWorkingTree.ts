@@ -2,7 +2,10 @@
 import type { CommandController } from './index';
 import * as vscode from 'vscode';
 
-export async function handleStashUnshelve(this: CommandController, arg?: unknown): Promise<void> {
+export async function handleStashPopToWorkingTree(
+  this: CommandController,
+  arg?: unknown
+): Promise<void> {
   const item = this.asStashItem(arg);
   const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to pop'));
   if (!ref) {

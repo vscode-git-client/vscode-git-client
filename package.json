@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.22.3",
+  "version": "1.22.4",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -29,7 +29,10 @@
     "onCommand:vscodeGitClient.compareWithRevision.swapDirection",
     "onCommand:vscodeGitClient.directoryTimeline.open",
     "onCommand:vscodeGitClient.fileBlame.open",
+    "onCommand:vscodeGitClient.scm.stashResource",
     "onCommand:vscodeGitClient.scm.shelveResource",
+    "onCommand:vscodeGitClient.stash.popToWorkingTree",
+    "onCommand:vscodeGitClient.stash.unshelve",
     "onCommand:vscodeGitClient.scm.commitTemplate",
     "onCommand:vscodeGitClient.scm.amendFromInput",
     "onCommand:vscodeGitClient.textCompare.open"
@@ -590,7 +593,7 @@
         "category": "VS Code Git Client"
       },
       {
-        "command": "vscodeGitClient.scm.shelveResource",
+        "command": "vscodeGitClient.scm.stashResource",
         "title": "Stash Selected Change (VS Code Git Client)",
         "category": "VS Code Git Client"
       },
@@ -640,7 +643,7 @@
         "category": "VS Code Git Client"
       },
       {
-        "command": "vscodeGitClient.stash.unshelve",
+        "command": "vscodeGitClient.stash.popToWorkingTree",
         "title": "Pop Stash to Working Tree",
         "category": "VS Code Git Client"
       },
@@ -876,7 +879,7 @@
       ],
       "scm/resourceState/context": [
         {
-          "command": "vscodeGitClient.scm.shelveResource",
+          "command": "vscodeGitClient.scm.stashResource",
           "when": "scmProvider == git && resourceScheme == file && scmResourceGroup != index",
           "group": "2_vscodeGitClient@1"
         }
@@ -1162,7 +1165,7 @@
           "group": "navigation"
         },
         {
-          "command": "vscodeGitClient.stash.unshelve",
+          "command": "vscodeGitClient.stash.popToWorkingTree",
           "when": "view == vscodeGitClient.stashes && viewItem == stashEntry",
           "group": "navigation@3"
         },

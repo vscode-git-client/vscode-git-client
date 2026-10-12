@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { describe, it } from 'node:test';
 import * as vscode from 'vscode';
-import { handleShelveResource } from '../commands/commandController/handleShelveResource';
+import { handleScmStashResource } from '../commands/commandController/handleScmStashResource';
 import { handleStashCreate } from '../commands/commandController/handleStashCreate';
 
 interface WindowMocks {
@@ -40,7 +40,7 @@ function patchWindow(mocks: WindowMocks): () => void {
 }
 
 const callHandleStashCreate = handleStashCreate as unknown as (this: never) => Promise<void>;
-const callHandleShelveResource = handleShelveResource as unknown as (
+const callHandleScmStashResource = handleScmStashResource as unknown as (
   this: never,
   arg?: unknown
 ) => Promise<void>;
@@ -82,7 +82,7 @@ describe('stash actions defaults', () => {
     ]);
   });
 
-  it('handleShelveResource stashes selected file with includeUntracked enabled', async () => {
+  it('handleScmStashResource stashes selected file with includeUntracked enabled', async () => {
     let captured:
       | {
           paths: string[];
@@ -99,7 +99,7 @@ describe('stash actions defaults', () => {
     });
 
     try {
-      await callHandleShelveResource.call(
+      await callHandleScmStashResource.call(
         {
           toRepoFilePath: () => 'src/new-untracked.ts',
           git: {

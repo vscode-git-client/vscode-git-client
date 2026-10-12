@@ -197,6 +197,55 @@ describe('Command Registration', () => {
       );
     });
 
+    it('keeps old stash command IDs as aliases for backward compatibility', () => {
+      originalRegisterCommand = vscode.commands.registerCommand;
+
+      const registered = new Map<string, (...args: unknown[]) => unknown>();
+      (
+        vscode.commands as unknown as {
+          registerCommand: typeof vscode.commands.registerCommand;
+        }
+      ).registerCommand = (command: string, callback: (...args: unknown[]) => unknown) => {
+        registered.set(command, callback);
+        return { dispose: () => {} };
+      };
+
+      const controller = new CommandController(
+        {} as any,
+
+        {} as any,
+
+        {} as any,
+        {
+          error: () => {},
+          warn: () => {},
+          info: () => {},
+          dispose: () => {}
+        } as any,
+
+        {} as any,
+        { fsPath: '/mock/extension/path' } as vscode.Uri
+      );
+
+      const context = {
+        subscriptions: [] as vscode.Disposable[]
+      } as vscode.ExtensionContext;
+      controller.register(context);
+
+      const stashResourceCallback = registered.get(GitCommand.ScmStashResource);
+      const shelveAliasCallback = registered.get(GitCommand.ScmShelveResource);
+      const popToWorkingTreeCallback = registered.get(GitCommand.StashPopToWorkingTree);
+      const unshelveAliasCallback = registered.get(GitCommand.StashUnshelve);
+
+      assert.strictEqual(typeof stashResourceCallback, 'function');
+      assert.strictEqual(typeof shelveAliasCallback, 'function');
+      assert.strictEqual(typeof popToWorkingTreeCallback, 'function');
+      assert.strictEqual(typeof unshelveAliasCallback, 'function');
+
+      assert.strictEqual(shelveAliasCallback, stashResourceCallback);
+      assert.strictEqual(unshelveAliasCallback, popToWorkingTreeCallback);
+    });
+
     it('pushes disposables into context.subscriptions', () => {
       originalRegisterCommand = vscode.commands.registerCommand;
 

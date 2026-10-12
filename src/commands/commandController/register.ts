@@ -3,6 +3,17 @@ import { type CommandController } from './index';
 import { GitCommand } from '../../config/commands';
 
 export function register(this: CommandController, context: vscode.ExtensionContext): void {
+  const explicitAliases = (command: string): string[] => {
+    switch (command) {
+      case GitCommand.StashPopToWorkingTree:
+        return [GitCommand.StashUnshelve];
+      case GitCommand.ScmStashResource:
+        return [GitCommand.ScmShelveResource];
+      default:
+        return [];
+    }
+  };
+
   const register = (command: string, callback: (...args: unknown[]) => Promise<void>): void => {
     const run = async (...args: unknown[]): Promise<void> => {
       try {
@@ -13,10 +24,24 @@ export function register(this: CommandController, context: vscode.ExtensionConte
         void vscode.window.showErrorMessage(`VS Code Git Client: ${message}`);
       }
     };
-    const legacy = this.legacyCommandId(command);
+
+    const aliases = new Set<string>();
+    const primaryLegacy = this.legacyCommandId(command);
+    if (primaryLegacy) {
+      aliases.add(primaryLegacy);
+    }
+
+    for (const alias of explicitAliases(command)) {
+      aliases.add(alias);
+      const aliasLegacy = this.legacyCommandId(alias);
+      if (aliasLegacy) {
+        aliases.add(aliasLegacy);
+      }
+    }
+
     context.subscriptions.push(
       vscode.commands.registerCommand(command, run),
-      ...(legacy ? [vscode.commands.registerCommand(legacy, run)] : [])
+      ...[...aliases].map((alias) => vscode.commands.registerCommand(alias, run))
     );
   };
 
@@ -110,7 +135,7 @@ export function register(this: CommandController, context: vscode.ExtensionConte
 
   register(GitCommand.StashCreate, this.handleStashCreate.bind(this));
 
-  register(GitCommand.StashUnshelve, this.handleStashUnshelve.bind(this));
+  register(GitCommand.StashPopToWorkingTree, this.handleStashPopToWorkingTree.bind(this));
 
   register(GitCommand.StashApply, this.handleStashApply.bind(this));
   register(GitCommand.StashPop, this.handleStashPop.bind(this));
@@ -247,7 +272,7 @@ export function register(this: CommandController, context: vscode.ExtensionConte
 
   register(GitCommand.StageFile, this.handleStageFile.bind(this));
 
-  register(GitCommand.ScmShelveResource, this.handleShelveResource.bind(this));
+  register(GitCommand.ScmStashResource, this.handleScmStashResource.bind(this));
 
   register(GitCommand.UnstageFile, this.handleUnstageFile.bind(this));
 

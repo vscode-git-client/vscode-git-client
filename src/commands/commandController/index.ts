@@ -127,18 +127,18 @@ import { handleRepoConfigUser } from './handleRepoConfigUser';
 import { handleResetCurrentToCommit } from './handleResetCurrentToCommit';
 import { handleRevertSelectedChanges } from './handleRevertSelectedChanges';
 import { handleScmAmendFromInput } from './handleScmAmendFromInput';
+import { handleScmStashResource } from './handleScmStashResource';
 import { handleSetRemoteUrl } from './handleSetRemoteUrl';
-import { handleShelveResource } from './handleShelveResource';
 import { handleStageFile } from './handleStageFile';
 import { handleStagePatch } from './handleStagePatch';
 import { handleStashApply } from './handleStashApply';
 import { handleStashApplyPop } from './handleStashApplyPop';
 import { handleStashCreate } from './handleStashCreate';
 import { handleStashDrop } from './handleStashDrop';
+import { handleStashPopToWorkingTree } from './handleStashPopToWorkingTree';
 import { handleStashPop } from './handleStashPop';
 import { handleStashPreviewPatch } from './handleStashPreviewPatch';
 import { handleStashRename } from './handleStashRename';
-import { handleStashUnshelve } from './handleStashUnshelve';
 import { handleSubmoduleCheckoutRecorded } from './handleSubmoduleCheckoutRecorded';
 import { handleSubmoduleDeinit } from './handleSubmoduleDeinit';
 import { handleSubmoduleDiffPointer } from './handleSubmoduleDiffPointer';
@@ -389,7 +389,7 @@ export class CommandController {
 
   public readonly handleOperationContinue = handleOperationContinue;
 
-  public readonly handleShelveResource = handleShelveResource;
+  public readonly handleScmStashResource = handleScmStashResource;
 
   public readonly handleCommitTemplate = handleCommitTemplate;
 
@@ -589,7 +589,7 @@ export class CommandController {
 
   public readonly handleStashApply = handleStashApply;
 
-  public readonly handleStashUnshelve = handleStashUnshelve;
+  public readonly handleStashPopToWorkingTree = handleStashPopToWorkingTree;
 
   public readonly handleBranchCompareWithCurrent = handleBranchCompareWithCurrent;
 

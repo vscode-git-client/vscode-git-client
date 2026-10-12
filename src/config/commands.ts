@@ -35,6 +35,8 @@ export enum GitCommand {
   BranchResetCurrentToCommit = 'vscodeGitClient.branch.resetCurrentToCommit',
   BranchCompareWithCurrent = 'vscodeGitClient.branch.compareWithCurrent',
   StashCreate = 'vscodeGitClient.stash.create',
+  StashPopToWorkingTree = 'vscodeGitClient.stash.popToWorkingTree',
+  // Legacy alias kept for backward compatibility.
   StashUnshelve = 'vscodeGitClient.stash.unshelve',
   StashApply = 'vscodeGitClient.stash.apply',
   StashPop = 'vscodeGitClient.stash.pop',
@@ -92,6 +94,8 @@ export enum GitCommand {
   GitSshPullCustom = 'vscodeGitClient.git.sshPull.custom',
   StagePatch = 'vscodeGitClient.stage.patch',
   StageFile = 'vscodeGitClient.stage.file',
+  ScmStashResource = 'vscodeGitClient.scm.stashResource',
+  // Legacy alias kept for backward compatibility.
   ScmShelveResource = 'vscodeGitClient.scm.shelveResource',
   UnstageFile = 'vscodeGitClient.unstage.file',
   CommitAmend = 'vscodeGitClient.commit.amend',

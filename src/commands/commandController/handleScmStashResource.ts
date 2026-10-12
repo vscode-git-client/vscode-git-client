@@ -2,7 +2,10 @@
 import type { CommandController } from './index';
 import * as vscode from 'vscode';
 
-export async function handleShelveResource(this: CommandController, arg?: unknown): Promise<void> {
+export async function handleScmStashResource(
+  this: CommandController,
+  arg?: unknown
+): Promise<void> {
   const filePath = this.toRepoFilePath(arg);
   if (!filePath) {
     void vscode.window.showWarningMessage('Select a Source Control file to stash.');
