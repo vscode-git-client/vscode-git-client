@@ -4,12 +4,12 @@ import * as vscode from 'vscode';
 
 export async function handleStashUnshelve(this: CommandController, arg?: unknown): Promise<void> {
   const item = this.asStashItem(arg);
-      const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to unshelve'));
-      if (!ref) {
-        return;
-      }
-  
-      await this.git.unstashToWorkingTree(ref);
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Unshelved ${ref}.`);
+  const ref = item?.stash.ref ?? (await this.pickStashRef('Pick stash to pop'));
+  if (!ref) {
+    return;
+  }
+
+  await this.git.unstashToWorkingTree(ref);
+  await this.state.refreshAll();
+  void vscode.window.showInformationMessage(`Popped ${ref}.`);
 }

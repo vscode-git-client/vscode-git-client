@@ -22,13 +22,13 @@ The extension was first inspired by the IntelliJ Git client experience, then ada
 1. Open a folder that contains a Git repository.
 2. Open the extension's Activity Bar container.
 3. Use `Branches` for branch/tag operations, `Git Graph` for history, and `Commit Details` for changed files and diffs.
-4. Use VS Code Source Control for regular staging/commit work; the extension adds stash, commit-template, amend, and shelve actions there.
+4. Use VS Code Source Control for regular staging/commit work; the extension adds stash, commit-template, and amend actions there.
 5. Use `Quick Git Actions` from the Command Palette when you know the action but not the view.
 
 ### Where Things Live
 
 | Surface                | What it contains                                                                         |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
+|------------------------|------------------------------------------------------------------------------------------|
 | Activity Bar container | `Branches`, `Commit Details`, `Git Graph`, `Worktrees`, `Submodules`                     |
 | Source Control panel   | `Stashes` plus SCM input/file actions                                                    |
 | Explorer context menu  | Compare files or folders with a branch, tag, or commit; open directory timelines         |
@@ -123,13 +123,13 @@ Right-click a file or folder in Explorer and choose `Compare with Revision`.
 
 Use **Text Compare: Compare Files...** from the Command Palette to open two editable temporary files in VS Code's diff editor. Each side can be a workspace file, the current clipboard contents, or an empty buffer. Right-click a file in the Explorer and choose **Text Compare** to seed one side automatically.
 
-### Stash And Shelve Work
+### Stash Work
 
 Open `Stashes` in the Source Control panel to manage saved work:
 
-- Create a stash with optional untracked files and keep-index mode.
-- Apply, pop, drop, rename, preview patch, or unshelve a stash.
-- Right-click an unstaged SCM resource and choose the shelve action to stash only that file.
+- Create a stash that always includes untracked files, with optional keep-index mode.
+- Apply, pop, drop, rename, and preview stash patches.
+- Right-click an unstaged SCM resource and choose the stash action to stash only that file.
 
 ### Resolve Conflicts
 
@@ -227,7 +227,7 @@ Supported editor workflows include:
 ## Settings
 
 | Setting                                                | Default         | Description                                                                                                                                                                                       |
-| ------------------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|--------------------------------------------------------|-----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `vscodeGitClient.gitPath`                              | `"git"`         | Git executable path                                                                                                                                                                               |
 | `vscodeGitClient.commandTimeoutMs`                     | `15000`         | Timeout for Git commands in milliseconds                                                                                                                                                          |
 | `vscodeGitClient.maxGraphCommits`                      | `200`           | Controls how many commits load per page in Git Graph views. Commits accumulate as you click "Load More..." in the tree view or scroll to the bottom of the Filter Graph webview.                  |
@@ -284,7 +284,7 @@ Open this folder in VS Code and press `F5` to launch the extension host.
 ### Architecture Map
 
 | Module                                                     | Purpose                                                                                                        |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+|------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
 | `src/services/gitService.ts`                               | Git command wrapper with typed methods, VS Code Git API integrations, error normalization, and command logging |
 | `src/services/gitParsing.ts`                               | Output parsers for branches, stashes, log, status, and blame                                                   |
 | `src/services/repositoryContext.ts`                        | Resolves the active Git repository root                                                                        |
@@ -317,7 +317,7 @@ Key command IDs, not exhaustive:
 - `vscodeGitClient.refresh` - Refresh all views
 - `vscodeGitClient.branch.*` - Checkout, create, rename, delete, track, merge, rebase, reset, compare, search, actionHub, openCommits
 - `vscodeGitClient.tag.*` - Checkout, checkoutNewBranch, copyRevisionNumber, showRepositoryAtRevision, compareWithCurrent, createPatch, openCommits
-- `vscodeGitClient.stash.*` - Create, apply, pop, drop, rename, previewPatch, unshelve
+- `vscodeGitClient.stash.*` - Create, apply, pop, drop, rename, previewPatch
 - `vscodeGitClient.graph.*` - openDetails, openFileDiff, checkoutCommit, createBranchHere, createTagHere, cherryPick, cherryPickRange, revert, rebaseInteractiveFromHere, compareWithCurrent, createPatch, showRepositoryAtRevision, openRepositoryFileAtRevision, goToParentCommit, filter, clearFilter
 - `vscodeGitClient.commit.*` - revertSelectedChanges, cherryPickSelectedChanges, createPatchSelectedChanges, applyPatch, amend
 - `vscodeGitClient.compare.open` - Open branch comparison
@@ -327,7 +327,7 @@ Key command IDs, not exhaustive:
 - `vscodeGitClient.operation.*` - abort, continue, skip
 - `vscodeGitClient.git.*` - pushWithPreview, pullWithPreview, fetchPrune
 - `vscodeGitClient.stage.*` / `vscodeGitClient.unstage.file` - stage and unstage actions
-- `vscodeGitClient.scm.*` - shelveResource, commitTemplate, amendFromInput
+- `vscodeGitClient.scm.*` - stash selected resource, commitTemplate, amendFromInput
 - `vscodeGitClient.worktree.*` - worktree actions
 - `vscodeGitClient.submodule.*` - submodule actions
 - `vscodeGitClient.fileBlame.open` - File blame

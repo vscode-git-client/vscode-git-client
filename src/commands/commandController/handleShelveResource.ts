@@ -4,32 +4,27 @@ import * as vscode from 'vscode';
 
 export async function handleShelveResource(this: CommandController, arg?: unknown): Promise<void> {
   const filePath = this.toRepoFilePath(arg);
-      if (!filePath) {
-        void vscode.window.showWarningMessage('Select a Source Control file to shelve.');
-        return;
-      }
-  
-      const defaultMessage = `Shelve ${filePath}`;
-      const rawMessage = await vscode.window.showInputBox({
-        title: 'Shelve selected change',
-        value: defaultMessage,
-        placeHolder: 'Shelve message'
-      });
-      if (rawMessage === undefined) {
-        return;
-      }
-  
-      const message = rawMessage.trim() || defaultMessage;
-      const changes = await this.git.getChangedFiles();
-      const includeUntracked = changes.some(
-        (item) => item.path === filePath && item.status.trim() === '??'
-      );
-  
-      await this.git.stashFiles([filePath], message, {
-        keepIndex: true,
-        includeUntracked
-      });
-  
-      await this.state.refreshAll();
-      void vscode.window.showInformationMessage(`Shelved ${filePath}.`);
+  if (!filePath) {
+    void vscode.window.showWarningMessage('Select a Source Control file to stash.');
+    return;
+  }
+
+  const defaultMessage = `Stash ${filePath}`;
+  const rawMessage = await vscode.window.showInputBox({
+    title: 'Stash selected change',
+    value: defaultMessage,
+    placeHolder: 'Stash message'
+  });
+  if (rawMessage === undefined) {
+    return;
+  }
+
+  const message = rawMessage.trim() || defaultMessage;
+  await this.git.stashFiles([filePath], message, {
+    keepIndex: true,
+    includeUntracked: true
+  });
+
+  await this.state.refreshAll();
+  void vscode.window.showInformationMessage(`Stashed ${filePath}.`);
 }

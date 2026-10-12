@@ -4,26 +4,21 @@ import * as vscode from 'vscode';
 
 export async function handleStashCreate(this: CommandController): Promise<void> {
   const message = (
-        await vscode.window.showInputBox({
-          title: 'Create stash',
-          placeHolder: 'WIP: short message'
-        })
-      )?.trim();
-  
-      if (!message) {
-        return;
-      }
-  
-      const includeUntracked =
-        (await vscode.window.showQuickPick(['No', 'Yes'], {
-          title: 'Include untracked files?'
-        })) === 'Yes';
-  
-      const keepIndex =
-        (await vscode.window.showQuickPick(['No', 'Yes'], {
-          title: 'Keep staged changes in index?'
-        })) === 'Yes';
-  
-      await this.git.createStash(message, { includeUntracked, keepIndex });
-      await this.state.refreshAll();
+    await vscode.window.showInputBox({
+      title: 'Create stash',
+      placeHolder: 'WIP: short message'
+    })
+  )?.trim();
+
+  if (!message) {
+    return;
+  }
+
+  const keepIndex =
+    (await vscode.window.showQuickPick(['No', 'Yes'], {
+      title: 'Keep staged changes in index?'
+    })) === 'Yes';
+
+  await this.git.createStash(message, { includeUntracked: true, keepIndex });
+  await this.state.refreshAll();
 }

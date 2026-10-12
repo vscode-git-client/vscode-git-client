@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { GitCommand } from '../config/commands';
 import { StateStore } from '../state/stateStore';
-import { StashEntry, WorkingTreeChange } from '../types';
+import { StashEntry } from '../types';
 import { GitService } from '../services/gitService';
 
 export class StashTreeItem extends vscode.TreeItem {
@@ -124,20 +124,9 @@ export class StashTreeDragAndDropController implements vscode.TreeDragAndDropCon
     }
 
     try {
-      const changes = await this.git.getChangedFiles();
-      let includeUntracked = false;
-
-      for (const p of paths) {
-        const match = changes.find((c: WorkingTreeChange) => c.path === p || p.endsWith(c.path));
-        if (match && match.status.trim() === '??') {
-          includeUntracked = true;
-          break;
-        }
-      }
-
       await this.git.stashFiles(paths, message, {
         keepIndex: true,
-        includeUntracked
+        includeUntracked: true
       });
       await this.state.refreshAll();
     } catch (error) {
