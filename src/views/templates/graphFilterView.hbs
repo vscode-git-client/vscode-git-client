@@ -25,11 +25,26 @@
     .filter-col-span-3 {
       grid-column: 1 / span 3;
     }
+    .filter-col-span-3-right {
+      grid-column: 3 / span 3;
+    }
+    .filter-col-1 {
+      grid-column: 1;
+    }
+    .filter-col-2 {
+      grid-column: 2;
+    }
     .filter-col-4 {
       grid-column: 4;
     }
     .filter-col-5 {
       grid-column: 5;
+    }
+    .filter-row-1 {
+      grid-row: 1;
+    }
+    .filter-row-2 {
+      grid-row: 2;
     }
     {{> partials/styles/filterFieldAtoms}}
     .filter-input.invalid {
@@ -117,6 +132,24 @@
     .actions button.primary:hover {
       background: var(--vscode-button-hoverBackground);
     }
+    .view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+    .view-header-actions {
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      min-width: 160px;
+    }
+    .view-header-actions .actions {
+      border-top: none;
+      padding-top: 0;
+      margin-top: 0;
+    }
     {{> partials/styles/outlineButton
       selector=".actions button.secondary"
       padding="6px 12px"
@@ -154,23 +187,29 @@
   </style>
 </head>
 <body>
-  <header style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+  <header class="view-header">
     <div>
       {{> partials/molecules/viewHeading title=title hint=hint}}
     </div>
-    {{#unless showApply}}
-      <div class="actions" style="border-top: none; padding-top: 0; margin-top: 0;">
-        <button type="button" class="secondary" id="cancel">Close</button>
-        <button type="button" class="secondary" id="clear">Clear Filters</button>
-      </div>
-    {{/unless}}
+    <div class="view-header-actions">
+      {{#unless showApply}}
+        <div class="actions">
+          <button type="button" class="secondary" id="cancel">Close</button>
+          <button type="button" class="secondary" id="clear">Clear Filters</button>
+        </div>
+      {{else}}
+        <div class="actions">
+          <button type="button" class="secondary" id="clear">Clear Filters</button>
+        </div>
+      {{/unless}}
+    </div>
   </header>
 
   <div class="filter-tags-row" id="filter-tags-row"></div>
 
   <form id="form">
     <section class="filters-inline">
-      <div class="filter-col-span-3">
+      <div class="filter-col-span-3 filter-row-1">
         {{> partials/molecules/textFilterField
           id="message"
           name="message"
@@ -182,7 +221,7 @@
           spellcheck="false"
         }}
       </div>
-      <div class="filter-col-4">
+      <div class="filter-col-4 filter-row-1">
         {{> partials/molecules/textFilterField
           id="branch"
           name="branch"
@@ -196,7 +235,7 @@
           autocompleteLabel="Branch suggestions"
         }}
       </div>
-      <div class="filter-col-5">
+      <div class="filter-col-5 filter-row-1">
         {{> partials/molecules/textFilterField
           id="author"
           name="author"
@@ -210,7 +249,7 @@
           autocompleteLabel="Author suggestions"
         }}
       </div>
-      <div class="filter-col-4">
+      <div class="filter-col-1 filter-row-2">
         {{> partials/molecules/dateFilterField
           id="since"
           name="since"
@@ -218,7 +257,7 @@
           clearLabel="since"
         }}
       </div>
-      <div class="filter-col-5">
+      <div class="filter-col-2 filter-row-2">
         {{> partials/molecules/dateFilterField
           id="until"
           name="until"
@@ -226,7 +265,7 @@
           clearLabel="until"
         }}
       </div>
-      <div class="filter-col-span-3">
+      <div class="filter-col-span-3-right filter-row-2">
         {{> partials/molecules/textFilterField
           id="exclude-message"
           name="exclude-message"
