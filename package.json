@@ -534,12 +534,12 @@
       },
       {
         "command": "vscodeGitClient.operation.abort",
-        "title": "Abort Merge/Rebase/Cherry-Pick",
+        "title": "Abort Consolidation",
         "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.operation.continue",
-        "title": "Continue Merge/Rebase/Cherry-Pick",
+        "title": "Continue Consolidation",
         "category": "VS Code Git Client"
       },
       {
