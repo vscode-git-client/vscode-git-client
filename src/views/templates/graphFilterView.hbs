@@ -249,6 +249,17 @@
           autocompleteLabel="Author suggestions"
         }}
       </div>
+      <div class="filter-col-span-3-right filter-row-2">
+        {{> partials/molecules/textFilterField
+          id="exclude-message"
+          name="exclude-message"
+          label="Exclude message (regex)"
+          placeholder="Merge pull request|WIP"
+          clearLabel="Exclude message regex"
+          autocompleteAttr="off"
+          spellcheck="false"
+        }}
+      </div>
       <div class="filter-col-1 filter-row-2">
         {{> partials/molecules/dateFilterField
           id="since"
@@ -265,17 +276,7 @@
           clearLabel="until"
         }}
       </div>
-      <div class="filter-col-span-3-right filter-row-2">
-        {{> partials/molecules/textFilterField
-          id="exclude-message"
-          name="exclude-message"
-          label="Exclude message (regex)"
-          placeholder="Merge pull request|WIP"
-          clearLabel="Exclude message regex"
-          autocompleteAttr="off"
-          spellcheck="false"
-        }}
-      </div>
+      
     </section>
 
     <section class="commit-preview">
