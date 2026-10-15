@@ -25,15 +25,6 @@
     .filter-col-span-3 {
       grid-column: 1 / span 3;
     }
-    .filter-col-span-3-right {
-      grid-column: 3 / span 3;
-    }
-    .filter-col-1 {
-      grid-column: 1;
-    }
-    .filter-col-2 {
-      grid-column: 2;
-    }
     .filter-col-4 {
       grid-column: 4;
     }
@@ -249,7 +240,7 @@
           autocompleteLabel="Author suggestions"
         }}
       </div>
-      <div class="filter-col-span-3-right filter-row-2">
+      <div class="filter-col-span-3 filter-row-2">
         {{> partials/molecules/textFilterField
           id="exclude-message"
           name="exclude-message"
@@ -260,7 +251,7 @@
           spellcheck="false"
         }}
       </div>
-      <div class="filter-col-1 filter-row-2">
+      <div class="filter-col-4 filter-row-2">
         {{> partials/molecules/dateFilterField
           id="since"
           name="since"
@@ -268,7 +259,7 @@
           clearLabel="since"
         }}
       </div>
-      <div class="filter-col-2 filter-row-2">
+      <div class="filter-col-5 filter-row-2">
         {{> partials/molecules/dateFilterField
           id="until"
           name="until"
@@ -276,7 +267,6 @@
           clearLabel="until"
         }}
       </div>
-      
     </section>
 
     <section class="commit-preview">
