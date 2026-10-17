@@ -41,6 +41,22 @@
     .filter-input.invalid {
       border-color: var(--vscode-inputValidation-errorBorder, #d93025);
     }
+    .filter-col-4 .field-clear,
+    .filter-col-5 .field-clear {
+      width: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: width 50ms ease, opacity 50ms ease;
+    }
+    .filter-col-4 .input-shell:hover .field-clear,
+    .filter-col-4 .input-shell:focus-within .field-clear,
+    .filter-col-5 .input-shell:hover .field-clear,
+    .filter-col-5 .input-shell:focus-within .field-clear {
+      width: 18px;
+      opacity: 1;
+      pointer-events: auto;
+    }
     {{> partials/styles/fieldClear}}
     {{> partials/styles/autocomplete listClass="autocomplete-list" optionClass="autocomplete-option" shadowAlpha="0.25"}}
     .filter-tags-row {
