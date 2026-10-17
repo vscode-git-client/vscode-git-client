@@ -443,7 +443,11 @@ function attachOperationStatusBarActions(
     const operation = stateStore.operationState.kind;
     const isRebaseActive = operation === 'rebase';
     const isCherryPickActive = operation === 'cherry-pick';
-    const isActionable = isRebaseActive || isCherryPickActive;
+    const isMergeActive = operation === 'merge';
+    const isRevertActive = operation === 'revert';
+    const isActionable = isRebaseActive || isCherryPickActive || isMergeActive || isRevertActive;
+    // Skip is only meaningful during rebase and cherry-pick
+    const isSkippable = isRebaseActive || isCherryPickActive;
 
     if (isActionable) {
       if (
@@ -457,7 +461,11 @@ function attachOperationStatusBarActions(
       }
       continueItem.show();
       abortItem.show();
-      skipItem.show();
+      if (isSkippable) {
+        skipItem.show();
+      } else {
+        skipItem.hide();
+      }
     } else {
       continueItem.hide();
       abortItem.hide();

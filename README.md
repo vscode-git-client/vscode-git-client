@@ -105,7 +105,7 @@ The comparison tab shows both directions (`A..B` and `B..A`) with commit and cha
 - Toggle between **List** (two side-by-side tables) and **Graph** mode (inline SVG showing how the two branches diverged from their merge base); filters dim non-matching commits in graph mode so topology stays visible, while row selection and multi-select shortcuts stay available.
 - List mode supports a Vertical/Horizontal pane layout toggle next to the List/Graph toggle. Vertical (default) stacks the two branches' commit tables; Horizontal places them side by side. Your choice persists for the workspace; `vscodeGitClient.compare.listLayout` sets the initial default.
 - Optional filters to ignore merge commits.
-- Optional matching-message detection to hide likely cherry-picked commits across branches using author, timestamp, and message.
+- Optional matching-message detection to hide likely cherry-picked commits across branches. A commit is considered matched when the combination of **author name**, **commit timestamp**, and **subject** is identical on both sides; commit IDs are intentionally ignored so cherry-picks that produce a different SHA still match.
 - Export as two CSV files or one Excel workbook with two sheets.
 - Recent compare pairs persisted in workspace state.
 
@@ -241,6 +241,7 @@ Supported editor workflows include:
 | `vscodeGitClient.compare.exportFormat`                 | `"csv"`         | Compare Branches export format: `csv` for two files, or `excel` for one `.xlsx` with two sheets                                                                                                   |
 | `vscodeGitClient.compare.listLayout`                   | `"vertical"`    | Initial Compare Branches List-mode pane layout (`vertical` stacked or `horizontal` side by side); only applies until the in-webview toggle is used, after which the choice persists per workspace |
 | `vscodeGitClient.compareWithRevision.defaultDirection` | `"forward"`     | Compare with Revision diff direction: `forward` opens working tree on the left and selected revision on the right; `reverse` swaps those sides                                                    |
+| `vscodeGitClient.commitListVirtualizationThreshold`    | `200`           | Minimum number of commits in a list before windowed virtualization is enabled. Set to `0` to disable virtualization and always render all rows.                                                   |
 | `vscodeGitClient.commitMessageTemplates`               | see below       | Reusable commit message templates with `{branch}`, `{ticket}`, `{scope}`, and `{cursor}` placeholders                                                                                             |
 | `vscodeGitClient.commitMessageTicketPattern`           | `"[A-Z]+-\\d+"` | Regex used to extract a ticket id from the current branch name                                                                                                                                    |
 
