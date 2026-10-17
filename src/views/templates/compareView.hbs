@@ -299,26 +299,21 @@
           <button id="mode-toggle-list" type="button" role="tab" aria-selected="{{#if isListMode}}true{{else}}false{{/if}}" class="{{#if isListMode}}active{{/if}}" data-mode="list">List</button>
           <button id="mode-toggle-graph" type="button" role="tab" aria-selected="{{#if isGraphMode}}true{{else}}false{{/if}}" class="{{#if isGraphMode}}active{{/if}}" data-mode="graph">Graph</button>
         </div>
-        {{#if isListMode}}
-        <div class="mode-toggle" role="tablist" aria-label="Compare pane layout">
+        <div id="layout-toggle-wrap" class="mode-toggle" role="tablist" aria-label="Compare pane layout" style="{{#if isGraphMode}}display:none{{/if}}">
           <button id="layout-toggle-vertical" type="button" role="tab" aria-selected="{{#unless isHorizontalLayout}}true{{else}}false{{/unless}}" class="{{#unless isHorizontalLayout}}active{{/unless}}" data-layout="vertical">Vertical</button>
           <button id="layout-toggle-horizontal" type="button" role="tab" aria-selected="{{#if isHorizontalLayout}}true{{else}}false{{/if}}" class="{{#if isHorizontalLayout}}active{{/if}}" data-layout="horizontal">Horizontal</button>
         </div>
-        {{/if}}
         <button id="btn-refresh" type="button" title="Refresh" aria-label="Refresh"><span class="refresh-icon">⟳</span></button>
         <button id="filter-export-excel" class="filter-export" type="button" title="{{exportButtonLabel}}">{{exportButtonLabel}}</button>
       </div>
     </div>
   </section>
-  {{#if isListMode}}
-  <div class="grid{{#if isHorizontalLayout}} horizontal{{/if}}">
+  <div id="list-grid" class="grid{{#if isHorizontalLayout}} horizontal{{/if}}" style="{{#if isGraphMode}}display:none{{/if}}">
     {{> partials/compareCommitTable side="left" total=leftTotal ref=leftRef rows=leftCommits}}
 
     {{> partials/compareCommitTable side="right" total=rightTotal ref=rightRef rows=rightCommits}}
   </div>
-  {{/if}}
-  {{#if isGraphMode}}
-  <section class="graph-canvas">
+  <section id="graph-canvas" class="graph-canvas" style="{{#if isListMode}}display:none{{/if}}">
     <header class="graph-banner">
       <span data-banner-summary>{{leftRef}} ({{leftTotal}}) ↔ {{rightRef}} ({{rightTotal}}){{#if graphMergeBaseShort}} · merge base {{graphMergeBaseShort}}{{/if}}</span>
     </header>
@@ -331,7 +326,6 @@
       </ul>
     </div>
   </section>
-  {{/if}}
 
   {{> partials/compareContextMenu}}
   {{> partials/comparePaneContextMenu}}
@@ -339,13 +333,16 @@
   <script>
     const vscode = acquireVsCodeApi();
     const allAuthors = {{{authorsJson}}};
-    const compareViewMode = '{{mode}}';
-    const isGraphMode = compareViewMode === 'graph';
-    const compareLayoutOrientation = '{{orientation}}';
+    let compareViewMode = '{{mode}}';
+    let isGraphMode = compareViewMode === 'graph';
+    let compareLayoutOrientation = '{{orientation}}';
     const modeToggleListBtn = document.getElementById('mode-toggle-list');
     const modeToggleGraphBtn = document.getElementById('mode-toggle-graph');
     const layoutToggleVerticalBtn = document.getElementById('layout-toggle-vertical');
     const layoutToggleHorizontalBtn = document.getElementById('layout-toggle-horizontal');
+    const layoutToggleWrap = document.getElementById('layout-toggle-wrap');
+    const listGrid = document.getElementById('list-grid');
+    const graphCanvas = document.getElementById('graph-canvas');
     const authorInput = document.getElementById('filter-author');
     const authorAutocomplete = document.getElementById('author-autocomplete');
     const messageInput = document.getElementById('filter-message');
@@ -1048,7 +1045,48 @@
       if (event.data && event.data.type === 'refreshComplete') {
         setRefreshLoading(false);
       }
+      if (event.data && event.data.type === 'setCompareModeAck') {
+        applyModeChange(event.data.mode);
+      }
+      if (event.data && event.data.type === 'setCompareLayoutAck') {
+        applyLayoutChange(event.data.orientation);
+      }
     });
+
+    const applyModeChange = (newMode) => {
+      if (newMode === compareViewMode) { return; }
+      compareViewMode = newMode;
+      isGraphMode = newMode === 'graph';
+      if (modeToggleListBtn) {
+        modeToggleListBtn.classList.toggle('active', newMode === 'list');
+        modeToggleListBtn.setAttribute('aria-selected', newMode === 'list' ? 'true' : 'false');
+      }
+      if (modeToggleGraphBtn) {
+        modeToggleGraphBtn.classList.toggle('active', newMode === 'graph');
+        modeToggleGraphBtn.setAttribute('aria-selected', newMode === 'graph' ? 'true' : 'false');
+      }
+      if (listGrid) { listGrid.style.display = newMode === 'list' ? '' : 'none'; }
+      if (graphCanvas) { graphCanvas.style.display = newMode === 'graph' ? '' : 'none'; }
+      if (layoutToggleWrap) { layoutToggleWrap.style.display = newMode === 'list' ? '' : 'none'; }
+      clearCommitSelection();
+      selectionAnchorSha = null;
+      applyFilters();
+    };
+
+    const applyLayoutChange = (newOrientation) => {
+      if (newOrientation === compareLayoutOrientation) { return; }
+      compareLayoutOrientation = newOrientation;
+      if (layoutToggleVerticalBtn) {
+        layoutToggleVerticalBtn.classList.toggle('active', newOrientation === 'vertical');
+        layoutToggleVerticalBtn.setAttribute('aria-selected', newOrientation === 'vertical' ? 'true' : 'false');
+      }
+      if (layoutToggleHorizontalBtn) {
+        layoutToggleHorizontalBtn.classList.toggle('active', newOrientation === 'horizontal');
+        layoutToggleHorizontalBtn.setAttribute('aria-selected', newOrientation === 'horizontal' ? 'true' : 'false');
+      }
+      if (listGrid) { listGrid.classList.toggle('horizontal', newOrientation === 'horizontal'); }
+    };
+
     const sendModeChange = (mode) => {
       if (mode !== compareViewMode) {
         vscode.postMessage({ type: 'setCompareMode', mode });

@@ -63,6 +63,16 @@ interface RefreshCompleteMessage {
   readonly type: 'refreshComplete';
 }
 
+interface SetCompareModeAckMessage {
+  readonly type: 'setCompareModeAck';
+  readonly mode: CompareViewMode;
+}
+
+interface SetCompareLayoutAckMessage {
+  readonly type: 'setCompareLayoutAck';
+  readonly orientation: CompareLayoutOrientation;
+}
+
 interface SetCompareModeMessage {
   readonly type: 'setCompareMode';
   readonly mode: CompareViewMode;
@@ -183,13 +193,19 @@ export class CompareView {
 
     if (isSetCompareModeMessage(message)) {
       await this.modeStore.setCompareViewMode(message.mode);
-      this.rerender();
+      void this.panel.webview.postMessage({
+        type: 'setCompareModeAck',
+        mode: message.mode
+      } satisfies SetCompareModeAckMessage);
       return;
     }
 
     if (isSetCompareLayoutMessage(message)) {
       await this.layoutStore.setCompareLayoutOrientation(message.orientation);
-      this.rerender();
+      void this.panel.webview.postMessage({
+        type: 'setCompareLayoutAck',
+        orientation: message.orientation
+      } satisfies SetCompareLayoutAckMessage);
       return;
     }
 
