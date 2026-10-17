@@ -9,7 +9,7 @@ function parseGraphRows(raw: string): GraphCommit[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, authorEmail, date, subject] =
         line.split(FIELD_SEPARATOR);
       return {
         graph,
@@ -23,29 +23,34 @@ function parseGraphRows(raw: string): GraphCommit[] {
               .filter(Boolean)
           : [],
         author,
+        authorEmail,
         date,
         subject
       };
     });
 }
 
-export async function tryGetMergeBaseCommit(this: GitService, leftRef: string, rightRef: string): Promise<GraphCommit | undefined> {
+export async function tryGetMergeBaseCommit(
+  this: GitService,
+  leftRef: string,
+  rightRef: string
+): Promise<GraphCommit | undefined> {
   try {
-        const base = await this.runGit(['merge-base', leftRef, rightRef]);
-        const sha = base.stdout.trim();
-        if (!sha) {
-          return undefined;
-        }
-        const detail = await this.runGit([
-          'log',
-          '-1',
-          '--date=iso-strict',
-          `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
-          sha
-        ]);
-        const [parsed] = parseGraphRows(detail.stdout);
-        return parsed;
-      } catch {
-        return undefined;
-      }
+    const base = await this.runGit(['merge-base', leftRef, rightRef]);
+    const sha = base.stdout.trim();
+    if (!sha) {
+      return undefined;
+    }
+    const detail = await this.runGit([
+      'log',
+      '-1',
+      '--date=iso-strict',
+      `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
+      sha
+    ]);
+    const [parsed] = parseGraphRows(detail.stdout);
+    return parsed;
+  } catch {
+    return undefined;
+  }
 }

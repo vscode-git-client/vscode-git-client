@@ -10,7 +10,7 @@ function parseGraphRows(raw: string): GraphCommit[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, authorEmail, date, subject] =
         line.split(FIELD_SEPARATOR);
       return {
         graph,
@@ -24,24 +24,29 @@ function parseGraphRows(raw: string): GraphCommit[] {
               .filter(Boolean)
           : [],
         author,
+        authorEmail,
         date,
         subject
       };
     });
 }
 
-export async function directoryHistory(this: GitService, path: string, onBatch?: (commits: GraphCommit[]) => void): Promise<GraphCommit[]> {
-  const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
-      const args = ['log', '--date=iso-strict', '--no-renames', `--format=${format}`];
-      const normalizedPath = path.trim();
-      if (normalizedPath) {
-        args.push('--', normalizedPath);
-      }
-  
-      if (!onBatch) {
-        const result = await this.runGit(args);
-        return parseGraphRows(result.stdout);
-      }
-  
-      return this.streamLogRecords(args, onBatch);
+export async function directoryHistory(
+  this: GitService,
+  path: string,
+  onBatch?: (commits: GraphCommit[]) => void
+): Promise<GraphCommit[]> {
+  const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
+  const args = ['log', '--date=iso-strict', '--no-renames', `--format=${format}`];
+  const normalizedPath = path.trim();
+  if (normalizedPath) {
+    args.push('--', normalizedPath);
+  }
+
+  if (!onBatch) {
+    const result = await this.runGit(args);
+    return parseGraphRows(result.stdout);
+  }
+
+  return this.streamLogRecords(args, onBatch);
 }

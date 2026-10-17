@@ -610,11 +610,14 @@
       const sha = escapeHtml(commit.sha || '');
       const subject = escapeHtml(commit.subject || '');
       const author = escapeHtml(commit.author || '');
+      const authorEmail = escapeHtml(commit.authorEmail || '');
+      const authorTooltip = authorEmail ? author + ' &lt;' + authorEmail + '&gt;' : author;
       const timestamp = Number(commit.dateTimestamp || 0);
       const full = escapeHtml(commit.dateTitle || '');
       const dateText = escapeHtml(commit.dateLabel || '');
       const graph = escapeHtml(renderGraphGlyph(commit.graph));
-      return '<tr class="commit-row" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit hash: ' + sha + '">' + graph + '</td><td class="col-subject" title="' + subject + '">' + subject + '</td><td class="col-author" title="' + author + '">' + author + '</td><td class="col-date muted"><span title="' + full + '">' + dateText + '</span></td></tr>';
+      const subjectTooltip = subject + '&#10;SHA: ' + sha;
+      return '<tr class="commit-row" data-sha="' + sha + '" data-subject="' + subject + '" data-author="' + author + '" data-timestamp="' + timestamp + '" data-side="filter" title="' + sha + '"><td class="col-graph copyable" title="Copy commit hash: ' + sha + '">' + graph + '</td><td class="col-subject" title="' + subjectTooltip + '">' + subject + '</td><td class="col-author" title="' + authorTooltip + '">' + author + '</td><td class="col-date muted" title="' + full + '"><span>' + dateText + '</span></td></tr>';
     }
 
     function scoreMatch(candidate, keyword) {

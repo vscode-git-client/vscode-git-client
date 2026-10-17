@@ -57,6 +57,7 @@ export interface GraphCommit {
   readonly parents: string[];
   readonly refs: string[];
   readonly author: string;
+  readonly authorEmail?: string;
   readonly date: string;
   readonly subject: string;
   readonly stats?: {

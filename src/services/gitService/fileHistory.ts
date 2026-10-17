@@ -9,7 +9,7 @@ function parseGraphRows(raw: string): GraphCommit[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, authorEmail, date, subject] =
         line.split(FIELD_SEPARATOR);
       return {
         graph,
@@ -23,6 +23,7 @@ function parseGraphRows(raw: string): GraphCommit[] {
               .filter(Boolean)
           : [],
         author,
+        authorEmail,
         date,
         subject
       };
@@ -30,14 +31,14 @@ function parseGraphRows(raw: string): GraphCommit[] {
 }
 
 export async function fileHistory(this: GitService, path: string): Promise<GraphCommit[]> {
-  const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
-      const result = await this.runGit([
-        'log',
-        '--date=iso-strict',
-        '--follow',
-        `--format=${format}`,
-        '--',
-        path
-      ]);
-      return parseGraphRows(result.stdout);
+  const format = `%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`;
+  const result = await this.runGit([
+    'log',
+    '--date=iso-strict',
+    '--follow',
+    `--format=${format}`,
+    '--',
+    path
+  ]);
+  return parseGraphRows(result.stdout);
 }

@@ -10,7 +10,7 @@ export async function getGraph(
   skip = 0,
   filters?: CommitFilters
 ): Promise<GraphCommit[]> {
-  const format = ['%m', '%H', '%h', '%P', '%D', '%an', '%aI', '%s'].join(FIELD_SEPARATOR);
+  const format = ['%m', '%H', '%h', '%P', '%D', '%an', '%ae', '%aI', '%s'].join(FIELD_SEPARATOR);
 
   const parseCommits = (stdout: string): GraphCommit[] =>
     stdout
@@ -18,7 +18,7 @@ export async function getGraph(
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+        const [graph, sha, shortSha, parentsRaw, refsRaw, author, authorEmail, date, subject] =
           line.split(FIELD_SEPARATOR);
         const parents = parentsRaw?.split(' ').filter(Boolean) ?? [];
         const refs = refsRaw
@@ -34,6 +34,7 @@ export async function getGraph(
           parents,
           refs,
           author,
+          authorEmail,
           date,
           subject
         } as GraphCommit;

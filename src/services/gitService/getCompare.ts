@@ -9,7 +9,7 @@ function parseGraphRows(raw: string): GraphCommit[] {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [graph, sha, shortSha, parentsRaw, refsRaw, author, date, subject] =
+      const [graph, sha, shortSha, parentsRaw, refsRaw, author, authorEmail, date, subject] =
         line.split(FIELD_SEPARATOR);
       return {
         graph,
@@ -23,46 +23,51 @@ function parseGraphRows(raw: string): GraphCommit[] {
               .filter(Boolean)
           : [],
         author,
+        authorEmail,
         date,
         subject
       };
     });
 }
 
-export async function getCompare(this: GitService, leftRef: string, rightRef: string): Promise<CompareResult> {
+export async function getCompare(
+  this: GitService,
+  leftRef: string,
+  rightRef: string
+): Promise<CompareResult> {
   const leftOnly = await this.runGit([
-        'log',
-        '--date=iso-strict',
-        `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
-        `${rightRef}..${leftRef}`
-      ]);
-      const rightOnly = await this.runGit([
-        'log',
-        '--date=iso-strict',
-        `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
-        `${leftRef}..${rightRef}`
-      ]);
-  
-      const diffNames = await this.runGit(['diff', '--name-status', `${leftRef}...${rightRef}`]);
-  
-      const mergeBase = await this.tryGetMergeBaseCommit(leftRef, rightRef);
-  
-      return {
-        leftRef,
-        rightRef,
-        commitsOnlyLeft: parseGraphRows(leftOnly.stdout),
-        commitsOnlyRight: parseGraphRows(rightOnly.stdout),
-        mergeBase,
-        changedFiles: diffNames.stdout
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => {
-            const [status, path] = line.split('\t');
-            return {
-              status,
-              path
-            };
-          })
-      };
+    'log',
+    '--date=iso-strict',
+    `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
+    `${rightRef}..${leftRef}`
+  ]);
+  const rightOnly = await this.runGit([
+    'log',
+    '--date=iso-strict',
+    `--format=%m${FIELD_SEPARATOR}%H${FIELD_SEPARATOR}%h${FIELD_SEPARATOR}%P${FIELD_SEPARATOR}%D${FIELD_SEPARATOR}%an${FIELD_SEPARATOR}%ae${FIELD_SEPARATOR}%aI${FIELD_SEPARATOR}%s${RECORD_SEPARATOR}`,
+    `${leftRef}..${rightRef}`
+  ]);
+
+  const diffNames = await this.runGit(['diff', '--name-status', `${leftRef}...${rightRef}`]);
+
+  const mergeBase = await this.tryGetMergeBaseCommit(leftRef, rightRef);
+
+  return {
+    leftRef,
+    rightRef,
+    commitsOnlyLeft: parseGraphRows(leftOnly.stdout),
+    commitsOnlyRight: parseGraphRows(rightOnly.stdout),
+    mergeBase,
+    changedFiles: diffNames.stdout
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [status, path] = line.split('\t');
+        return {
+          status,
+          path
+        };
+      })
+  };
 }

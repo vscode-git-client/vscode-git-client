@@ -574,7 +574,11 @@ function renderGraphRow(
   side: 'left' | 'right',
   date: { label: string; title: string; timestamp: number }
 ): string {
-  return `<li class="graph-row commit-row" data-sha="${escapeHtml(commit.sha)}" data-short-sha="${escapeHtml(commit.shortSha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><span class="graph-row-spacer"></span><span class="graph-row-sha">${escapeHtml(commit.shortSha)}</span><span class="graph-row-subject">${escapeHtml(commit.subject)}</span><span class="graph-row-author">${escapeHtml(commit.author)}</span><span class="graph-row-date muted" title="${escapeHtml(date.title)}">${escapeHtml(date.label)}</span></li>`;
+  const authorTooltip = commit.authorEmail
+    ? `${escapeHtml(commit.author)} <${escapeHtml(commit.authorEmail)}>`
+    : escapeHtml(commit.author);
+  const subjectTooltip = `${escapeHtml(commit.subject)}&#10;SHA: ${escapeHtml(commit.sha)}`;
+  return `<li class="graph-row commit-row" data-sha="${escapeHtml(commit.sha)}" data-short-sha="${escapeHtml(commit.shortSha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><span class="graph-row-spacer"></span><span class="graph-row-sha">${escapeHtml(commit.shortSha)}</span><span class="graph-row-subject" title="${subjectTooltip}">${escapeHtml(commit.subject)}</span><span class="graph-row-author" title="${authorTooltip}">${escapeHtml(commit.author)}</span><span class="graph-row-date muted" title="${escapeHtml(date.title)}">${escapeHtml(date.label)}</span></li>`;
 }
 
 function renderGraphMergeBaseRow(commit: GraphCommit): string {
@@ -593,7 +597,11 @@ function renderCommitRows(commits: GraphCommit[], side: 'left' | 'right'): strin
       const rel = escapeHtml(date.label);
       const full = escapeHtml(date.title);
       const graph = escapeHtml(renderGraphGlyph(commit.graph));
-      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit hash: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject">${escapeHtml(commit.subject)}</td><td class="col-author">${escapeHtml(commit.author)}</td><td class="col-date muted"><span title="${full}">${rel}</span></td></tr>`;
+      const authorTooltip = commit.authorEmail
+        ? `${escapeHtml(commit.author)} <${escapeHtml(commit.authorEmail)}>`
+        : escapeHtml(commit.author);
+      const subjectTooltip = `${escapeHtml(commit.subject)}&#10;SHA: ${escapeHtml(commit.sha)}`;
+      return `<tr class="commit-row" data-sha="${escapeHtml(commit.sha)}" data-subject="${escapeHtml(commit.subject)}" data-author="${escapeHtml(commit.author)}" data-timestamp="${date.timestamp}" data-side="${side}" title="${escapeHtml(commit.sha)}"><td class="col-graph copyable" title="Copy commit hash: ${escapeHtml(commit.sha)}">${graph}</td><td class="col-subject" title="${subjectTooltip}">${escapeHtml(commit.subject)}</td><td class="col-author" title="${authorTooltip}">${escapeHtml(commit.author)}</td><td class="col-date muted" title="${full}"><span>${rel}</span></td></tr>`;
     })
     .join('');
 }

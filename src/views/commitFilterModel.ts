@@ -6,6 +6,7 @@ export interface SerializedCommit {
   readonly shortSha: string;
   readonly subject: string;
   readonly author: string;
+  readonly authorEmail: string;
   readonly date: string;
   readonly dateLabel: string;
   readonly dateTitle: string;
@@ -55,6 +56,7 @@ export function serializeCommits(commits: readonly GraphCommit[]): SerializedCom
       shortSha: commit.shortSha,
       subject: commit.subject,
       author: commit.author,
+      authorEmail: commit.authorEmail ?? '',
       date: commit.date,
       dateLabel: date.label,
       dateTitle: date.title,
