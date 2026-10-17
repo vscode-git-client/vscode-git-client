@@ -318,6 +318,10 @@ export function register(this: CommandController, context: vscode.ExtensionConte
 
   register(GitCommand.WorktreeOpenTerminal, this.handleWorktreeOpenTerminal.bind(this));
 
+  register(GitCommand.WorktreeCompareWithCurrent, this.handleWorktreeCompareWithCurrent.bind(this));
+
+  register(GitCommand.WorktreeViewActiveChanges, this.handleWorktreeViewActiveChanges.bind(this));
+
   // ── Submodule commands ─────────────────────────────────────────────────
 
   register(GitCommand.SubmoduleRefresh, this.handleSubmoduleRefresh.bind(this));

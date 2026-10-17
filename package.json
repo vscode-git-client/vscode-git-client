@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.22.6",
+  "version": "1.23.0",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -747,6 +747,16 @@
         "category": "VS Code Git Client"
       },
       {
+        "command": "vscodeGitClient.worktree.compareWithCurrent",
+        "title": "Compare with Current Branch",
+        "category": "VS Code Git Client"
+      },
+      {
+        "command": "vscodeGitClient.worktree.viewActiveChanges",
+        "title": "View Active Changes",
+        "category": "VS Code Git Client"
+      },
+      {
         "command": "vscodeGitClient.submodule.refresh",
         "title": "Refresh Submodules",
         "category": "VS Code Git Client"
@@ -1288,6 +1298,16 @@
           "command": "vscodeGitClient.worktree.openTerminal",
           "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
           "group": "navigation@4"
+        },
+        {
+          "command": "vscodeGitClient.worktree.compareWithCurrent",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/)",
+          "group": "compare@1"
+        },
+        {
+          "command": "vscodeGitClient.worktree.viewActiveChanges",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/",
+          "group": "compare@2"
         },
         {
           "command": "vscodeGitClient.worktree.lock",

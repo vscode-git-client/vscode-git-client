@@ -179,6 +179,8 @@ import { handleWorktreeRemove } from './handleWorktreeRemove';
 import { handleWorktreeRemoveForce } from './handleWorktreeRemoveForce';
 import { handleWorktreeRevealInFinder } from './handleWorktreeRevealInFinder';
 import { handleWorktreeUnlock } from './handleWorktreeUnlock';
+import { handleWorktreeCompareWithCurrent } from './handleWorktreeCompareWithCurrent';
+import { handleWorktreeViewActiveChanges } from './handleWorktreeViewActiveChanges';
 import { legacyCommandId } from './legacyCommandId';
 import { normalizeBranchActionHubArg } from './normalizeBranchActionHubArg';
 import { openBranchCommits } from './openBranchCommits';
@@ -490,6 +492,10 @@ export class CommandController {
   public readonly handleWorktreeOpen = handleWorktreeOpen;
 
   public readonly handleWorktreeRefresh = handleWorktreeRefresh;
+
+  public readonly handleWorktreeCompareWithCurrent = handleWorktreeCompareWithCurrent;
+
+  public readonly handleWorktreeViewActiveChanges = handleWorktreeViewActiveChanges;
 
   public readonly handleFileBlameOpen = handleFileBlameOpen;
 

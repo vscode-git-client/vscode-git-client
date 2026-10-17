@@ -118,6 +118,8 @@ export enum GitCommand {
   WorktreePrune = 'vscodeGitClient.worktree.prune',
   WorktreeRevealInFinder = 'vscodeGitClient.worktree.revealInFinder',
   WorktreeOpenTerminal = 'vscodeGitClient.worktree.openTerminal',
+  WorktreeCompareWithCurrent = 'vscodeGitClient.worktree.compareWithCurrent',
+  WorktreeViewActiveChanges = 'vscodeGitClient.worktree.viewActiveChanges',
   SubmoduleRefresh = 'vscodeGitClient.submodule.refresh',
   SubmoduleInit = 'vscodeGitClient.submodule.init',
   SubmoduleInitAll = 'vscodeGitClient.submodule.initAll',
