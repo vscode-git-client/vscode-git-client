@@ -57,6 +57,17 @@
       opacity: 1;
       pointer-events: auto;
     }
+    .filter-col-4 .filter-input[type="date"],
+    .filter-col-5 .filter-input[type="date"] {
+      padding-right: 8px;
+      transition: padding-right 50ms ease;
+    }
+    .filter-col-4 .input-shell:hover .filter-input[type="date"],
+    .filter-col-4 .input-shell:focus-within .filter-input[type="date"],
+    .filter-col-5 .input-shell:hover .filter-input[type="date"],
+    .filter-col-5 .input-shell:focus-within .filter-input[type="date"] {
+      padding-right: 28px;
+    }
     {{> partials/styles/fieldClear}}
     {{> partials/styles/autocomplete listClass="autocomplete-list" optionClass="autocomplete-option" shadowAlpha="0.25"}}
     .filter-tags-row {

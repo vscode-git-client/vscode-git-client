@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.23.2",
+  "version": "1.23.3",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -256,13 +256,13 @@
       },
       {
         "command": "vscodeGitClient.branch.search.refresh",
-        "title": "Refresh",
+        "title": "Refresh this branch",
         "icon": "$(refresh)",
         "category": "VS Code Git Client"
       },
       {
         "command": "vscodeGitClient.remote.setUrl",
-        "title": "Change remote URL",
+        "title": "Set remote URL",
         "category": "VS Code Git Client"
       },
       {
@@ -665,7 +665,7 @@
       },
       {
         "command": "vscodeGitClient.commit.createPatchSelectedChanges",
-        "title": "Create Patch",
+        "title": "Create Patch From Selected Changes",
         "category": "VS Code Git Client"
       },
       {
