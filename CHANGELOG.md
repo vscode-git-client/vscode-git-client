@@ -14,6 +14,9 @@ All notable changes to this project are documented in this file.
 - **Text Compare premature close** — the session no longer disposes immediately on open when VS Code is still settling tabs between `openTextDocument` and `vscode.diff`. A `sessionSettled` flag defers the standalone-tab balance check until after the diff editor stabilises.
 - **Compare Branches — Message filter missing commit ID matching** — the "Message" field only fuzzy-matched the commit subject, so pasting a commit SHA (full or short) found nothing, unlike Filter Graph's equivalent field. It now also matches against the commit hash, same as Filter Graph.
 
+### Changed
+- **Copy commit hashes and messages ordering** — copying commit IDs or messages from Filter Graph or Compare Branches now copies in reverse view order (time ascending, oldest-first) by default; holding `Shift` while clicking reverses back to view order (newest-first).
+
 ### Added
 - **Commit context menu — Shift+Click to reverse copy order** — in Filter Graph and Compare Branches, holding `Shift` while clicking `Copy Commit Hash(es)` or `Copy Commit Message(s)` on a multi-commit selection copies the hashes/messages in reverse order.
 - **Text Compare** — new generic, Git-agnostic comparison command. Open `Text Compare: Compare Files...` from the Command Palette, or right-click a file in the Explorer and choose `Text Compare`. Each side can be a workspace file, the current clipboard contents, or an empty buffer. Both sides open as editable temporary untitled files and are discarded when the comparison tab closes.

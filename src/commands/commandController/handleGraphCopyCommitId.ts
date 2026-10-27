@@ -2,14 +2,19 @@
 import type { CommandController } from './index';
 import * as vscode from 'vscode';
 
-export async function handleGraphCopyCommitId(this: CommandController, arg?: unknown, selected?: unknown): Promise<void> {
+export async function handleGraphCopyCommitId(
+  this: CommandController,
+  arg?: unknown,
+  selected?: unknown
+): Promise<void> {
   const shas = this.toGraphCommitShas(arg, selected);
-      if (shas.length === 0) {
-        return;
-      }
-      await vscode.env.clipboard.writeText(shas.join('\n'));
-      void vscode.window.setStatusBarMessage(
-        shas.length > 1 ? `Copied ${shas.length} commit IDs` : `Copied commit ID ${shas[0]}`,
-        1500
-      );
+  if (shas.length === 0) {
+    return;
+  }
+  const orderedShas = [...shas].reverse();
+  await vscode.env.clipboard.writeText(orderedShas.join('\n'));
+  void vscode.window.setStatusBarMessage(
+    shas.length > 1 ? `Copied ${shas.length} commit IDs` : `Copied commit ID ${shas[0]}`,
+    1500
+  );
 }

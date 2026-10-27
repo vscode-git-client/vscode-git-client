@@ -78,7 +78,7 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
       await runForEachSha(GitCommand.GraphOpenDetails);
       return false;
     case 'copyCommitId': {
-      const orderedShas = message.reverseOrder ? [...normalizedShas].reverse() : normalizedShas;
+      const orderedShas = message.reverseOrder ? normalizedShas : [...normalizedShas].reverse();
       await vscode.env.clipboard.writeText(orderedShas.join('\n'));
       void vscode.window.setStatusBarMessage(
         normalizedShas.length > 1
@@ -93,8 +93,8 @@ export async function handleCommitAction(message: CommitActionMessage): Promise<
         return false;
       }
       const orderedSubjects = message.reverseOrder
-        ? [...normalizedSubjects].reverse()
-        : normalizedSubjects;
+        ? normalizedSubjects
+        : [...normalizedSubjects].reverse();
       await vscode.env.clipboard.writeText(orderedSubjects.join('\n'));
       void vscode.window.setStatusBarMessage(
         normalizedSubjects.length > 1

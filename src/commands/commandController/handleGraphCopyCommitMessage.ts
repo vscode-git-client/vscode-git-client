@@ -2,20 +2,25 @@
 import type { CommandController } from './index';
 import * as vscode from 'vscode';
 
-export async function handleGraphCopyCommitMessage(this: CommandController, arg?: unknown, selected?: unknown): Promise<void> {
+export async function handleGraphCopyCommitMessage(
+  this: CommandController,
+  arg?: unknown,
+  selected?: unknown
+): Promise<void> {
   const shas = this.toGraphCommitShas(arg, selected);
-      if (shas.length === 0) {
-        return;
-      }
-      const messages = shas
-        .map((sha) => this.state.graph.find((commit) => commit.sha === sha)?.subject?.trim() ?? '')
-        .filter((value): value is string => Boolean(value));
-      if (messages.length === 0) {
-        return;
-      }
-      await vscode.env.clipboard.writeText(messages.join('\n'));
-      void vscode.window.setStatusBarMessage(
-        messages.length > 1 ? `Copied ${messages.length} commit messages` : 'Copied commit message',
-        1500
-      );
+  if (shas.length === 0) {
+    return;
+  }
+  const orderedShas = [...shas].reverse();
+  const messages = orderedShas
+    .map((sha) => this.state.graph.find((commit) => commit.sha === sha)?.subject?.trim() ?? '')
+    .filter((value): value is string => Boolean(value));
+  if (messages.length === 0) {
+    return;
+  }
+  await vscode.env.clipboard.writeText(messages.join('\n'));
+  void vscode.window.setStatusBarMessage(
+    messages.length > 1 ? `Copied ${messages.length} commit messages` : 'Copied commit message',
+    1500
+  );
 }
