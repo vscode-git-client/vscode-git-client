@@ -85,14 +85,50 @@
       color: var(--muted);
       font-weight: 600;
     }
-    .row {
-      display: flex;
+    /* Table layout: icon | name | commit | author | updated [| pull/push] | actions */
+    .section {
+      --cols: 22px minmax(0, 1fr) 72px minmax(80px, 160px) 84px 28px;
+    }
+    .section.with-sync {
+      --cols: 22px minmax(0, 1fr) 72px minmax(80px, 160px) 84px 76px 28px;
+    }
+    .row, .col-head {
+      display: grid;
+      grid-template-columns: var(--cols);
       align-items: center;
-      gap: 10px;
+      column-gap: 10px;
       padding: 6px 14px;
+    }
+    .row {
       cursor: pointer;
       user-select: none;
     }
+    .col-head {
+      padding-top: 2px;
+      padding-bottom: 4px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+    .cell {
+      font-size: 12px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .cell-sha {
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
+    .cell-sync {
+      text-align: right;
+    }
+    .cell-sync .pull { color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d); }
+    .cell-sync .push { color: var(--vscode-gitDecoration-addedResourceForeground, #89d185); }
     .row:hover, .row.focused {
       background: var(--row-hover);
     }
@@ -112,7 +148,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      flex: 1;
       min-width: 0;
     }
     .row-name mark {
@@ -121,19 +156,13 @@
       border-radius: 2px;
       padding: 0 1px;
     }
-    .row-meta {
-      font-size: 11px;
-      color: var(--muted);
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
     .row-actions {
-      display: none;
-      gap: 4px;
-      flex-shrink: 0;
+      display: flex;
+      justify-content: flex-end;
+      visibility: hidden;
     }
     .row:hover .row-actions, .row.focused .row-actions {
-      display: flex;
+      visibility: visible;
     }
     {{> partials/styles/outlineButton
       selector=".row-actions button"
@@ -242,17 +271,52 @@
       );
     }
 
-    function describeBranch(branch) {
-      const parts = [];
-      if (branch.current) parts.push('current');
-      if (branch.type === 'remote') parts.push('remote');
-      if (branch.upstream) parts.push('↑ ' + branch.upstream);
-      if (branch.ahead || branch.behind) parts.push('▲' + branch.ahead + ' ▼' + branch.behind);
-      return parts.join(' · ');
+    function shortSha(item) {
+      const sha = (item.lastCommit && item.lastCommit.sha) || item.sha || '';
+      return sha.slice(0, 7);
     }
 
-    function describeTag(tag) {
-      return tag.sha ? tag.sha.slice(0, 7) : '';
+    function formatRelative(epoch) {
+      if (!epoch) return '';
+      const seconds = Math.max(0, Math.floor(Date.now() / 1000) - epoch);
+      const units = [
+        ['y', 31536000],
+        ['mo', 2592000],
+        ['w', 604800],
+        ['d', 86400],
+        ['h', 3600],
+        ['m', 60]
+      ];
+      for (const [label, size] of units) {
+        if (seconds >= size) return Math.floor(seconds / size) + label + ' ago';
+      }
+      return 'just now';
+    }
+
+    function formatSync(branch) {
+      if (!branch.upstream) return '';
+      if (!branch.ahead && !branch.behind) return '<span title="Up to date with upstream">✓</span>';
+      const parts = [];
+      if (branch.behind) parts.push('<span class="pull" title="' + branch.behind + ' to pull">↓' + branch.behind + '</span>');
+      if (branch.ahead) parts.push('<span class="push" title="' + branch.ahead + ' to push">↑' + branch.ahead + '</span>');
+      return parts.join(' ');
+    }
+
+    function buildTooltip(item, isTag) {
+      const commit = item.lastCommit;
+      const lines = [item.name];
+      if (commit) {
+        lines.push('', 'Commit: ' + commit.sha);
+        lines.push('Message: ' + (commit.subject || '(no message)'));
+        lines.push('Author: ' + (commit.author || 'unknown'));
+        lines.push('Time: ' + (commit.epoch ? new Date(commit.epoch * 1000).toLocaleString() : 'unknown'));
+      } else {
+        lines.push('', 'No commit information available');
+      }
+      if (!isTag && item.upstream) {
+        lines.push('', 'Upstream: ' + item.upstream);
+      }
+      return lines.join('\n');
     }
 
     function applyFilter() {
@@ -331,27 +395,39 @@
       let globalIndex = 0;
       const html = sections
         .map((section) => {
+          const isTag = section.kind === 'tag';
+          const withSync = section.label === 'Local';
+          const head =
+            '<div class="col-head">' +
+              '<span></span><span>Name</span><span>Commit</span><span>Author</span><span>Updated</span>' +
+              (withSync ? '<span class="cell-sync">Pull / Push</span>' : '') +
+              '<span></span>' +
+            '</div>';
           const rows = section.items
             .map((item) => {
               const idx = globalIndex++;
-              const isTag = section.kind === 'tag';
               const icon = isTag ? '🏷' : item.current ? '✔' : item.type === 'remote' ? '☁' : '⎇';
-              const meta = isTag ? describeTag(item) : describeBranch(item);
+              const commit = item.lastCommit;
+              const epoch = (commit && commit.epoch) || item.lastCommitEpoch;
               const classes = ['row'];
               if (!isTag && item.current) classes.push('current');
               if (idx === focusedIndex) classes.push('focused');
               const kind = isTag ? 'tag' : 'branch';
-              return '<div class="' + classes.join(' ') + '" data-index="' + idx + '" data-name="' + escapeHtml(item.name) + '" data-kind="' + kind + '">' +
+              const author = (commit && commit.author) || '';
+              return '<div class="' + classes.join(' ') + '" data-index="' + idx + '" data-name="' + escapeHtml(item.name) + '" data-kind="' + kind + '" title="' + escapeHtml(buildTooltip(item, isTag)) + '">' +
                 '<span class="row-icon">' + icon + '</span>' +
                 '<span class="row-name">' + highlight(item.name, query) + '</span>' +
-                (meta ? '<span class="row-meta">' + escapeHtml(meta) + '</span>' : '') +
+                '<span class="cell cell-sha">' + escapeHtml(shortSha(item)) + '</span>' +
+                '<span class="cell">' + escapeHtml(author) + '</span>' +
+                '<span class="cell">' + escapeHtml(formatRelative(epoch)) + '</span>' +
+                (withSync ? '<span class="cell cell-sync">' + formatSync(item) + '</span>' : '') +
                 '<span class="row-actions">' +
                   '<button data-action="actions" title="More actions">⋯</button>' +
                 '</span>' +
                 '</div>';
             })
             .join('');
-          return '<div class="section"><div class="section-title">' + escapeHtml(section.label) + '</div>' + rows + '</div>';
+          return '<div class="section' + (withSync ? ' with-sync' : '') + '"><div class="section-title">' + escapeHtml(section.label) + '</div>' + head + rows + '</div>';
         })
         .join('');
 

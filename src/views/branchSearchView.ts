@@ -130,13 +130,15 @@ export class BranchSearchView {
       ahead: branch.ahead,
       behind: branch.behind,
       current: branch.current,
-      lastCommitEpoch: branch.lastCommitEpoch
+      lastCommitEpoch: branch.lastCommitEpoch,
+      lastCommit: branch.lastCommit
     }));
     const tagPayload = this.getTags().map((tag) => ({
       name: tag.name,
       fullName: tag.fullName,
       sha: tag.sha,
-      lastCommitEpoch: tag.lastCommitEpoch
+      lastCommitEpoch: tag.lastCommitEpoch,
+      lastCommit: tag.lastCommit
     }));
     void this.panel.webview.postMessage({
       type: 'data',

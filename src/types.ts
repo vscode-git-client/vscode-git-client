@@ -16,6 +16,14 @@ export interface RefComparison {
   readonly behind: number;
 }
 
+/** Latest commit a ref points to (peeled through annotated tags). */
+export interface RefCommitInfo {
+  readonly sha: string;
+  readonly subject: string;
+  readonly author: string;
+  readonly epoch?: number;
+}
+
 export interface BranchRef {
   readonly name: string;
   readonly shortName: string;
@@ -28,6 +36,7 @@ export interface BranchRef {
   readonly behind: number;
   readonly current: boolean;
   readonly lastCommitEpoch?: number;
+  readonly lastCommit?: RefCommitInfo;
   readonly comparison?: RefComparison;
 }
 
@@ -37,6 +46,7 @@ export interface TagRef {
   readonly sha?: string;
   readonly availableOnRemotes?: string[];
   readonly lastCommitEpoch?: number;
+  readonly lastCommit?: RefCommitInfo;
   readonly comparison?: RefComparison;
 }
 

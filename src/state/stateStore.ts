@@ -45,7 +45,8 @@ function branchesEqual(a: readonly BranchRef[], b: readonly BranchRef[]): boolea
       left.upstream !== right.upstream ||
       left.ahead !== right.ahead ||
       left.behind !== right.behind ||
-      left.lastCommitEpoch !== right.lastCommitEpoch
+      left.lastCommitEpoch !== right.lastCommitEpoch ||
+      left.lastCommit?.sha !== right.lastCommit?.sha
     ) {
       return false;
     }

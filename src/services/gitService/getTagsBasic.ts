@@ -15,14 +15,43 @@ export async function getTagsBasic(this: GitService): Promise<TagRef[]> {
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line) => {
-          const [name, fullName, objectSha, peeledSha, commitEpochRaw] = line.split(FIELD_SEPARATOR);
-          const commitEpoch = Number.parseInt((commitEpochRaw ?? '').trim(), 10);
+          const [
+            name,
+            fullName,
+            objectSha,
+            peeledSha,
+            creatorEpochRaw,
+            committerEpochRaw,
+            peeledCommitterEpochRaw,
+            authorName,
+            peeledAuthorName,
+            subject,
+            peeledSubject
+          ] = line.split(FIELD_SEPARATOR);
+          // Annotated tags have a peeled sha; its `*` fields describe the tagged commit.
+          const isAnnotated = Boolean(peeledSha);
+          const parseEpoch = (raw: string | undefined): number | undefined => {
+            const value = Number.parseInt((raw ?? '').trim(), 10);
+            return Number.isNaN(value) ? undefined : value;
+          };
+          const commitEpoch =
+            parseEpoch(isAnnotated ? peeledCommitterEpochRaw : committerEpochRaw) ??
+            parseEpoch(creatorEpochRaw);
+          const commitSha = peeledSha || objectSha || undefined;
           return {
             name,
             fullName,
-            sha: peeledSha || objectSha || undefined,
+            sha: commitSha,
             availableOnRemotes: [] as string[],
-            lastCommitEpoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch
+            lastCommitEpoch: commitEpoch,
+            lastCommit: commitSha
+              ? {
+                  sha: commitSha,
+                  subject: ((isAnnotated ? peeledSubject : subject) ?? '').trim(),
+                  author: ((isAnnotated ? peeledAuthorName : authorName) ?? '').trim(),
+                  epoch: commitEpoch
+                }
+              : undefined
           };
         })
         .sort(GitService.TAG_SORT_COMPARATOR);

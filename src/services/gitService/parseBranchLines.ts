@@ -11,7 +11,8 @@ export function parseBranchLines(this: GitService, stdout: string, remoteUrls: M
         .map((line) => line.trim())
         .filter(Boolean)
         .map((line) => {
-          const [name, fullName, upstream, track, head, commitEpochRaw] = line.split(FIELD_SEPARATOR);
+          const [name, fullName, upstream, track, head, commitEpochRaw, commitSha, authorName, ...subjectParts] =
+            line.split(FIELD_SEPARATOR);
           const { ahead, behind } = parseTrack(track || '');
           const type: 'local' | 'remote' = fullName.startsWith('refs/remotes/') ? 'remote' : 'local';
           const shortName = type === 'remote' ? name.replace(/^[^/]+\//, '') : name;
@@ -28,7 +29,15 @@ export function parseBranchLines(this: GitService, stdout: string, remoteUrls: M
             ahead,
             behind,
             current: head === '*',
-            lastCommitEpoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch
+            lastCommitEpoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch,
+            lastCommit: commitSha
+              ? {
+                  sha: commitSha,
+                  subject: subjectParts.join(FIELD_SEPARATOR).trim(),
+                  author: (authorName ?? '').trim(),
+                  epoch: Number.isNaN(commitEpoch) ? undefined : commitEpoch
+                }
+              : undefined
           };
         })
         .filter((branch) => {

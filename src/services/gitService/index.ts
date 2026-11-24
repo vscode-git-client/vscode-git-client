@@ -223,7 +223,11 @@ export class GitService {
     '%(upstream:short)',
     '%(upstream:track)',
     '%(HEAD)',
-    '%(committerdate:unix)'
+    '%(committerdate:unix)',
+    '%(objectname)',
+    '%(authorname)',
+    // Free text goes last so it can be re-joined if it ever contains the field separator.
+    '%(contents:subject)'
   ].join(FIELD_SEPARATOR);
 
   static readonly BRANCH_SORT_COMPARATOR = (a: BranchRef, b: BranchRef): number => {
@@ -244,7 +248,15 @@ export class GitService {
     '%(refname)',
     '%(objectname)',
     '%(*objectname)',
-    '%(creatordate:unix)'
+    '%(creatordate:unix)',
+    // Lightweight tags: the plain fields describe the commit. Annotated tags: the `*` (peeled)
+    // fields describe the commit, while the plain ones describe the tag object itself.
+    '%(committerdate:unix)',
+    '%(*committerdate:unix)',
+    '%(authorname)',
+    '%(*authorname)',
+    '%(contents:subject)',
+    '%(*contents:subject)'
   ].join(FIELD_SEPARATOR);
 
   static readonly TAG_SORT_COMPARATOR = (a: TagRef, b: TagRef): number => {
