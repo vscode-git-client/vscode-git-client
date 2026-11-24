@@ -159,6 +159,7 @@ Available actions include:
 - Add a detached worktree from a local branch, remote branch, tag, or typed revision.
 - Pick the destination from the file explorer dialog: an empty folder is used directly, while a non-empty folder is treated as the parent for an auto-named child folder such as `sample-project-staging`.
 - Lock, unlock, remove, or force remove worktrees.
+- Update a worktree's path (`Update Worktree Path...`) after moving its folder, which runs `git worktree repair` to re-link it with the main repository.
 - Preview and prune stale worktrees.
 
 ### Manage Submodules

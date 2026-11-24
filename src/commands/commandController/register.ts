@@ -310,6 +310,8 @@ export function register(this: CommandController, context: vscode.ExtensionConte
 
   register(GitCommand.WorktreeUnlock, this.handleWorktreeUnlock.bind(this));
 
+  register(GitCommand.WorktreeRepairPath, this.handleWorktreeRepairPath.bind(this));
+
   register(GitCommand.WorktreePrunePreview, this.handleWorktreePrunePreview.bind(this));
 
   register(GitCommand.WorktreePrune, this.handleWorktreePrune.bind(this));

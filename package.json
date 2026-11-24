@@ -2,7 +2,7 @@
   "name": "vscode-git-client",
   "displayName": "VS Code Git Client",
   "description": "A powerful Git client for VS Code with branch tree, stashes, graph, submodules, worktrees, merge/diff/compare workflows.",
-  "version": "1.23.4",
+  "version": "1.24.0",
   "publisher": "thanhtunguet",
   "icon": "media/vscodegitclient.png",
   "main": "./dist/extension.js",
@@ -726,6 +726,11 @@
         "category": "VS Code Git Client"
       },
       {
+        "command": "vscodeGitClient.worktree.repairPath",
+        "title": "Update Worktree Path...",
+        "category": "VS Code Git Client"
+      },
+      {
         "command": "vscodeGitClient.worktree.prunePreview",
         "title": "Preview Prunable Worktrees",
         "category": "VS Code Git Client"
@@ -1318,6 +1323,11 @@
           "command": "vscodeGitClient.worktree.unlock",
           "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeLocked/",
           "group": "manage@2"
+        },
+        {
+          "command": "vscodeGitClient.worktree.repairPath",
+          "when": "view == vscodeGitClient.worktrees && viewItem =~ /worktreeEntry/ && !(viewItem =~ /worktreeCurrent/)",
+          "group": "manage@3"
         },
         {
           "command": "vscodeGitClient.worktree.remove",

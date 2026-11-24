@@ -169,6 +169,7 @@ import { handleWorktreeAddDetached } from './handleWorktreeAddDetached';
 import { handleWorktreeAddFromBranch } from './handleWorktreeAddFromBranch';
 import { handleWorktreeAddNewBranch } from './handleWorktreeAddNewBranch';
 import { handleWorktreeLock } from './handleWorktreeLock';
+import { handleWorktreeRepairPath } from './handleWorktreeRepairPath';
 import { handleWorktreeOpen } from './handleWorktreeOpen';
 import { handleWorktreeOpenInNewWindow } from './handleWorktreeOpenInNewWindow';
 import { handleWorktreeOpenTerminal } from './handleWorktreeOpenTerminal';
@@ -476,6 +477,8 @@ export class CommandController {
   public readonly handleWorktreeUnlock = handleWorktreeUnlock;
 
   public readonly handleWorktreeLock = handleWorktreeLock;
+
+  public readonly handleWorktreeRepairPath = handleWorktreeRepairPath;
 
   public readonly handleWorktreeRemoveForce = handleWorktreeRemoveForce;
 

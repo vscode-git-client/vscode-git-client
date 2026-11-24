@@ -95,6 +95,7 @@ import { isMissingFileContentError } from './isMissingFileContentError';
 import { isPatchAlreadyApplied } from './isPatchAlreadyApplied';
 import { isRepo } from './isRepo';
 import { lockWorktree } from './lockWorktree';
+import { repairWorktree } from './repairWorktree';
 import { logGitDuration } from './logGitDuration';
 import { mergeAbort } from './mergeAbort';
 import { mergeIntoCurrent } from './mergeIntoCurrent';
@@ -601,6 +602,8 @@ export class GitService {
   public readonly lockWorktree = lockWorktree;
 
   public readonly unlockWorktree = unlockWorktree;
+
+  public readonly repairWorktree = repairWorktree;
 
   public readonly getPrunableWorktrees = getPrunableWorktrees;
 

@@ -114,6 +114,7 @@ export enum GitCommand {
   WorktreeRemoveForce = 'vscodeGitClient.worktree.removeForce',
   WorktreeLock = 'vscodeGitClient.worktree.lock',
   WorktreeUnlock = 'vscodeGitClient.worktree.unlock',
+  WorktreeRepairPath = 'vscodeGitClient.worktree.repairPath',
   WorktreePrunePreview = 'vscodeGitClient.worktree.prunePreview',
   WorktreePrune = 'vscodeGitClient.worktree.prune',
   WorktreeRevealInFinder = 'vscodeGitClient.worktree.revealInFinder',
