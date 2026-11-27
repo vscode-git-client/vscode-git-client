@@ -33,6 +33,32 @@
     input[type="text"]:focus {
       border-color: var(--accent);
     }
+    .search-row {
+      flex-wrap: wrap;
+    }
+    #search {
+      min-width: 160px;
+    }
+    /* The first option ("Revision Type" / "Repository") doubles as the label and means "All". */
+    .filter-select {
+      flex-shrink: 0;
+      height: 32px;
+      min-width: 120px;
+      padding: 0 8px;
+      font-size: 12px;
+      background: var(--vscode-dropdown-background, var(--vscode-input-background));
+      color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+      border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, var(--border)));
+      border-radius: 4px;
+      outline: none;
+    }
+    .filter-select:focus {
+      border-color: var(--accent);
+    }
+    .filter-select:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
     .count {
       font-size: 11px;
       color: var(--muted);
@@ -208,6 +234,14 @@
     }}
     <div class="search-row">
       <input id="search" type="text" placeholder="Filter branches or tags…" autofocus spellcheck="false" />
+      <select id="type-filter" class="filter-select" aria-label="Revision type" title="Revision Type">
+        <option value="all">Revision Type</option>
+        <option value="branch">Branch</option>
+        <option value="tag">Tag</option>
+      </select>
+      <select id="repo-filter" class="filter-select" aria-label="Repository" title="Repository">
+        <option value="all">Repository</option>
+      </select>
       <button id="refresh" type="button" title="Refresh branches and tags" aria-label="Refresh branches and tags"><span class="refresh-icon">⟳</span></button>
       <span id="count" class="count">0 results</span>
     </div>
@@ -223,6 +257,8 @@
     const vscode = acquireVsCodeApi();
     const searchInput = document.getElementById('search');
     const refreshBtn = document.getElementById('refresh');
+    const typeFilter = document.getElementById('type-filter');
+    const repoFilter = document.getElementById('repo-filter');
     const listEl = document.getElementById('list');
     const countEl = document.getElementById('count');
     const branchMenu = document.getElementById('branch-context-menu');
@@ -265,6 +301,7 @@
       if (msg && msg.type === 'data') {
         branches = msg.branches || [];
         tags = msg.tags || [];
+        updateRepoOptions();
         applyFilter();
         return;
       }
@@ -348,13 +385,44 @@
       return lines.join('\n');
     }
 
+    // Repository dropdown: All / Local / one entry per remote found in the loaded branches.
+    function updateRepoOptions() {
+      const previous = repoFilter.value;
+      const remoteNames = Array.from(
+        new Set(branches.filter((b) => b.type === 'remote').map((b) => b.remoteName || 'unknown'))
+      ).sort((a, b) => a.localeCompare(b));
+      const options = [
+        { value: 'all', label: 'Repository' },
+        { value: 'local', label: 'Local' },
+        ...remoteNames.map((name) => ({ value: 'remote:' + name, label: name }))
+      ];
+      repoFilter.innerHTML = options
+        .map((o) => '<option value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + '</option>')
+        .join('');
+      repoFilter.value = options.some((o) => o.value === previous) ? previous : 'all';
+    }
+
+    function matchesRepository(branch, repo) {
+      if (repo === 'all') return true;
+      if (repo === 'local') return branch.type === 'local';
+      return branch.type === 'remote' && 'remote:' + (branch.remoteName || 'unknown') === repo;
+    }
+
     function applyFilter() {
       const query = searchInput.value.trim().toLowerCase();
-      const branchMatches = branches.filter((b) => {
+      const type = typeFilter.value;
+      const repo = repoFilter.value;
+      // Tags are not tied to a remote, so the repository filter only applies to branches
+      // and any specific repository hides tags.
+      repoFilter.disabled = type === 'tag';
+      const showBranches = type !== 'tag';
+      const showTags = type !== 'branch' && (type === 'tag' || repo === 'all');
+      const branchMatches = !showBranches ? [] : branches.filter((b) => {
+        if (!matchesRepository(b, repo)) return false;
         if (!query) return true;
         return b.name.toLowerCase().includes(query) || (b.shortName && b.shortName.toLowerCase().includes(query));
       });
-      const tagMatches = tags.filter((t) => {
+      const tagMatches = !showTags ? [] : tags.filter((t) => {
         if (!query) return true;
         return t.name.toLowerCase().includes(query);
       });
@@ -612,6 +680,16 @@
       refreshContextMenu.close();
       listEl.scrollTop = 0;
       applyFilter();
+    });
+
+    [typeFilter, repoFilter].forEach((select) => {
+      select.addEventListener('change', () => {
+        closeMenu();
+        refreshContextMenu.close();
+        listEl.scrollTop = 0;
+        applyFilter();
+        searchInput.focus();
+      });
     });
 
     if (refreshBtn) {
