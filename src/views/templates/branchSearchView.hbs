@@ -3,6 +3,8 @@
     :root {
       --row-hover: color-mix(in srgb, var(--accent), transparent 85%);
       --row-active: color-mix(in srgb, var(--accent), transparent 70%);
+      /* Overridden from JS (ROW_H) so layout and virtualization share one value. */
+      --row-h: 30px;
     }
     {{> partials/styles/contextMenu minWidth="240px"}}
     {{> partials/styles/bodyBase background="var(--bg)" padding="16px 20px" gap="12px"}}
@@ -71,41 +73,52 @@
       overflow-y: auto;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 4px 0;
+      padding: 0;
       min-height: 0;
+      position: relative;
     }
-    .section {
-      padding: 4px 0;
+    /* Virtualization: .vspace reserves the full scroll height, .vwindow holds only the visible slice. */
+    .vspace {
+      position: relative;
+      width: 100%;
+    }
+    .vwindow {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+    }
+    /* Group header, table header and rows all share one fixed height (--row-h). */
+    .section-title, .col-head, .row {
+      box-sizing: border-box;
+      height: var(--row-h, 30px);
     }
     .section-title {
-      padding: 6px 14px 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      background: color-mix(in srgb, var(--fg), transparent 94%);
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--muted);
       font-weight: 600;
     }
-    /* Table layout: icon | name | commit | author | updated [| pull/push] | actions */
-    .section {
-      --cols: 22px minmax(0, 1fr) 72px minmax(80px, 160px) 84px 28px;
-    }
-    .section.with-sync {
-      --cols: 22px minmax(0, 1fr) 72px minmax(80px, 160px) 84px 76px 28px;
-    }
+    /* Table layout (shared by all sections so columns line up):
+       icon | name | pull/push (local only, empty elsewhere) | commit | author | updated | actions */
     .row, .col-head {
+      --cols: 22px minmax(0, 1fr) 76px 72px minmax(80px, 160px) 84px 28px;
       display: grid;
       grid-template-columns: var(--cols);
       align-items: center;
       column-gap: 10px;
-      padding: 6px 14px;
+      padding: 0 14px;
     }
     .row {
       cursor: pointer;
       user-select: none;
     }
     .col-head {
-      padding-top: 2px;
-      padding-bottom: 4px;
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.4px;
@@ -222,6 +235,22 @@
     let selectedName = null;
     let selectedKind = null;
     let isLoading = true;
+
+    // Fixed row height (group header, table header and rows) makes windowing a pure arithmetic problem.
+    const ROW_H = 30;
+    const VIRTUALIZE_THRESHOLD = 100; // virtualize only when more than this many items
+    const OVERSCAN = 10;              // extra entries rendered above/below the viewport
+    document.documentElement.style.setProperty('--row-h', ROW_H + 'px');
+
+    let entries = [];        // flat list: { type: 'title' | 'head' | 'row', ... }
+    let rowEntryIndex = [];  // row index -> index in entries
+    let flatRows = [];       // row index -> { item, kind }
+    let virtualized = false;
+    let windowEl = null;
+    let renderedStart = -1;
+    let renderedEnd = -1;
+    let currentQuery = '';
+    let scrollRaf = 0;
 
     function getMenu(kind) {
       return kind === 'tag' ? tagMenu : branchMenu;
@@ -362,11 +391,15 @@
       }
 
       if (isLoading && total === 0) {
+        windowEl = null;
+        virtualized = false;
         listEl.innerHTML = '<div class="loading">Loading branches and tags…</div>';
         return;
       }
 
       if (total === 0) {
+        windowEl = null;
+        virtualized = false;
         listEl.innerHTML = '<div class="empty">No branches or tags match your search.</div>';
         return;
       }
@@ -392,59 +425,127 @@
         sections.push({ label: 'Tags', kind: 'tag', items: filtered.tags });
       }
 
-      let globalIndex = 0;
-      const html = sections
-        .map((section) => {
-          const isTag = section.kind === 'tag';
-          const withSync = section.label === 'Local';
-          const head =
-            '<div class="col-head">' +
-              '<span></span><span>Name</span><span>Commit</span><span>Author</span><span>Updated</span>' +
-              (withSync ? '<span class="cell-sync">Pull / Push</span>' : '') +
-              '<span></span>' +
-            '</div>';
-          const rows = section.items
-            .map((item) => {
-              const idx = globalIndex++;
-              const icon = isTag ? '🏷' : item.current ? '✔' : item.type === 'remote' ? '☁' : '⎇';
-              const commit = item.lastCommit;
-              const epoch = (commit && commit.epoch) || item.lastCommitEpoch;
-              const classes = ['row'];
-              if (!isTag && item.current) classes.push('current');
-              if (idx === focusedIndex) classes.push('focused');
-              const kind = isTag ? 'tag' : 'branch';
-              const author = (commit && commit.author) || '';
-              return '<div class="' + classes.join(' ') + '" data-index="' + idx + '" data-name="' + escapeHtml(item.name) + '" data-kind="' + kind + '" title="' + escapeHtml(buildTooltip(item, isTag)) + '">' +
-                '<span class="row-icon">' + icon + '</span>' +
-                '<span class="row-name">' + highlight(item.name, query) + '</span>' +
-                '<span class="cell cell-sha">' + escapeHtml(shortSha(item)) + '</span>' +
-                '<span class="cell">' + escapeHtml(author) + '</span>' +
-                '<span class="cell">' + escapeHtml(formatRelative(epoch)) + '</span>' +
-                (withSync ? '<span class="cell cell-sync">' + formatSync(item) + '</span>' : '') +
-                '<span class="row-actions">' +
-                  '<button data-action="actions" title="More actions">⋯</button>' +
-                '</span>' +
-                '</div>';
-            })
-            .join('');
-          return '<div class="section' + (withSync ? ' with-sync' : '') + '"><div class="section-title">' + escapeHtml(section.label) + '</div>' + head + rows + '</div>';
-        })
-        .join('');
+      entries = [];
+      rowEntryIndex = [];
+      flatRows = [];
+      for (const section of sections) {
+        const isTag = section.kind === 'tag';
+        const withSync = section.label === 'Local';
+        entries.push({ type: 'title', label: section.label });
+        entries.push({ type: 'head', withSync });
+        for (const item of section.items) {
+          rowEntryIndex.push(entries.length);
+          entries.push({ type: 'row', item, isTag, withSync, rowIndex: flatRows.length });
+          flatRows.push({ item, kind: isTag ? 'tag' : 'branch' });
+        }
+      }
 
-      listEl.innerHTML = html;
+      currentQuery = query;
+      virtualized = flatRows.length > VIRTUALIZE_THRESHOLD;
+      if (focusedIndex >= flatRows.length) focusedIndex = 0;
+
+      listEl.innerHTML =
+        '<div class="vspace" style="height:' + (entries.length * ROW_H) + 'px"><div class="vwindow"></div></div>';
+      windowEl = listEl.querySelector('.vwindow');
+      renderedStart = -1;
+      renderedEnd = -1;
+      renderWindow(true);
     }
 
-    function rowsFlat() {
-      return Array.from(listEl.querySelectorAll('.row'));
+    function entryHtml(entry) {
+      if (entry.type === 'title') {
+        return '<div class="section-title">' + escapeHtml(entry.label) + '</div>';
+      }
+      if (entry.type === 'head') {
+        return '<div class="col-head">' +
+          '<span></span><span>Name</span>' +
+          '<span class="cell-sync">' + (entry.withSync ? 'Pull / Push' : '') + '</span>' +
+          '<span>Commit</span><span>Author</span><span>Updated</span>' +
+          '<span></span>' +
+          '</div>';
+      }
+      const item = entry.item;
+      const isTag = entry.isTag;
+      const idx = entry.rowIndex;
+      const icon = isTag ? '🏷' : item.current ? '✔' : item.type === 'remote' ? '☁' : '⎇';
+      const commit = item.lastCommit;
+      const epoch = (commit && commit.epoch) || item.lastCommitEpoch;
+      const classes = ['row'];
+      if (!isTag && item.current) classes.push('current');
+      if (idx === focusedIndex) classes.push('focused');
+      const kind = isTag ? 'tag' : 'branch';
+      const author = (commit && commit.author) || '';
+      return '<div class="' + classes.join(' ') + '" data-index="' + idx + '" data-name="' + escapeHtml(item.name) + '" data-kind="' + kind + '" title="' + escapeHtml(buildTooltip(item, isTag)) + '">' +
+        '<span class="row-icon">' + icon + '</span>' +
+        '<span class="row-name">' + highlight(item.name, currentQuery) + '</span>' +
+        '<span class="cell cell-sync">' + (entry.withSync ? formatSync(item) : '') + '</span>' +
+        '<span class="cell cell-sha">' + escapeHtml(shortSha(item)) + '</span>' +
+        '<span class="cell">' + escapeHtml(author) + '</span>' +
+        '<span class="cell">' + escapeHtml(formatRelative(epoch)) + '</span>' +
+        '<span class="row-actions">' +
+          '<button data-action="actions" title="More actions">⋯</button>' +
+        '</span>' +
+        '</div>';
     }
 
-    function focusRow(idx) {
-      const rows = rowsFlat();
-      if (rows.length === 0) return;
-      focusedIndex = Math.max(0, Math.min(idx, rows.length - 1));
-      rows.forEach((r, i) => r.classList.toggle('focused', i === focusedIndex));
-      const row = rows[focusedIndex];
-      if (row) row.scrollIntoView({ block: 'nearest' });
+    // Renders the slice of entries intersecting the viewport (all entries when not virtualized).
+    function renderWindow(force) {
+      if (!windowEl) return;
+      let start = 0;
+      let end = entries.length;
+      if (virtualized) {
+        const viewH = listEl.clientHeight || 600;
+        start = Math.max(0, Math.floor(listEl.scrollTop / ROW_H) - OVERSCAN);
+        end = Math.min(entries.length, Math.ceil((listEl.scrollTop + viewH) / ROW_H) + OVERSCAN);
+      }
+      if (!force && start === renderedStart && end === renderedEnd) return;
+      renderedStart = start;
+      renderedEnd = end;
+      windowEl.style.top = (start * ROW_H) + 'px';
+      windowEl.innerHTML = entries.slice(start, end).map(entryHtml).join('');
+    }
+
+    function updateFocusClasses() {
+      if (!windowEl) return;
+      windowEl.querySelectorAll('.row').forEach((r) => {
+        r.classList.toggle('focused', Number(r.dataset.index) === focusedIndex);
+      });
+    }
+
+    function scrollRowIntoView(rowIdx) {
+      const entryIdx = rowEntryIndex[rowIdx];
+      if (entryIdx === undefined) return;
+      // When moving up past the first row of a section, reveal its group + table headers too.
+      let topEntry = entryIdx;
+      while (topEntry > 0 && entries[topEntry - 1].type !== 'row') topEntry--;
+      const rowTop = entryIdx * ROW_H;
+      const rowBottom = rowTop + ROW_H;
+      const viewH = listEl.clientHeight;
+      if (topEntry * ROW_H < listEl.scrollTop) {
+        listEl.scrollTop = topEntry * ROW_H;
+      } else if (rowBottom > listEl.scrollTop + viewH) {
+        listEl.scrollTop = rowBottom - viewH;
+      }
+    }
+
+    function focusRow(idx, opts) {
+      if (flatRows.length === 0) return;
+      focusedIndex = Math.max(0, Math.min(idx, flatRows.length - 1));
+      if (!opts || opts.scroll !== false) scrollRowIntoView(focusedIndex);
+      renderWindow(false);
+      updateFocusClasses();
+    }
+
+    listEl.addEventListener('scroll', () => {
+      if (!virtualized || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        renderWindow(false);
+      });
+    });
+
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => { if (virtualized) renderWindow(false); }).observe(listEl);
     }
 
     function closeMenu() {
@@ -509,6 +610,7 @@
     searchInput.addEventListener('input', () => {
       closeMenu();
       refreshContextMenu.close();
+      listEl.scrollTop = 0;
       applyFilter();
     });
 
@@ -542,11 +644,10 @@
         focusRow(focusedIndex - 1);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const rows = rowsFlat();
-        const row = rows[focusedIndex];
-        if (row) {
-          const kind = row.dataset.kind;
-          const name = row.dataset.name;
+        const entry = flatRows[focusedIndex];
+        if (entry) {
+          const kind = entry.kind;
+          const name = entry.item.name;
           if (kind === 'tag') {
             vscode.postMessage({ type: 'checkoutTag', name });
           } else {
@@ -591,7 +692,7 @@
 
       const idx = Number(row.dataset.index);
       if (Number.isFinite(idx)) {
-        focusRow(idx);
+        focusRow(idx, { scroll: false });
       }
       openMenu(event.clientX, event.clientY, name, kind);
     });
@@ -630,10 +731,10 @@
       }
       e.stopPropagation();
       const idx = Number(row.dataset.index);
-      if (Number.isFinite(idx)) {
-        focusRow(idx);
-      }
       const rect = row.getBoundingClientRect();
+      if (Number.isFinite(idx)) {
+        focusRow(idx, { scroll: false });
+      }
       openMenu(rect.left + 28, rect.bottom + 4, name, kind);
     });
   </script>
